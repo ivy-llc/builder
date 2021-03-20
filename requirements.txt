@@ -1,0 +1,4 @@
+ivy-core
+gitpython
+opencv-python
+tensorflow-io

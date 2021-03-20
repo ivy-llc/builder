@@ -1,0 +1,5 @@
+{
+  "num_examples": 100,
+  "vector_dim": 1,
+  "image_dims": [32, 32]
+}
