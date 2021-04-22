@@ -127,9 +127,9 @@ class TFDataLoader(DataLoader):
                 tf_container = Container(container_dict).map(_to_tensor)
                 window_containers.append(tf_container)
             window_containers += [tf_container] * (max_seq_len - seq_len - 1)  # padding for shorter sequences
-            joined_window_containers = Container.concat(window_containers, 1, tf)
+            joined_window_containers = Container.concat(window_containers, 1)
             all_containers.append(joined_window_containers)
-        return Container.concat(all_containers, 0, tf)
+        return Container.concat(all_containers, 0)
 
     # Dynamic Windowing #
     # ------------------#
@@ -193,7 +193,7 @@ class TFDataLoader(DataLoader):
                                 Container(tfio.experimental.serialization.decode_json(
                                     json_strings[highest_idx_entry], self._container_tensor_spec)).slice(0)
                                 for json_str in json_strings_stack]
-        return Container.concat(json_container_stack, 0, tf)
+        return Container.concat(json_container_stack, 0)
 
     # container pruning
 

@@ -38,7 +38,7 @@ def test_sequential_scheduler_with_dynamic_schedule_file_edit(dev_str, call):
 
     with open(schedule_filepath) as file:
         original_schedule_dict = json.load(file)
-    new_schedule_dict = dict(**{'minimal_again': ['ivy.builder.examples.tf.simple_tf_example.main', {}]},
+    new_schedule_dict = dict(**{'minimal_again': ['demos.tf.simple_tf_example.main', {}]},
                              **original_schedule_dict)
 
     success = [False]
