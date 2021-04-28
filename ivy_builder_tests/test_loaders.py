@@ -6,9 +6,9 @@ import pytest
 import ivy.tensorflow
 import ivy_tests.helpers as helpers
 
-from ivy_builder.specs import DatasetDirs
+from ivy_builder.specs.dataset_dirs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
-from ivy_builder.specs import DataLoaderSpec
+from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 
 from ivy_builder.data_loaders.tf_data_loader import TFDataLoader
 

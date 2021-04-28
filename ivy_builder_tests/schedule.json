@@ -1,10 +1,10 @@
 {
   "minimal": [
-    "demos.tf.simple_tf_example.main",
+    "demos.simple_example.main",
     {}
   ],
   "complete": [
-    "demos.tf.full_tf_example.main",
+    "demos.full_example.main",
     {}
   ]
 }

@@ -38,17 +38,17 @@ def test_sequential_scheduler_with_dynamic_schedule_file_edit(dev_str, call):
 
     with open(schedule_filepath) as file:
         original_schedule_dict = json.load(file)
-    new_schedule_dict = dict(**{'minimal_again': ['demos.tf.simple_tf_example.main', {}]},
+    new_schedule_dict = dict(**{'minimal_again': ['demos.simple_example.main', {}]},
                              **original_schedule_dict)
 
     success = [False]
 
     def write_to_file():
-        time.sleep(0.1)
         with open(schedule_filepath, 'w') as schedule_file:
             json.dump(new_schedule_dict, schedule_file, indent=2, separators=(',', ': '))
 
     def run_scheduler(success_list):
+        time.sleep(0.1)
         num_completed_tasks = len(scheduler.run())
         print('found length: {}'.format(num_completed_tasks))
         if num_completed_tasks == 3:
@@ -57,8 +57,8 @@ def test_sequential_scheduler_with_dynamic_schedule_file_edit(dev_str, call):
         else:
             raise Exception('Expected 3 tasks to run, but actually ' + str(num_completed_tasks) + ' ran.')
 
-    schedule_thread = threading.Thread(target=run_scheduler, args=(success,))
     file_write_thread = threading.Thread(target=write_to_file)
+    schedule_thread = threading.Thread(target=run_scheduler, args=(success,))
     schedule_thread.start()
     file_write_thread.start()
     schedule_thread.join()
@@ -76,7 +76,7 @@ def test_sequential_scheduler_with_dynamic_source_code_edit(dev_str, call):
     scheduler = SequentialScheduler(schedule_filepath)
     helpers.remove_dirs()
 
-    src_filepath = os.path.relpath(os.path.join(THIS_DIR, '../demos/tf/full_tf_example.py'))
+    src_filepath = os.path.relpath(os.path.join(THIS_DIR, '../demos/full_example.py'))
     with open(src_filepath, 'r') as file:
         original_src_lines = file.readlines()
     msg_to_add = '"Finished complete example!"'

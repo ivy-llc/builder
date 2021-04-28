@@ -2,7 +2,7 @@
 import abc
 
 # local
-from ivy_builder.specs import DataLoaderSpec
+from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 
 
 class DataLoader(abc.ABC):

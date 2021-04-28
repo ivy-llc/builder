@@ -1,13 +1,15 @@
 # local
 from ivy.core.container import Container
 from ivy_builder.abstract.network import Network
-from ivy_builder.abstract.data_loader import DataLoader
+# ToDo: fix this import error
+# from ivy_builder.abstract.data_loader import DataLoader
 
 
 class TrainerSpec(Container):
 
     def __init__(self,
-                 data_loader: DataLoader,
+                 # data_loader: DataLoader,
+                 data_loader: None,
                  network: Network,
                  log_dir: str = 'log',
                  overwrite_log_dir: bool = False,
@@ -22,8 +24,6 @@ class TrainerSpec(Container):
                  starting_iteration: int = None,
                  total_iterations: int = 1e6,
                  initial_learning_rate: float = 1e-4,
-                 min_learning_rate: float = 6.25e-6,
-                 max_learning_rate: float = 1e-4,
                  custom_train_step: bool = False,
                  save_trace: bool = False,
                  auto_detect_weights: bool = True,
@@ -47,8 +47,6 @@ class TrainerSpec(Container):
         self['starting_iteration'] = starting_iteration
         self['total_iterations'] = total_iterations
         self['initial_learning_rate'] = initial_learning_rate
-        self['min_learning_rate'] = min_learning_rate
-        self['max_learning_rate'] = max_learning_rate
         self['custom_train_step'] = custom_train_step
         self['save_trace'] = save_trace
         self['auto_detect_weights'] = auto_detect_weights
@@ -115,14 +113,6 @@ class TrainerSpec(Container):
     @property
     def initial_learning_rate(self):
         return self['initial_learning_rate']
-
-    @property
-    def min_learning_rate(self):
-        return self['min_learning_rate']
-
-    @property
-    def max_learning_rate(self):
-        return self['max_learning_rate']
 
     @property
     def custom_train_step(self):

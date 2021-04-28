@@ -1,15 +1,19 @@
 # global
 import os
-import abc
+import ivy
 import git
+import abc
 import shutil
+import pathlib
 import logging
+import datetime
+import numpy as np
 from datetime import datetime
 
 # local
+from ivy_builder.abstract.network import Network
 from ivy_builder.specs.trainer_spec import TrainerSpec
 from ivy_builder.abstract.data_loader import DataLoader
-from ivy_builder.abstract.network import Network
 from ivy_builder.builder import spec_to_dict, save_dict_as_json
 
 logging.getLogger().setLevel(logging.INFO)
@@ -27,7 +31,58 @@ def _get_valid_filepath(base_dir, base_filename, file_type):
         return filepath
 
 
-class Trainer(abc.ABC):
+class Checkpoint:
+
+    def __init__(self, optimizer, net):
+        self._optimizer = optimizer
+        self._net = net
+
+    def restore(self, checkpoint_path):
+        checkpoint = ivy.Container.from_disk(checkpoint_path)
+        self._net.v = checkpoint.network.map(lambda x, kc: ivy.variable(x))
+        self._optimizer.set_state(checkpoint.optimizer)
+
+    @property
+    def optimizer(self):
+        return self._optimizer
+
+    @property
+    def net(self):
+        return self._net
+
+
+class CheckpointManager:
+
+    def __init__(self, checkpoint, directory, max_to_keep, step_counter):
+        self._checkpoint = checkpoint
+        self._directory = directory
+        self._max_to_keep = max_to_keep
+        self._step_counter = step_counter
+        self._get_latest_checkpoint_fpath()
+
+    def _get_latest_checkpoint_fpath(self):
+        if os.path.exists(self._directory):
+            contents = os.listdir(self._directory)
+            if len(contents) == 0:
+                self._latest_checkpoint_fpath = None
+            else:
+                contents.sort()
+                self._latest_checkpoint_fpath = os.path.join(self._directory, contents[-1])
+        else:
+            self._latest_checkpoint_fpath = None
+
+    @property
+    def latest_checkpoint_fpath(self):
+        return self._latest_checkpoint_fpath
+
+    def save(self, step):
+        checkpoint = ivy.Container({'network': self._checkpoint.net.v,
+                                    'optimizer': self._checkpoint.optimizer.state})
+        self._latest_checkpoint_fpath = os.path.join(self._directory, 'chkpt-{}.hdf5'.format(step))
+        checkpoint.to_disk(self._latest_checkpoint_fpath)
+
+
+class Trainer:
 
     def __init__(self, spec: TrainerSpec) -> None:
 
@@ -64,87 +119,57 @@ class Trainer(abc.ABC):
         # uninitialized variables
         self._starting_iteration = None
 
+        # trainer variables
+        self._global_step = 0
+        self._log_tensors = {}
+
+        # set seed
+        np.random.seed(self._spec.seed)
+        ivy.seed(self._spec.seed)
+
+        # uninitialized variables
+        self._log_dir_train = ''
+        self._vis_dir_train = ''
+        self._chkpt = None
+        self._chkpt_manager = None
+        self._summary_writers = dict()
+        self._log_dirs = list()
+
+        # profiling
+        self._save_trace = self._spec.save_trace
+
     # Abstract #
     # ---------#
 
     # Private Methods #
 
     @abc.abstractmethod
-    def _compute_cost(self, batch):
+    def _compute_cost(self, batch: ivy.Array, v: ivy.Container) -> ivy.Array:
         """
         compute training cost from input batch
         """
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _learning_rate_func(self, global_step):
+    def _learning_rate_func(self, global_step: ivy.Variable) -> ivy.Array:
         """
         compute learning rate, given global step
         """
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _write_scalar_summaries(self, data_loader: DataLoader, network: Network, training_batch,
-                                training_writer, global_step) -> None:
+    def _write_scalar_summaries(self, data_loader: DataLoader, network: Network, training_batch: ivy.Array,
+                                global_step: ivy.Variable) -> None:
         """
         write scalar summaries to disk, ready for tensorboard viewing
         """
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _write_image_summaries(self, data_loader: DataLoader, network: Network, training_batch,
-                               training_writer, global_step) -> None:
+    def _write_image_summaries(self, data_loader: DataLoader, network: Network, training_batch: ivy.Array,
+                               global_step: ivy.Variable) -> None:
         """
         write image summaries to disk, ready for tensorboard viewing
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def _train(self, vis_mode=False, starting_iteration=None, repeat_run=False):
-        """
-        Run the training
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def _initialize_model(self):
-        """
-        Initialize model, possibly loading from checkpoint.
-        :return starting iteration
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def _init_logger(self):
-        """
-        Initialize logger
-        """
-        raise NotImplementedError
-
-    # Public Methods #
-
-    @abc.abstractmethod
-    def save_model(self, saved_model_path: str, checkpoint_path: str = None) -> None:
-        """
-        saved the model in saved model format, from the specified checkpoint
-        :param saved_model_path: path to save the new saved model
-        :param checkpoint_path: path of the network weights in checkpoint files
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def save(self, checkpoint_path: str) -> None:
-        """
-        save the network weights in checkpoint file
-        :param checkpoint_path: path of the checkpoint file for saving the weights
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def restore(self, checkpoint_path: str) -> None:
-        """
-        restore the network weights from checkpoint file
-        :param checkpoint_path: path of the checkpoint file for loading the weights
         """
         raise NotImplementedError
 
@@ -153,23 +178,158 @@ class Trainer(abc.ABC):
     @property
     @abc.abstractmethod
     def _optimizer(self):
-        """
-        get scheduler
-        """
         raise NotImplementedError
-
-    # Setters #
-    # --------#
 
     @_optimizer.setter
     def _optimizer(self, value):
-        """
-        set scheduler
-        """
         self._optimizer = value
+
+    # Initialization #
+    # ---------------#
+
+    def _init_checkpoint_manager(self):
+        pathlib.Path(os.path.join(self._spec.log_dir, 'chkpts')).mkdir(parents=True, exist_ok=True)
+        self._chkpt = Checkpoint(optimizer=self._optimizer, net=self._spec.network)
+        self._chkpt_manager = CheckpointManager(self._chkpt, os.path.join(self._spec.log_dir, 'chkpts'), 20,
+                                                step_counter=self._global_step)
+
+    def _make_log_dirs(self):
+        for log_dir in self._log_dirs:
+            pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
+
+    def _init_log_dirs(self):
+
+        self._log_dir_train = os.path.join(self._spec.log_dir, 'log', 'scalars', 'training')
+
+        self._vis_dir_train = os.path.join(self._spec.log_dir, 'log', 'images', 'training')
+
+        self._log_dirs = [
+            self._log_dir_train,
+            self._vis_dir_train]
+
+        self._make_log_dirs()
+
+    def _init_logger(self):
+        self._init_log_dirs()
+
+    def _log_scalars(self):
+        self._write_scalar_summaries(self._spec.data_loader, self._spec.network, self._training_batch,
+                                     self._global_step)
+
+    def _save(self):
+        self._chkpt_manager.save(self._global_step)
+        logging.info('network checkpoint saved @ step ' + str(self._global_step))
+
+    def _initialize_model(self, checkpoint_path=None):
+        starting_iteration = 0
+        self._init_checkpoint_manager()
+        if not checkpoint_path:
+            checkpoint_path = self._chkpt_manager.latest_checkpoint_fpath
+        if self._spec.ld_chkpt is True and checkpoint_path is None:
+            raise Exception('Unable to load checkpoint, no checkpoint files found.')
+        if self._spec.ld_chkpt is True and checkpoint_path is not None:
+            load_status = self._chkpt.restore(checkpoint_path)
+            logging.info('loaded checkpoints from {}'.format(checkpoint_path))
+            starting_iteration = int(checkpoint_path.split('-')[-1].split('.')[0])
+            logging.info('#--------------#\n# MODEL LOADED #\n#--------------#')
+        else:
+            logging.info('#-------------#\n# MODEL BUILT #\n#-------------#')
+        if isinstance(self._spec.starting_iteration, int):
+            return self._spec.starting_iteration
+        return starting_iteration
+
+    # Training #
+    # ---------#
+
+    def _train_step(self, with_output=False):
+        training_batch = self._spec.data_loader.get_next_training_batch()
+        cost, grads = ivy.execute_with_gradients(lambda v: self._compute_cost(training_batch, v), self._spec.network.v)
+        self._spec.network.v = self._optimizer.step(self._spec.network.v, grads)
+        if with_output:
+            return training_batch, cost
+        return cost
+
+    def _data_load_and_train_step(self, vis_mode, log_scalars_on_this_it, log_viz_on_this_it):
+        if vis_mode:
+            self._training_batch = self._spec.data_loader.get_next_training_batch()
+        else:
+            if log_scalars_on_this_it or log_viz_on_this_it:
+                self._training_batch, self._total_cost = \
+                    self._train_step(with_output=True)
+            else:
+                self._total_cost = self._train_step()
+
+    def _train(self, vis_mode=False, starting_iteration=None, repeat_run=False):
+
+        if starting_iteration:
+            self._starting_iteration = starting_iteration
+
+        if repeat_run:
+            self._total_iterations = self._spec.total_iterations + self._starting_iteration
+        else:
+            self._total_iterations = self._spec.total_iterations
+
+        self._global_step = self._starting_iteration
+        self._learning_rate = self._learning_rate_func(self._global_step)
+
+        if self._starting_iteration == self._total_iterations:
+            return self._starting_iteration
+
+        if vis_mode:
+            vis_freq = 1
+        else:
+            vis_freq = self._spec.vis_freq
+
+        local_counter = 0
+        tracing = False
+
+        while self._global_step < int(self._total_iterations) or int(self._total_iterations) == -1:
+
+            log_scalars_on_this_it = self._spec.log_scalars and self._global_step % self._spec.log_freq == 0 \
+                                     and self._spec.log_freq > 0 and not vis_mode
+            log_viz_on_this_it = self._spec.log_vis and self._global_step % vis_freq == 0 and self._spec.vis_freq > 0
+
+            self._data_load_and_train_step(vis_mode, log_scalars_on_this_it, log_viz_on_this_it)
+
+            if log_scalars_on_this_it:
+                self._log_scalars()
+            if log_viz_on_this_it or vis_mode:
+                self._write_image_summaries(self._spec.data_loader, self._spec.network, self._training_batch,
+                                            self._global_step)
+            if self._global_step % self._spec.save_freq == 0 and self._spec.save_freq > 0 and not vis_mode:
+                self._save()
+
+            self._global_step += 1
+            local_counter += 1
+            self._learning_rate = self._learning_rate_func(self._global_step)
+
+            if vis_mode:
+                input('press enter to visualise another example')
+
+        return self._global_step
 
     # Public Methods #
     # ---------------#
+
+    def save(self, checkpoint_path: str) -> None:
+        """
+        save the network weights and optimizer state in checkpoint file
+        :param checkpoint_path: path of the checkpoint file for saving the weights and optimizer state
+        """
+        checkpoint = ivy.Container({'network': self._spec.network.v,
+                                    'optimizer': self._optimizer.state})
+        os.makedirs('/'.join(checkpoint_path.split('/')[:-1]), exist_ok=True)
+        checkpoint.to_disk(checkpoint_path)
+
+    def restore(self, checkpoint_path: str, global_step: int = None) -> None:
+        """
+        restore the network weights from checkpoint file
+        :param checkpoint_path: path of the checkpoint file for loading the weights
+        :param global_step: training step to start at for continued training
+        """
+        self._chkpt.restore(checkpoint_path)
+        if global_step is not None:
+            self._global_step = global_step
 
     def setup(self) -> None:
         """
@@ -189,3 +349,10 @@ class Trainer(abc.ABC):
         run the trainer, but without weight optimization. Only used for tensorboard visualization
         """
         self._train(True)
+
+    # Getters #
+    # --------#
+
+    @property
+    def learning_rate(self):
+        return self._learning_rate_func(self._global_step)
