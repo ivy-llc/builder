@@ -109,6 +109,7 @@ class JSONDataLoader(DataLoader):
         return grouped_conts
 
     def _get_containers_w_filepath_img_entries_as_tensor_slices(self, container_filepaths):
+        # noinspection PyUnusedLocal
         def _to_tensor(x, key_chain=''):
             if type(x) == str:
                 x = [[list(x.encode())]]
@@ -164,7 +165,7 @@ class JSONDataLoader(DataLoader):
 
         gather_idxs_list = list()
         for w_idx in window_idxs_single:
-            gather_idxs_list.append(ivy.expand_dims(ivy.arange(x_[0] + self._window_size, x_[0], 1), 0))
+            gather_idxs_list.append(ivy.expand_dims(ivy.arange(w_idx[0] + self._window_size, w_idx[0], 1), 0))
         gather_idxs = ivy.concatenate(gather_idxs_list, 0)
         gather_idxs = ivy.reshape(gather_idxs, (-1, 1))
         num_valid_windows_for_seq = ivy.shape(window_idxs_single)[0:1]
@@ -188,18 +189,22 @@ class JSONDataLoader(DataLoader):
 
     # json to container
 
-    def _load_json_files(self, json_filepaths):
-        return tf.map_fn(
-            lambda json_path: tf.io.read_file(json_path) if json_path != '' else '', json_filepaths,
-            parallel_iterations=self._parallel_window_iterations)
+    @staticmethod
+    def _load_json_files(containers):
+        read_files = list()
+        for j_fpath in containers.fpaths:
+            read_file = tf.io.read_file(j_fpath) if j_fpath != '' else ''
+            read_files.append(ivy.expand_dims(read_file, 0))
+        return ivy.Container({'json_str': ivy.concatenate(read_files, 0)})
 
-    def _parse_json_strings(self, json_strings):
-        json_strings_stack = ivy.unstack(json_strings, 0)
-        highest_idx_entry = ivy.reduce_sum(ivy.cast(json_strings != '', 'int32'))[0] - 1
+    def _parse_json_strings(self, containers):
+        json_strs = containers.json_str
+        json_strings_stack = ivy.unstack(json_strs, 0)
+        highest_idx_entry = ivy.reduce_sum(ivy.cast(json_strs != '', 'int32'))[0] - 1
         json_container_stack = [Container(tfio.experimental.serialization.decode_json(
             json_str, self._container_tensor_spec)).slice(0) if json_str != '' else
                                 Container(tfio.experimental.serialization.decode_json(
-                                    json_strings[highest_idx_entry], self._container_tensor_spec)).slice(0)
+                                    json_strs[highest_idx_entry], self._container_tensor_spec)).slice(0)
                                 for json_str in json_strings_stack]
         return Container.concat(json_container_stack, 0)
 
@@ -276,11 +281,11 @@ class JSONDataLoader(DataLoader):
             first_container_dict = json.load(fp)
         first_container = Container(first_container_dict)
 
+        # noinspection PyUnusedLocal
         def _to_tensor_spec(value, key_chain=''):
             value_as_tensor = ivy.array(value)
             return tf.TensorSpec(value_as_tensor.shape, value_as_tensor.dtype)
 
-        # self._container_tensor_spec = first_container.map(_to_tensor_spec)
         for key, val in first_container.to_iterator():
             if type(val) == str:
                 full_filepath = os.path.abspath(os.path.join(self._container_data_dir, val))
@@ -307,10 +312,9 @@ class JSONDataLoader(DataLoader):
                 [c.slice(0) for c in container_slices.unstack(0, container_slices.size)], 0),
                 'base', container_slices.size)
         else:
+            self._container_tensor_spec = first_container.map(_to_tensor_spec)
             # load containers with filepath entries
-            dataset = Dataset(ivy.Container.list_stack(
-                [c.slice(0) for c in container_filepaths.unstack(0, container_filepaths.size)], 0),
-                'base', container_filepaths.size)
+            dataset = Dataset(ivy.Container({'fpaths': container_filepaths}), 'base', len(container_filepaths))
             dataset = dataset.map('loaded_json', self._load_json_files, self._num_workers)
             dataset = dataset.map('parsed_json', self._parse_json_strings, self._num_workers)
             if 'unused_key_chains' in self._spec:
@@ -318,7 +322,7 @@ class JSONDataLoader(DataLoader):
             if self._first_frame_validity_fn is not None:
                 dataset = dataset.map('valid_first_frames', lambda x: self._first_frame_validity_fn(x, None))
         dataset = dataset.map('windowed_container',
-                              lambda x: self._group_container_into_windowed_container(x),
+                              lambda x_: self._group_container_into_windowed_container(x_),
                               self._num_workers)
         dataset = dataset.unbatch('unbatched')
         if self._spec.shuffle_buffer_size > 0:
