@@ -69,7 +69,7 @@ class Dataset:
             slice_obj = slice(0, slice_size, slice_obj.step)
         return Dataset._slice_dataset(slice_obj, sliced_dataset)
 
-    def _get_item(self, slice_obj):
+    def _get_base_item(self, slice_obj):
         base_dataset = self._slice_base_dataset(slice_obj, self._dataset)
         if self._trans_fn is not None:
             if self._elementwise_query_fn:
@@ -79,24 +79,35 @@ class Dataset:
             return self._trans_fn(base_dataset)
         return base_dataset
 
+    def _get_item(self, base_slice_obj, slice_obj):
+        if isinstance(base_slice_obj, tuple):
+            item = ivy.Container.list_join((self._get_base_item(base_slice_obj[0]),
+                                            self._get_base_item(base_slice_obj[1])))
+        else:
+            item = self._get_base_item(base_slice_obj)
+        return self._slice_dataset(slice_obj, item, self._size)
+
+    def _wrap_slice_obj(self, slice_obj):
+        if isinstance(slice_obj, numbers.Number):
+            return [slice_obj % self._size]*2
+        else:
+            so_start = slice_obj.start % self._size
+            so_stop = slice_obj.stop % self._size if slice_obj.stop != math.ceil(self.size) else slice_obj.stop
+            slice_obj = slice(so_start, so_stop, 1)
+            base_slice_obj = slice_obj
+            if so_stop < so_start:
+                slice_obj_0 = slice(so_start, self._size, 1)
+                slice_obj_1 = slice(0, so_stop, 1)
+                base_slice_obj = (slice_obj_0, slice_obj_1)
+            return base_slice_obj, slice_obj
+
     # Public #
     # -------#
 
     def __getitem__(self, slice_obj):
-        if isinstance(slice_obj, numbers.Number):
-            slice_obj = slice_obj % self.size
-            return self._slice_dataset(slice_obj, self._get_item(slice_obj), self._size)
-        else:
-            so_start = slice_obj.start % self.size
-            so_stop = slice_obj.stop % self.size if slice_obj.stop != math.ceil(self.size) else slice_obj.stop
-            slice_obj = slice(so_start, so_stop, 1)
-            if so_stop < so_start:
-                slice_obj_0 = slice(so_start, self.size, 1)
-                slice_obj_1 = slice(0, so_stop, 1)
-                item = ivy.Container.list_join((self._get_item(slice_obj_0), self._get_item(slice_obj_1)))
-            else:
-                item = self._get_item(slice_obj)
-            return self._slice_dataset(slice_obj, item, self.size)
+        base_slice_obj, slice_obj = self._wrap_slice_obj(slice_obj)
+        # ToDo: implement the caching here
+        return self._get_item(base_slice_obj, slice_obj)
 
     def map(self, name, map_func, num_parallel_calls=1, base_slice_fn=None):
         return Dataset(dataset=self,
@@ -183,12 +194,6 @@ class Dataset:
                        name=name,
                        size=self._size,
                        trans_fn=lambda cont: cont.shuffle())
-
-    def apply(self, name, transformation_func, size):
-        # ToDo: implement
-        return Dataset(dataset=self,
-                       name=name,
-                       size=self._size)
 
     def prefetch(self, name, buffer_size):
         # ToDo: implement
