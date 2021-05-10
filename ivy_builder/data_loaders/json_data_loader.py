@@ -6,8 +6,6 @@ import json
 import logging
 import numpy as np
 import multiprocessing
-import tensorflow as tf
-import tensorflow_io as tfio
 from ivy_builder.dataset import Dataset
 from ivy.core.container import Container
 from ivy_builder.specs import DataLoaderSpec
@@ -80,6 +78,12 @@ class JSONDataLoader(DataLoader):
     # ---------------#
 
     @staticmethod
+    def _to_tensor(x, key_chain=''):
+        if type(x) == str:
+            x = [[list(x.encode())]]
+        return ivy.array(x, dtype_str='uint8')
+
+    @staticmethod
     def _load_container_filepaths_as_lists(cont_dir, starting_example, ending_example):
 
         if not os.path.isdir(cont_dir):
@@ -110,11 +114,6 @@ class JSONDataLoader(DataLoader):
 
     def _get_containers_w_filepath_img_entries_as_tensor_slices(self, container_filepaths):
         # noinspection PyUnusedLocal
-        def _to_tensor(x, key_chain=''):
-            if type(x) == str:
-                x = [[list(x.encode())]]
-            return ivy.array(x, dtype_str='uint8')
-
         all_containers = list()
         logging.info('loading containers into RAM...')
         num_seqs = len(container_filepaths)
@@ -131,7 +130,7 @@ class JSONDataLoader(DataLoader):
                     break
                 with open(filepath) as fp:
                     container_dict = json.load(fp)
-                container = Container(container_dict).map(_to_tensor)
+                container = Container(container_dict).map(self._to_tensor)
                 window_containers.append(container)
             window_containers += [container] * (max_seq_len - seq_len - 1)  # padding for shorter sequences
             joined_window_containers = Container.concat(window_containers, 1)
@@ -193,19 +192,21 @@ class JSONDataLoader(DataLoader):
     def _load_json_files(containers):
         read_files = list()
         for j_fpath in containers.fpaths:
-            read_file = tf.io.read_file(j_fpath) if j_fpath != '' else ''
-            read_files.append(ivy.expand_dims(read_file, 0))
-        return ivy.Container({'json_str': ivy.concatenate(read_files, 0)})
+            if j_fpath != '':
+                with open(j_fpath, 'r') as file:
+                    read_str = file.read()
+            else:
+                read_str = ''
+            read_files.append(read_str)
+        return ivy.Container({'json_str': read_files})
 
     def _parse_json_strings(self, containers):
-        json_strs = containers.json_str
-        json_strings_stack = ivy.unstack(json_strs, 0)
-        highest_idx_entry = ivy.reduce_sum(ivy.cast(json_strs != '', 'int32'))[0] - 1
-        json_container_stack = [Container(tfio.experimental.serialization.decode_json(
-            json_str, self._container_tensor_spec)).slice(0) if json_str != '' else
-                                Container(tfio.experimental.serialization.decode_json(
-                                    json_strs[highest_idx_entry], self._container_tensor_spec)).slice(0)
-                                for json_str in json_strings_stack]
+        json_strings_stack = containers.json_str
+        highest_idx_entry = len([item for item in containers.json_str if item != '']) - 1
+        json_container_stack = [Container(json.loads(json_str)).map(self._to_tensor).slice(0)
+                                if json_str != '' else
+                                Container(json.loads(json_strings_stack[highest_idx_entry])).map(
+                                    self._to_tensor).slice(0) for json_str in json_strings_stack]
         return Container.concat(json_container_stack, 0)
 
     # container pruning
@@ -281,11 +282,6 @@ class JSONDataLoader(DataLoader):
             first_container_dict = json.load(fp)
         first_container = Container(first_container_dict)
 
-        # noinspection PyUnusedLocal
-        def _to_tensor_spec(value, key_chain=''):
-            value_as_tensor = ivy.array(value)
-            return tf.TensorSpec(value_as_tensor.shape, value_as_tensor.dtype)
-
         for key, val in first_container.to_iterator():
             if type(val) == str:
                 full_filepath = os.path.abspath(os.path.join(self._container_data_dir, val))
@@ -312,7 +308,6 @@ class JSONDataLoader(DataLoader):
                 [c.slice(0) for c in container_slices.unstack(0, container_slices.size)], 0),
                 'base', container_slices.size)
         else:
-            self._container_tensor_spec = first_container.map(_to_tensor_spec)
             # load containers with filepath entries
             dataset = Dataset(ivy.Container({'fpaths': container_filepaths}), 'base', len(container_filepaths))
             dataset = dataset.map('loaded_json', self._load_json_files, self._num_workers)
@@ -320,7 +315,7 @@ class JSONDataLoader(DataLoader):
             if 'unused_key_chains' in self._spec:
                 dataset = dataset.map('keychain_pruned', self._prune_unused_key_chains, self._num_workers)
             if self._first_frame_validity_fn is not None:
-                dataset = dataset.map('valid_first_frames', lambda x: self._first_frame_validity_fn(x, None))
+                dataset = dataset.map('valid_first_frames', lambda x_: self._first_frame_validity_fn(x_, None))
         dataset = dataset.map('windowed_container',
                               lambda x_: self._group_container_into_windowed_container(x_),
                               self._num_workers)
@@ -335,9 +330,6 @@ class JSONDataLoader(DataLoader):
         if self._spec.post_proc_fn is not None:
             dataset = dataset.map(map_func=self._spec.post_proc_fn, num_parallel_calls=self._num_workers)
         # dataset = dataset.prefetch(2)
-        if self._spec.prefetch_to_gpu:
-            # dataset = dataset.apply(tf.data.experimental.prefetch_to_device('/GPU:0', 1))
-            pass
         if not ('single_pass' in self._spec and self._spec.single_pass):
             # dataset = dataset.repeat()
             pass

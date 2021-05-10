@@ -1,9 +1,7 @@
 # global
 import os
-import pytest
 
 # local
-import ivy_tests.helpers as helpers
 from ivy_builder.specs.dataset_dirs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
@@ -20,7 +18,7 @@ def test_json_loader(dev_str, f, call):
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 2])
     data_loader_spec = DataLoaderSpec(dataset_spec, None, shuffle_buffer_size=0, batch_size=3,
                                       window_size=2, num_sequences_to_use=6, num_training_sequences=3,
-                                      post_proc_fn=None, prefetch_to_gpu=False, preload_containers=True)
+                                      post_proc_fn=None, preload_containers=True)
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -35,14 +33,10 @@ def test_json_loader(dev_str, f, call):
         assert valid_batch.actions.shape == (3, 2, 6)
         assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
 
-    if call is not helpers.tf_call:
-        # ivy builder currently only supports tensorflow
-        return
-
     # test keychain pruning, no container pre-loading, and padded windowing
     data_loader_spec = DataLoaderSpec(dataset_spec, None, shuffle_buffer_size=0, batch_size=3,
                                       window_size=3, num_sequences_to_use=6, num_training_sequences=3,
-                                      post_proc_fn=None, prefetch_to_gpu=False, preload_containers=False,
+                                      post_proc_fn=None, preload_containers=False,
                                       unused_key_chains=['observations/image/ego/ego_cam_px/depth'])
     data_loader = JSONDataLoader(data_loader_spec)
 
