@@ -27,8 +27,24 @@ class Dataset:
     # --------#
 
     @staticmethod
+    def _ensure_number_is_int(val):
+        if val % 1 > 1e-6:
+            raise Exception('Trying to slice ivy Container with non-integer slice {}'.format(val))
+        return int(round(val))
+
+    @staticmethod
     def _slice_dataset(slice_obj, dataset):
         if isinstance(dataset, ivy.Container):
+            if isinstance(slice_obj, numbers.Number):
+                slice_obj = Dataset._ensure_number_is_int(slice_obj)
+            else:
+                so_start = Dataset._ensure_number_is_int(slice_obj.start)
+                so_stop = Dataset._ensure_number_is_int(slice_obj.stop)
+                if slice_obj.step is None:
+                    so_step = 1
+                else:
+                    so_step = Dataset._ensure_number_is_int(slice_obj.step)
+                slice_obj = slice(so_start, so_stop, so_step)
             return dataset.slice(slice_obj)
         else:
             return dataset[slice_obj]
