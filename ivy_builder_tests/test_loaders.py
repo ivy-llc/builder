@@ -1,10 +1,7 @@
 # global
 import os
-import pytest
-import numpy as np
 
 # local
-import ivy_tests.helpers as helpers
 from ivy_builder.specs.dataset_dirs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
@@ -12,10 +9,6 @@ from ivy_builder.data_loaders.json_data_loader import JSONDataLoader
 
 
 def test_json_loader(dev_str, f, call):
-
-    if call is not helpers.tf_call:
-        # ivy builder currently onlu supports tensorflow
-        pytest.skip()
 
     # dataset dir
     current_dir = os.path.dirname(os.path.realpath(__file__))

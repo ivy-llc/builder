@@ -1,5 +1,6 @@
 # global
 import os
+import cv2
 import ivy
 import json
 import logging
@@ -37,8 +38,7 @@ class JSONDataLoader(DataLoader):
 
         # data loader specification
         self._spec = data_loader_spec
-        self._container_data_dir = os.path.join(self._spec.dataset_spec.dirs.dataset_dir, 'containers')
-        self._container_data_dir_tensor = tf.constant(self._container_data_dir + '/', tf.string)
+        self._container_data_dir = os.path.join(self._spec.dataset_spec.dirs.dataset_dir, 'containers/')
 
         # variables
         self._window_size = self._spec.window_size
@@ -111,8 +111,8 @@ class JSONDataLoader(DataLoader):
     def _get_containers_w_filepath_img_entries_as_tensor_slices(self, container_filepaths):
         def _to_tensor(x, key_chain=''):
             if type(x) == str:
-                x = [[x]]
-            return ivy.array(x)
+                x = [[list(x.encode())]]
+            return ivy.array(x, dtype_str='uint8')
 
         all_containers = list()
         logging.info('loading containers into RAM...')
@@ -145,15 +145,13 @@ class JSONDataLoader(DataLoader):
             return ivy.reshape(ivy.gather_nd(x, self._gather_idxs),
                                [self._windows_per_seq, self._window_size] + x.shape[1:])
         else:
-            num_windows_in_seq = ivy.maximum(seq_info.length[0] - self._window_size + 1, 1)
+            num_windows_in_seq = int(ivy.to_numpy(ivy.maximum(seq_info.length[0] - self._window_size + 1, 1)))
             window_idxs_in_seq = ivy.arange(num_windows_in_seq, 0, 1)
             gather_idxs = ivy.tile(ivy.reshape(ivy.arange(self._window_size, 0, 1), (1, self._window_size)),
                                    (num_windows_in_seq, 1)) + ivy.expand_dims(window_idxs_in_seq, -1)
             gather_idxs_flat = ivy.reshape(gather_idxs, (self._window_size * num_windows_in_seq, 1))
             return ivy.reshape(ivy.gather_nd(x, gather_idxs_flat),
-                               ivy.cast(ivy.concatenate((ivy.expand_dims(num_windows_in_seq, 0),
-                                                         ivy.array([self._window_size]),
-                                                         ivy.shape(x)[1:]), 0), 'int32'))
+                               (num_windows_in_seq, self._window_size) + x.shape[1:])
 
     def _group_tensor_into_windowed_tensor(self, x, valid_first_frame):
         if self._window_size == 1:
@@ -163,8 +161,12 @@ class JSONDataLoader(DataLoader):
         if ivy.reduce_sum(ivy.cast(valid_first_frame_pruned, 'int32'))[0] == 0:
             valid_first_frame_pruned = ivy.cast(ivy.one_hot(0, self._sequence_lengths - self._window_size + 1), 'bool')
         window_idxs_single = ivy.indices_where(valid_first_frame_pruned)
-        gather_idxs = ivy.reshape(tf.map_fn(lambda x_: ivy.arange(x_[0] + self._window_size, x_[0], 1),
-                                            window_idxs_single), (-1, 1))
+
+        gather_idxs_list = list()
+        for w_idx in window_idxs_single:
+            gather_idxs_list.append(ivy.expand_dims(ivy.arange(x_[0] + self._window_size, x_[0], 1), 0))
+        gather_idxs = ivy.concatenate(gather_idxs_list, 0)
+        gather_idxs = ivy.reshape(gather_idxs, (-1, 1))
         num_valid_windows_for_seq = ivy.shape(window_idxs_single)[0:1]
         return ivy.reshape(ivy.gather_nd(x, gather_idxs),
                            ivy.concatenate((num_valid_windows_for_seq,
@@ -211,16 +213,26 @@ class JSONDataLoader(DataLoader):
     # images
 
     def _uint8_fn(self, filepaths_in_window):
-        return ivy.cast(tf.map_fn(
-            lambda img_path: tf.image.decode_image(tf.io.read_file(
-                tf.strings.join([self._container_data_dir_tensor, img_path]))), filepaths_in_window, dtype=tf.uint8,
-            parallel_iterations=self._parallel_window_iterations), 'float32') / 255
+        imgs = list()
+        # ToDo: replace this with map_fn function once implemented
+        for filepath in filepaths_in_window:
+            str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
+            full_path = os.path.join(self._container_data_dir, str_path)
+            img_rgba = cv2.imread(full_path, -1)
+            img = ivy.array(np.expand_dims(img_rgba.astype(np.float32), 0))/255
+            imgs.append(img)
+        return ivy.concatenate(imgs, 0)
 
     def _depth_fn(self, filepaths_in_window):
-        return tf.bitcast(tf.map_fn(
-            lambda depth_img_path: tf.image.decode_image(tf.io.read_file(tf.strings.join(
-                [self._container_data_dir_tensor, depth_img_path])), channels=4), filepaths_in_window, dtype=tf.uint8,
-            parallel_iterations=self._parallel_window_iterations), tf.float32)
+        imgs = list()
+        # ToDo: replace this with map_fn function once implemented
+        for filepath in filepaths_in_window:
+            str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
+            full_path = os.path.join(self._container_data_dir, str_path)
+            img_rgba = cv2.imread(full_path, -1)
+            img = ivy.array(np.frombuffer(img_rgba.tobytes(), np.float32).reshape((1,) + img_rgba.shape[:-1]))
+            imgs.append(img)
+        return ivy.concatenate(imgs, 0)
 
     def _str_fn(self, x, key_chain=''):
         if 'image' in key_chain:
@@ -249,9 +261,12 @@ class JSONDataLoader(DataLoader):
             self._windows_per_seq = self._sequence_lengths - self._window_size + 1
             # windowing values
             window_idxs_per_seq = ivy.reshape(ivy.arange(self._windows_per_seq, 0, 1), (self._windows_per_seq, 1))
+            gather_idxs_list = list()
+            for x in window_idxs_per_seq:
+                gather_idxs_list.append(ivy.expand_dims(ivy.arange(x[0] + self._window_size, x[0], 1), 0))
+            gather_idxs = ivy.concatenate(gather_idxs_list, 0)
             self._gather_idxs = \
-                ivy.reshape(tf.map_fn(lambda x: ivy.arange(x[0] + self._window_size, x[0], 1), window_idxs_per_seq),
-                            (self._windows_per_seq * self._window_size, 1)).numpy().tolist()
+                ivy.reshape(gather_idxs, (self._windows_per_seq * self._window_size, 1)).numpy().tolist()
         else:
             self._sequence_lengths = [len(item) for item in container_filepaths]
 
@@ -265,7 +280,7 @@ class JSONDataLoader(DataLoader):
             value_as_tensor = ivy.array(value)
             return tf.TensorSpec(value_as_tensor.shape, value_as_tensor.dtype)
 
-        self._container_tensor_spec = first_container.map(_to_tensor_spec)
+        # self._container_tensor_spec = first_container.map(_to_tensor_spec)
         for key, val in first_container.to_iterator():
             if type(val) == str:
                 full_filepath = os.path.abspath(os.path.join(self._container_data_dir, val))
@@ -317,7 +332,8 @@ class JSONDataLoader(DataLoader):
             dataset = dataset.map(map_func=self._spec.post_proc_fn, num_parallel_calls=self._num_workers)
         # dataset = dataset.prefetch(2)
         if self._spec.prefetch_to_gpu:
-            dataset = dataset.apply(tf.data.experimental.prefetch_to_device('/GPU:0', 1))
+            # dataset = dataset.apply(tf.data.experimental.prefetch_to_device('/GPU:0', 1))
+            pass
         if not ('single_pass' in self._spec and self._spec.single_pass):
             # dataset = dataset.repeat()
             pass
