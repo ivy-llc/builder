@@ -159,7 +159,7 @@ class TestUnbatch:
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': x})
         dataset = Dataset(dataset_container, 'base', dataset_container.size)
-        self._dataset = dataset.unbatch('unbatched', 9)
+        self._dataset = dataset.unbatch('unbatched')
 
     @pytest.mark.parametrize(
         "array_shape", [[3, 1], [3]])
@@ -212,7 +212,7 @@ class TestUnbatchAndBatch:
                    ivy.array([2, 3, 4, 5, 6, 7, 8, 9])]
         dataset_container = ivy.Container({'x': self._x})
         dataset = Dataset(dataset_container, 'base', dataset_container.size)
-        dataset = dataset.unbatch('unbatched', 10)
+        dataset = dataset.unbatch('unbatched')
         self._dataset = dataset.batch('batched', 3)
 
     def test_single(self, dev_str, f, call):

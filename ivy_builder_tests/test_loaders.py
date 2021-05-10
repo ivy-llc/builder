@@ -1,23 +1,19 @@
 # global
 import os
 import pytest
+import numpy as np
 
 # local
-import ivy.tensorflow
 import ivy_tests.helpers as helpers
-
 from ivy_builder.specs.dataset_dirs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
-
-from ivy_builder.data_loaders.tf_data_loader import TFDataLoader
-
-DataLoaders = {ivy.tensorflow: TFDataLoader}
+from ivy_builder.data_loaders.json_data_loader import JSONDataLoader
 
 
-def test_loaders(dev_str, f, call):
+def test_json_loader(dev_str, f, call):
 
-    if call not in [helpers.tf_call, helpers.tf_graph_call]:
+    if call is not helpers.tf_call:
         # ivy builder currently onlu supports tensorflow
         pytest.skip()
 
@@ -32,12 +28,11 @@ def test_loaders(dev_str, f, call):
                                       post_proc_fn=None, prefetch_to_gpu=False, preload_containers=True)
 
     # data loader
-    data_loader_class = DataLoaders[f]
-    data_loader = data_loader_class(data_loader_spec)
+    data_loader = JSONDataLoader(data_loader_spec)
 
     # testing
     for i in range(2):
-        train_batch = data_loader.get_next_batch('training')
+        train_batch = data_loader._training_dataset[1]
         assert train_batch.actions.shape == (3, 2, 6)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
@@ -46,11 +41,12 @@ def test_loaders(dev_str, f, call):
         assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
 
     # test keychain pruning, no container pre-loading, and padded windowing
+    '''
     data_loader_spec = DataLoaderSpec(dataset_spec, None, shuffle_buffer_size=0, batch_size=3,
                                       window_size=3, num_sequences_to_use=6, num_training_sequences=3,
                                       post_proc_fn=None, prefetch_to_gpu=False, preload_containers=False,
                                       unused_key_chains=['observations/image/ego/ego_cam_px/depth'])
-    data_loader = data_loader_class(data_loader_spec)
+    data_loader = JSONDataLoader(data_loader_spec)
 
     train_batch = data_loader.get_next_batch('training')
     assert train_batch.actions.shape == (3, 3, 6)
@@ -60,3 +56,4 @@ def test_loaders(dev_str, f, call):
     valid_batch = data_loader.get_next_batch('validation')
     assert valid_batch.actions.shape == (3, 3, 6)
     assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 3, 32, 32, 3)
+    '''

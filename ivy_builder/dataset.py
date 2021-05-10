@@ -77,7 +77,7 @@ class Dataset:
             if so_stop < so_start:
                 slice_obj_0 = slice(so_start, self.size, 1)
                 slice_obj_1 = slice(0, so_stop, 1)
-                item = ivy.Container.list_join((self._get_item(slice_obj_0), self._get_item(slice_obj_1)), 0)
+                item = ivy.Container.list_join((self._get_item(slice_obj_0), self._get_item(slice_obj_1)))
             else:
                 item = self._get_item(slice_obj)
             return self._slice_dataset(slice_obj, item, self.size)
@@ -85,11 +85,11 @@ class Dataset:
     def map(self, name, map_func, num_parallel_calls=1, base_slice_fn=None):
         return Dataset(dataset=self,
                        name=name,
-                       size=self._dataset.size,
+                       size=self._size,
                        base_slice_fn=base_slice_fn,
                        trans_fn=map_func)
 
-    def batch(self, name, batch_size, drop_remainder=False):
+    def batch(self, name, batch_size):
         def batch_array(x, _):
             return [ivy.concatenate([ivy.expand_dims(item, 0) for item in x[i*batch_size:i*batch_size+batch_size]], 0)
                     for i in range(int(len(x)/batch_size))]
@@ -114,15 +114,15 @@ class Dataset:
                        trans_fn=batch_cont,
                        elementwise_query_fn=False)
 
-    def unbatch(self, name, size):
+    def unbatch(self, name):
 
         # ToDo: make this more efficient, without needing to traverse entire dataset during initialization
         #  this can be achieved with extra optional input for the leading sizes of each entry in the dataset
         unbatch_slice_dict = dict()
         slice_dict = dict()
         size_so_far = 0
-        for i in range(self._dataset.size):
-            data = Dataset._slice_dataset(i, self._dataset)
+        for i in range(self._size):
+            data = Dataset._slice_dataset(i, self)
             for j in range(data.size):
                 unbatch_slice_dict[size_so_far + j] = i
                 slice_dict[size_so_far + j] = j
@@ -131,13 +131,12 @@ class Dataset:
 
         def base_slice_fn(slice_obj, dataset):
             if isinstance(slice_obj, numbers.Number):
-                return Dataset._slice_dataset(unbatch_slice_dict[slice_obj], dataset)
-            else:
-                so_start = unbatch_slice_dict[slice_obj.start]
-                so_stop = unbatch_slice_dict[slice_obj.stop - 1] + 1
-                so_stop = so_stop + 1 if so_stop == so_start else so_stop
-                so = slice(so_start, so_stop, 1)
-                return Dataset._slice_dataset(so, dataset)
+                slice_obj = slice(slice_obj, slice_obj + 1, 1)
+            so_start = unbatch_slice_dict[slice_obj.start]
+            so_stop = unbatch_slice_dict[slice_obj.stop - 1] + 1
+            so_stop = so_stop + 1 if so_stop == so_start else so_stop
+            so = slice(so_start, so_stop, 1)
+            return Dataset._slice_dataset(so, dataset)
 
         def unbatch_fn(cont):
             return cont.map(lambda x, kc: [c for o in [ivy.unstack(item, 0) for item in x] for c in o])
@@ -157,7 +156,7 @@ class Dataset:
 
         return Dataset(dataset=self,
                        name=name,
-                       size=size,
+                       size=unrolled_size,
                        base_slice_fn=base_slice_fn,
                        trans_fn=unbatch_fn,
                        slice_fn=slice_fn,

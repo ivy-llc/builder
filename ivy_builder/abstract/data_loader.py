@@ -27,6 +27,12 @@ class DataLoader(abc.ABC):
         """
         raise NotImplementedError
 
+    # Private #
+    # --------#
+
+    def set_base(self, base):
+        self._base = base
+
     # Getters #
     # --------#
 

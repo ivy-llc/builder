@@ -1,21 +1,23 @@
 # global
 import os
+import ivy
 import json
-import random
 import logging
+import numpy as np
 import multiprocessing
 import tensorflow as tf
 import tensorflow_io as tfio
+from ivy_builder.dataset import Dataset
 from ivy.core.container import Container
-from ivy_builder.abstract.data_loader import DataLoader
 from ivy_builder.specs import DataLoaderSpec
+from ivy_builder.abstract.data_loader import DataLoader
 
 
 # noinspection PyUnresolvedReferences
-class TFDataLoader(DataLoader):
+class JSONDataLoader(DataLoader):
 
     def __init__(self, data_loader_spec: DataLoaderSpec):
-        super(TFDataLoader, self).__init__(data_loader_spec)
+        super(JSONDataLoader, self).__init__(data_loader_spec)
 
         # prevents QT conflicts with other applications, such as PyRep
         import cv2
@@ -38,11 +40,11 @@ class TFDataLoader(DataLoader):
         self._container_data_dir = os.path.join(self._spec.dataset_spec.dirs.dataset_dir, 'containers')
         self._container_data_dir_tensor = tf.constant(self._container_data_dir + '/', tf.string)
 
-        # TF variables
+        # variables
         self._window_size = self._spec.window_size
         if 'sequence_lengths' in self._spec:
             self._fixed_sequence_length = isinstance(self._spec.dataset_spec.sequence_lengths, int)
-            self._windows_per_seq = tf.constant(self._spec.dataset_spec.sequence_lengths) - (self._window_size - 1)
+            self._windows_per_seq = ivy.array(self._spec.dataset_spec.sequence_lengths) - (self._window_size - 1)
         else:
             self._fixed_sequence_length = False
         self._batch_size = self._spec.batch_size
@@ -57,18 +59,22 @@ class TFDataLoader(DataLoader):
         end_idx_valid = self._spec.num_sequences_to_use - 1
 
         # train dataset
-        train_dataset = self._get_dataset(start_idx_train, end_idx_train)
-        self._training_iterator = iter(train_dataset)
+        self._training_dataset = self._get_dataset(start_idx_train, end_idx_train)
+        self._training_iterator = iter(self._training_dataset)
 
         # validation
         if self._spec.num_training_sequences < self._spec.num_sequences_to_use:
-            validation_dataset = self._get_dataset(start_idx_valid, end_idx_valid)
-            self._validation_iterator = iter(validation_dataset)
+            self._validation_dataset = self._get_dataset(start_idx_valid, end_idx_valid)
+            self._validation_iterator = iter(self._validation_dataset)
         else:
+            self._validation_dataset = None
             self._validation_iterator = None
 
         # dummy batch
         self._dummy_batch = None
+
+        # counter
+        self._counter = 0
 
     # Dataset in RAM #
     # ---------------#
@@ -106,7 +112,7 @@ class TFDataLoader(DataLoader):
         def _to_tensor(x, key_chain=''):
             if type(x) == str:
                 x = [[x]]
-            return tf.constant(x)
+            return ivy.array(x)
 
         all_containers = list()
         logging.info('loading containers into RAM...')
@@ -116,7 +122,7 @@ class TFDataLoader(DataLoader):
             if seq_idx % 10000 == 0:
                 logging.info('sequence {} of {}'.format(seq_idx, num_seqs))
             window_containers = list()
-            tf_container = None
+            container = None
             seq_len = 0
             for seq_len, filepath in enumerate(seq):
                 if filepath == '':
@@ -124,9 +130,9 @@ class TFDataLoader(DataLoader):
                     break
                 with open(filepath) as fp:
                     container_dict = json.load(fp)
-                tf_container = Container(container_dict).map(_to_tensor)
-                window_containers.append(tf_container)
-            window_containers += [tf_container] * (max_seq_len - seq_len - 1)  # padding for shorter sequences
+                container = Container(container_dict).map(_to_tensor)
+                window_containers.append(container)
+            window_containers += [container] * (max_seq_len - seq_len - 1)  # padding for shorter sequences
             joined_window_containers = Container.concat(window_containers, 1)
             all_containers.append(joined_window_containers)
         return Container.concat(all_containers, 0)
@@ -136,33 +142,33 @@ class TFDataLoader(DataLoader):
 
     def _group_tensor_into_windowed_tensor_simple(self, x, seq_info):
         if self._fixed_sequence_length:
-            return tf.reshape(tf.gather_nd(x, self._gather_idxs),
-                              [self._windows_per_seq, self._window_size] + x.shape[1:])
+            return ivy.reshape(ivy.gather_nd(x, self._gather_idxs),
+                               [self._windows_per_seq, self._window_size] + x.shape[1:])
         else:
-            num_windows_in_seq = tf.maximum(seq_info.length[0] - self._window_size + 1, 1)
-            window_idxs_in_seq = tf.range(0, num_windows_in_seq, 1)
-            gather_idxs = tf.tile(tf.reshape(tf.range(0, self._window_size, 1), (1, self._window_size)),
-                                  (num_windows_in_seq, 1)) + tf.expand_dims(window_idxs_in_seq, -1)
-            gather_idxs_flat = tf.reshape(gather_idxs, (self._window_size * num_windows_in_seq, 1))
-            return tf.reshape(tf.gather_nd(x, gather_idxs_flat),
-                              tf.concat((tf.expand_dims(num_windows_in_seq, 0),
-                                        tf.constant([self._window_size]), tf.shape(x)[1:]), 0))
+            num_windows_in_seq = ivy.maximum(seq_info.length[0] - self._window_size + 1, 1)
+            window_idxs_in_seq = ivy.arange(num_windows_in_seq, 0, 1)
+            gather_idxs = ivy.tile(ivy.reshape(ivy.arange(self._window_size, 0, 1), (1, self._window_size)),
+                                   (num_windows_in_seq, 1)) + ivy.expand_dims(window_idxs_in_seq, -1)
+            gather_idxs_flat = ivy.reshape(gather_idxs, (self._window_size * num_windows_in_seq, 1))
+            return ivy.reshape(ivy.gather_nd(x, gather_idxs_flat),
+                               ivy.cast(ivy.concatenate((ivy.expand_dims(num_windows_in_seq, 0),
+                                                         ivy.array([self._window_size]),
+                                                         ivy.shape(x)[1:]), 0), 'int32'))
 
     def _group_tensor_into_windowed_tensor(self, x, valid_first_frame):
         if self._window_size == 1:
-            valid_first_frame_pruned = tf.cast(valid_first_frame[:, 0], tf.bool)
+            valid_first_frame_pruned = ivy.cast(valid_first_frame[:, 0], 'bool')
         else:
-            valid_first_frame_pruned = tf.cast(valid_first_frame[:1-self._window_size, 0], tf.bool)
-        if tf.reduce_sum(tf.cast(valid_first_frame_pruned, tf.int32)) == 0:
-            valid_first_frame_pruned = tf.cast(tf.one_hot(0, self._sequence_lengths - self._window_size + 1), tf.bool)
-        window_idxs_single = tf.where(valid_first_frame_pruned)
-        gather_idxs = tf.reshape(tf.map_fn(lambda x_: tf.range(x_[0], x_[0] + self._window_size, 1),
-                                           window_idxs_single), (-1, 1))
-        num_valid_windows_for_seq = tf.shape(window_idxs_single)[0:1]
-        return tf.reshape(tf.gather_nd(x, gather_idxs),
-                          tf.concat((num_valid_windows_for_seq,
-                                     tf.constant([self._window_size]),
-                                     tf.shape(x)[1:]), 0))
+            valid_first_frame_pruned = ivy.cast(valid_first_frame[:1-self._window_size, 0], 'bool')
+        if ivy.reduce_sum(ivy.cast(valid_first_frame_pruned, 'int32'))[0] == 0:
+            valid_first_frame_pruned = ivy.cast(ivy.one_hot(0, self._sequence_lengths - self._window_size + 1), 'bool')
+        window_idxs_single = ivy.indices_where(valid_first_frame_pruned)
+        gather_idxs = ivy.reshape(tf.map_fn(lambda x_: ivy.arange(x_[0] + self._window_size, x_[0], 1),
+                                            window_idxs_single), (-1, 1))
+        num_valid_windows_for_seq = ivy.shape(window_idxs_single)[0:1]
+        return ivy.reshape(ivy.gather_nd(x, gather_idxs),
+                           ivy.concatenate((num_valid_windows_for_seq,
+                                            ivy.array([self._window_size]), ivy.shape(x)[1:]), 0))
 
     def _group_container_into_windowed_container(self, container):
         if self._first_frame_validity_fn is not None:
@@ -186,8 +192,8 @@ class TFDataLoader(DataLoader):
             parallel_iterations=self._parallel_window_iterations)
 
     def _parse_json_strings(self, json_strings):
-        json_strings_stack = tf.unstack(json_strings)
-        highest_idx_entry = tf.reduce_sum(tf.cast(json_strings != '', tf.int32)) - 1
+        json_strings_stack = ivy.unstack(json_strings, 0)
+        highest_idx_entry = ivy.reduce_sum(ivy.cast(json_strings != '', 'int32'))[0] - 1
         json_container_stack = [Container(tfio.experimental.serialization.decode_json(
             json_str, self._container_tensor_spec)).slice(0) if json_str != '' else
                                 Container(tfio.experimental.serialization.decode_json(
@@ -205,10 +211,10 @@ class TFDataLoader(DataLoader):
     # images
 
     def _uint8_fn(self, filepaths_in_window):
-        return tf.cast(tf.map_fn(
+        return ivy.cast(tf.map_fn(
             lambda img_path: tf.image.decode_image(tf.io.read_file(
                 tf.strings.join([self._container_data_dir_tensor, img_path]))), filepaths_in_window, dtype=tf.uint8,
-            parallel_iterations=self._parallel_window_iterations), tf.float32) / 255
+            parallel_iterations=self._parallel_window_iterations), 'float32') / 255
 
     def _depth_fn(self, filepaths_in_window):
         return tf.bitcast(tf.map_fn(
@@ -242,10 +248,10 @@ class TFDataLoader(DataLoader):
             self._sequence_lengths = len(container_filepaths[0])
             self._windows_per_seq = self._sequence_lengths - self._window_size + 1
             # windowing values
-            window_idxs_per_seq = tf.reshape(tf.range(0, self._windows_per_seq, 1), (self._windows_per_seq, 1))
+            window_idxs_per_seq = ivy.reshape(ivy.arange(self._windows_per_seq, 0, 1), (self._windows_per_seq, 1))
             self._gather_idxs = \
-                tf.reshape(tf.map_fn(lambda x: tf.range(x[0], x[0] + self._window_size, 1), window_idxs_per_seq),
-                           (self._windows_per_seq * self._window_size, 1)).numpy().tolist()
+                ivy.reshape(tf.map_fn(lambda x: ivy.arange(x[0] + self._window_size, x[0], 1), window_idxs_per_seq),
+                            (self._windows_per_seq * self._window_size, 1)).numpy().tolist()
         else:
             self._sequence_lengths = [len(item) for item in container_filepaths]
 
@@ -256,7 +262,7 @@ class TFDataLoader(DataLoader):
         first_container = Container(first_container_dict)
 
         def _to_tensor_spec(value, key_chain=''):
-            value_as_tensor = tf.constant(value)
+            value_as_tensor = ivy.array(value)
             return tf.TensorSpec(value_as_tensor.shape, value_as_tensor.dtype)
 
         self._container_tensor_spec = first_container.map(_to_tensor_spec)
@@ -269,7 +275,7 @@ class TFDataLoader(DataLoader):
 
         # padding to make rectangular
         container_filepaths = [item + ['']*(max_seq_len - len(item)) for item in container_filepaths]
-        random.shuffle(container_filepaths)
+        np.random.shuffle(container_filepaths)
 
         if self._spec.preload_containers:
             # load containers with vector data and image filepath entries
@@ -282,37 +288,46 @@ class TFDataLoader(DataLoader):
             if 'unused_key_chains' in self._spec:
                 container_slices = self._prune_unused_key_chains(container_slices)
 
-            dataset = tf.data.Dataset.from_tensor_slices(container_slices)
+            dataset = Dataset(ivy.Container.list_stack(
+                [c.slice(0) for c in container_slices.unstack(0, container_slices.size)], 0),
+                'base', container_slices.size)
         else:
             # load containers with filepath entries
-            dataset = tf.data.Dataset.from_tensor_slices(container_filepaths)
-            dataset = dataset.map(map_func=self._load_json_files, num_parallel_calls=self._num_workers)
-            dataset = dataset.map(map_func=self._parse_json_strings, num_parallel_calls=self._num_workers)
+            dataset = Dataset(ivy.Container.list_stack(
+                [c.slice(0) for c in container_filepaths.unstack(0, container_filepaths.size)], 0),
+                'base', container_filepaths.size)
+            dataset = dataset.map('loaded_json', self._load_json_files, self._num_workers)
+            dataset = dataset.map('parsed_json', self._parse_json_strings, self._num_workers)
             if 'unused_key_chains' in self._spec:
-                dataset = dataset.map(map_func=self._prune_unused_key_chains, num_parallel_calls=self._num_workers)
+                dataset = dataset.map('keychain_pruned', self._prune_unused_key_chains, self._num_workers)
             if self._first_frame_validity_fn is not None:
-                dataset = dataset.map(lambda x: self._first_frame_validity_fn(x, None))
-        dataset = dataset.map(map_func=lambda x: self._group_container_into_windowed_container(x),
-                              num_parallel_calls=self._num_workers)
-        dataset = dataset.unbatch()
+                dataset = dataset.map('valid_first_frames', lambda x: self._first_frame_validity_fn(x, None))
+        dataset = dataset.map('windowed_container',
+                              lambda x: self._group_container_into_windowed_container(x),
+                              self._num_workers)
+        dataset = dataset.unbatch('unbatched')
         if self._spec.shuffle_buffer_size > 0:
-            dataset = dataset.shuffle((max_seq_len - self._window_size + 1) * self._spec.shuffle_buffer_size)
-        dataset = dataset.map(map_func=self._load_images_from_filepath_tensors,
-                              num_parallel_calls=self._num_workers)
-        dataset = dataset.batch(self._batch_size, True)
+            dataset = dataset.shuffle('shuffled',
+                                      (max_seq_len - self._window_size + 1) * self._spec.shuffle_buffer_size)
+        dataset = dataset.map('loaded_images',
+                              self._load_images_from_filepath_tensors,
+                              self._num_workers)
+        dataset = dataset.batch('batched', self._batch_size)
         if self._spec.post_proc_fn is not None:
             dataset = dataset.map(map_func=self._spec.post_proc_fn, num_parallel_calls=self._num_workers)
-        dataset = dataset.prefetch(2)
+        # dataset = dataset.prefetch(2)
         if self._spec.prefetch_to_gpu:
             dataset = dataset.apply(tf.data.experimental.prefetch_to_device('/GPU:0', 1))
         if not ('single_pass' in self._spec and self._spec.single_pass):
-            dataset = dataset.repeat()
+            # dataset = dataset.repeat()
+            pass
         return dataset
 
     # Public Methods #
     # ---------------#
 
     def get_next_batch(self, dataset_key):
+        # ToDo: explore compiling the load data method
         if dataset_key == 'training':
             return next(self._training_iterator)
         elif dataset_key == 'validation':
@@ -329,4 +344,4 @@ class TFDataLoader(DataLoader):
     def get_dummy_batch(self):
         if self._dummy_batch is None:
             self._dummy_batch = self.get_next_training_batch()
-        return self._dummy_batch.to_random(tf)
+        return self._dummy_batch.to_random()
