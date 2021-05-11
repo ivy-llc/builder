@@ -8,7 +8,7 @@ import numpy as np
 class Dataset:
 
     def __init__(self, dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
-                 elementwise_query_fn=True):
+                 elementwise_query_fn=True, with_caching=True):
         self._dataset = dataset
         self._name = name
         self._size = size
@@ -22,6 +22,7 @@ class Dataset:
         else:
             self._slice_dataset = slice_fn
         self._elementwise_query_fn = elementwise_query_fn
+        self._with_caching = with_caching
         self._cache = dict()
 
     # Private #
@@ -123,7 +124,7 @@ class Dataset:
             if i in cache:
                 if i != start:
                     slice_objs.append((False, slice(start, i, 1)))
-                slice_objs.append((True, i))
+                slice_objs.append((True, slice(i, i+1, 1)))
                 start = i + 1
         if start < slice_obj.stop:
             slice_objs.append((False, slice(start, slice_obj.stop, 1)))
@@ -136,7 +137,7 @@ class Dataset:
             self._cache[so] = item
         else:
             for i in np.arange(so.start, so.stop-1e-3, 1.):
-                self._cache[i] = Dataset._slice_dataset(slice(i-so.start, i-so.start+1, 1), item)
+                self._cache[i] = Dataset._slice_dataset(i-so.start, item)
 
     # Public #
     # -------#
@@ -147,13 +148,17 @@ class Dataset:
         items = list()
         for from_cache, so in split_slice_objs:
             if from_cache:
-                items.append(self._cache[so])
+                so_key = so if isinstance(so, numbers.Number) else so.start
+                items.append(self._cache[so_key])
                 continue
             item = self._get_item(so)
-            self._add_to_cache(so, item)
+            if self._with_caching:
+                self._add_to_cache(so, item)
             items.append(item)
         if len(items) == 1:
-            return items[0]
+            if isinstance(slice_obj, numbers.Number):
+                return items[0]
+            return items[0].map(lambda x, kc: x if isinstance(x, list) else [x])
         items_as_lists = [item.map(lambda x, kc: x if isinstance(x, list) else [x]) for item in items]
         return ivy.Container.list_join(items_as_lists)
 
@@ -162,7 +167,8 @@ class Dataset:
                        name=name,
                        size=self._size,
                        base_slice_fn=base_slice_fn,
-                       trans_fn=map_func)
+                       trans_fn=map_func,
+                       with_caching=self._with_caching)
 
     def batch(self, name, batch_size):
         def batch_array(x, _):
@@ -187,7 +193,8 @@ class Dataset:
                        size=float(self._size / batch_size),
                        base_slice_fn=base_slice_fn,
                        trans_fn=batch_cont,
-                       elementwise_query_fn=False)
+                       elementwise_query_fn=False,
+                       with_caching=self._with_caching)
 
     def unbatch(self, name):
 
@@ -235,19 +242,22 @@ class Dataset:
                        base_slice_fn=base_slice_fn,
                        trans_fn=unbatch_fn,
                        slice_fn=slice_fn,
-                       elementwise_query_fn=False)
+                       elementwise_query_fn=False,
+                       with_caching=self._with_caching)
 
     def shuffle(self, name, shuffle_size):
         return Dataset(dataset=self,
                        name=name,
                        size=self._size,
-                       trans_fn=lambda cont: cont.shuffle())
+                       trans_fn=lambda cont: cont.shuffle(),
+                       with_caching=self._with_caching)
 
     def prefetch(self, name, buffer_size):
         # ToDo: implement
         return Dataset(dataset=self,
                        name=name,
-                       size=self._size)
+                       size=self._size,
+                       with_caching=self._with_caching)
 
     # Getters #
     # --------#

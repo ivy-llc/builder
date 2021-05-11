@@ -1,7 +1,9 @@
 # global
 import os
+import pytest
 
 # local
+import ivy_tests.helpers as helpers
 from ivy_builder.specs.dataset_dirs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
@@ -25,7 +27,7 @@ def test_json_loader(dev_str, f, call):
 
     # testing
     for i in range(2):
-        train_batch = data_loader._training_dataset[1]
+        train_batch = data_loader.get_next_batch('training')
         assert train_batch.actions.shape == (3, 2, 6)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
