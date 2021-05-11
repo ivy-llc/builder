@@ -18,6 +18,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Dependencies
+        continue-on-error: true
         run: |
           sudo apt-get update
           sudo apt-get install rsync
