@@ -3,6 +3,7 @@ import ivy
 import math
 import numbers
 import numpy as np
+import multiprocessing
 
 
 # noinspection PyMissingConstructor
@@ -32,7 +33,7 @@ class Cache:
 class Dataset:
 
     def __init__(self, dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
-                 elementwise_query_fn=True, with_caching=True, cache_size=1):
+                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=None):
         self._dataset = dataset
         self._name = name
         self._size = size
@@ -49,6 +50,9 @@ class Dataset:
         self._with_caching = with_caching
         self._cache_size = cache_size
         self._cache = Cache(cache_size)
+        self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
+        if self._num_processes > 1:
+            self._pool = multiprocessing.Pool(self._num_processes)
 
     # Private #
     # --------#
@@ -100,9 +104,13 @@ class Dataset:
         base_dataset = self._slice_base_dataset(slice_obj, self._dataset)
         if self._trans_fn is not None:
             if self._elementwise_query_fn:
-                return ivy.Container.list_stack(
-                    [self._trans_fn(base_dataset.slice(i))
-                     for i in range(base_dataset.size)], 0)
+                if self._num_processes > 1 and base_dataset.size > 1:
+                    slices = [base_dataset.slice(i) for i in range(base_dataset.size)]
+                    with self._pool as p:
+                        vals = p.map(self._trans_fn, slices)
+                else:
+                    vals = [self._trans_fn(base_dataset.slice(i)) for i in range(base_dataset.size)]
+                return ivy.Container.list_stack(vals, 0)
             return self._trans_fn(base_dataset)
         return base_dataset
 
@@ -164,6 +172,11 @@ class Dataset:
             for i in np.arange(so.start, so.stop-1e-3, 1.):
                 self._cache[i] = Dataset._slice_dataset(i-so.start, item)
 
+    def __del__(self):
+        self._pool.close()
+        self._pool.terminate()
+        self._pool.join()
+
     # Public #
     # -------#
 
@@ -199,7 +212,8 @@ class Dataset:
                        base_slice_fn=base_slice_fn,
                        trans_fn=map_func,
                        with_caching=self._with_caching,
-                       cache_size=self._cache_size)
+                       cache_size=self._cache_size,
+                       num_processes=self._num_processes)
 
     def batch(self, name, batch_size):
         def batch_array(x, _):
@@ -226,7 +240,8 @@ class Dataset:
                        trans_fn=batch_cont,
                        elementwise_query_fn=False,
                        with_caching=self._with_caching,
-                       cache_size=int(math.ceil(self._cache_size / batch_size)))
+                       cache_size=int(math.ceil(self._cache_size / batch_size)),
+                       num_processes=self._num_processes)
 
     def unbatch(self, name):
 
@@ -276,7 +291,8 @@ class Dataset:
                        slice_fn=slice_fn,
                        elementwise_query_fn=False,
                        with_caching=self._with_caching,
-                       cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size)))
+                       cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size)),
+                       num_processes=self._num_processes)
 
     def shuffle(self, name, shuffle_size):
         return Dataset(dataset=self,
@@ -284,7 +300,8 @@ class Dataset:
                        size=self._size,
                        trans_fn=lambda cont: cont.shuffle(),
                        with_caching=self._with_caching,
-                       cache_size=self._cache_size)
+                       cache_size=self._cache_size,
+                       num_processes=self._num_processes)
 
     def prefetch(self, name, buffer_size):
         # ToDo: implement
@@ -292,7 +309,8 @@ class Dataset:
                        name=name,
                        size=self._size,
                        with_caching=self._with_caching,
-                       cache_size=self._cache_size)
+                       cache_size=self._cache_size,
+                       num_processes=self._num_processes)
 
     # Getters #
     # --------#

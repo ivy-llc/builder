@@ -317,7 +317,7 @@ class JSONDataLoader(DataLoader):
             if self._first_frame_validity_fn is not None:
                 dataset = dataset.map('valid_first_frames', lambda x_: self._first_frame_validity_fn(x_, None))
         dataset = dataset.map('windowed_container',
-                              lambda x_: self._group_container_into_windowed_container(x_),
+                              self._group_container_into_windowed_container,
                               self._num_workers)
         dataset = dataset.unbatch('unbatched')
         if self._spec.shuffle_buffer_size > 0:

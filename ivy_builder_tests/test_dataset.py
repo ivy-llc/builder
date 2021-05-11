@@ -31,6 +31,8 @@ class TestQueries:
         assert np.allclose(ivy.to_numpy(self._dataset[4].x), ivy.to_numpy(self._x[4]))
         assert np.allclose(ivy.to_numpy(self._dataset[8].x), ivy.to_numpy(self._x[8]))
 
+        del self._dataset
+
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
     def test_single_wrapped(self, dev_str, f, call, array_shape):
@@ -46,6 +48,8 @@ class TestQueries:
         assert np.allclose(ivy.to_numpy(self._dataset[11].x), ivy.to_numpy(self._x[2]))
         assert np.allclose(ivy.to_numpy(self._dataset[-1].x), ivy.to_numpy(self._x[-1]))
         assert np.allclose(ivy.to_numpy(self._dataset[-2].x), ivy.to_numpy(self._x[-2]))
+
+        del self._dataset
 
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
@@ -63,6 +67,8 @@ class TestQueries:
         assert np.allclose(ivy.to_numpy(self._dataset[0:3].x[0]), ivy.to_numpy(self._x[0]))
         assert np.allclose(ivy.to_numpy(self._dataset[3:6].x[1]), ivy.to_numpy(self._x[4]))
         assert np.allclose(ivy.to_numpy(self._dataset[6:9].x[2]), ivy.to_numpy(self._x[8]))
+
+        del self._dataset
 
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
@@ -83,6 +89,8 @@ class TestQueries:
         assert np.allclose(ivy.to_numpy(self._dataset[-1:1].x[1]), ivy.to_numpy(self._x[0]))
         assert np.allclose(ivy.to_numpy(self._dataset[9:11].x[0]), ivy.to_numpy(self._x[0]))
         assert np.allclose(ivy.to_numpy(self._dataset[9:11].x[1]), ivy.to_numpy(self._x[1]))
+
+        del self._dataset
 
 
 class TestBatch:
@@ -108,6 +116,8 @@ class TestBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[2].x),
                            ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[6:9]], 0)))
 
+        del self._dataset
+
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
     def test_single_wrapped(self, dev_str, f, call, array_shape):
@@ -124,6 +134,8 @@ class TestBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[-2].x),
                            ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[4:7]], 0)))
 
+        del self._dataset
+
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
     def test_slice(self, dev_str, f, call, array_shape):
@@ -136,6 +148,8 @@ class TestBatch:
                            ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[3:6]], 0)))
         assert np.allclose(ivy.to_numpy(self._dataset[2:3].x[0]),
                            ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[6:9]], 0)))
+
+        del self._dataset
 
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
@@ -150,6 +164,8 @@ class TestBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[3:4].x[0]),
                            ivy.to_numpy(ivy.concatenate(
                                [ivy.expand_dims(a, 0) for a in self._x[-1:] + self._x[0:2]], 0)))
+
+        del self._dataset
 
 
 class TestUnbatch:
@@ -167,12 +183,12 @@ class TestUnbatch:
 
         self._init(array_shape)
 
-        d = self._dataset._dataset[0]
-
         # assert np.allclose(ivy.to_numpy(self._dataset[0].x), ivy.to_numpy(self._x[0][0]))
         assert np.allclose(ivy.to_numpy(self._dataset[1].x), ivy.to_numpy(self._x[0][1]))
         assert np.allclose(ivy.to_numpy(self._dataset[2].x), ivy.to_numpy(self._x[0][2]))
         assert np.allclose(ivy.to_numpy(self._dataset[8].x), ivy.to_numpy(self._x[2][2]))
+
+        del self._dataset
 
     @pytest.mark.parametrize(
         "array_shape", [[3, 1], [3]])
@@ -183,6 +199,8 @@ class TestUnbatch:
         assert np.allclose(ivy.to_numpy(self._dataset[9].x), ivy.to_numpy(self._x[0][0]))
         assert np.allclose(ivy.to_numpy(self._dataset[-1].x), ivy.to_numpy(self._x[2][2]))
         assert np.allclose(ivy.to_numpy(self._dataset[-2].x), ivy.to_numpy(self._x[2][1]))
+
+        del self._dataset
 
     @pytest.mark.parametrize(
         "array_shape", [[3, 1], [3]])
@@ -195,6 +213,8 @@ class TestUnbatch:
         assert np.allclose(ivy.to_numpy(self._dataset[6:8].x[0]), ivy.to_numpy(self._x[2][0]))
         assert np.allclose(ivy.to_numpy(self._dataset[6:8].x[1]), ivy.to_numpy(self._x[2][1]))
 
+        del self._dataset
+
     @pytest.mark.parametrize(
         "array_shape", [[3, 1], [3]])
     def test_slice_wrapped(self, dev_str, f, call, array_shape):
@@ -205,6 +225,8 @@ class TestUnbatch:
         assert np.allclose(ivy.to_numpy(self._dataset[-1:1].x[1]), ivy.to_numpy(self._x[0][0]))
         assert np.allclose(ivy.to_numpy(self._dataset[8:10].x[0]), ivy.to_numpy(self._x[2][2]))
         assert np.allclose(ivy.to_numpy(self._dataset[8:10].x[1]), ivy.to_numpy(self._x[0][0]))
+
+        del self._dataset
 
 
 class TestUnbatchAndBatch:
@@ -226,6 +248,8 @@ class TestUnbatchAndBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[2].x), ivy.to_numpy(ivy.array([6, 7, 8])))
         assert np.allclose(ivy.to_numpy(self._dataset[3].x), ivy.to_numpy(ivy.array([9, 0, 1])))
 
+        del self._dataset
+
     def test_single_wrapped(self, dev_str, f, call):
 
         self._init()
@@ -244,6 +268,8 @@ class TestUnbatchAndBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[-4].x), ivy.to_numpy(ivy.array([8, 9, 0])))
         assert np.allclose(ivy.to_numpy(self._dataset[-5].x), ivy.to_numpy(ivy.array([5, 6, 7])))
 
+        del self._dataset
+
     def test_slice(self, dev_str, f, call):
 
         self._init()
@@ -251,6 +277,8 @@ class TestUnbatchAndBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[0:2].x[0]), ivy.to_numpy(ivy.array([0, 1, 2])))
         assert np.allclose(ivy.to_numpy(self._dataset[0:2].x[1]), ivy.to_numpy(ivy.array([3, 4, 5])))
         assert np.allclose(ivy.to_numpy(self._dataset[2:3].x[0]), ivy.to_numpy(ivy.array([6, 7, 8])))
+
+        del self._dataset
 
     def test_slice_wrapped(self, dev_str, f, call):
 
@@ -260,3 +288,5 @@ class TestUnbatchAndBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[-1:1].x[1]), ivy.to_numpy(ivy.array([0, 1, 2])))
         assert np.allclose(ivy.to_numpy(self._dataset[2:4].x[0]), ivy.to_numpy(ivy.array([6, 7, 8])))
         assert np.allclose(ivy.to_numpy(self._dataset[2:4].x[1]), ivy.to_numpy(ivy.array([9, 0, 1])))
+
+        del self._dataset
