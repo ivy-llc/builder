@@ -2,6 +2,7 @@
 import ivy
 import math
 import numbers
+import numpy as np
 
 
 class Dataset:
@@ -89,41 +90,72 @@ class Dataset:
 
     def _wrap_slice_obj(self, slice_obj):
         if isinstance(slice_obj, numbers.Number):
-            return [slice_obj % self._size]*2
+            return slice_obj % self._size
         else:
             so_start = slice_obj.start % self._size
             so_stop = slice_obj.stop % self._size if slice_obj.stop != math.ceil(self.size) else slice_obj.stop
-            slice_obj = slice(so_start, so_stop, 1)
-            base_slice_obj = slice_obj
-            if so_stop < so_start:
-                slice_obj_0 = slice(so_start, self._size, 1)
-                slice_obj_1 = slice(0, so_stop, 1)
-                base_slice_obj = (slice_obj_0, slice_obj_1)
-            return base_slice_obj, slice_obj
+            return slice(so_start, so_stop, 1)
+
+    def _wrap_base_slice_obj(self, slice_obj):
+        if isinstance(slice_obj, numbers.Number):
+            return slice_obj
+        else:
+            if slice_obj.stop < slice_obj.start:
+                slice_obj_0 = slice(slice_obj.start, self._size, 1)
+                slice_obj_1 = slice(0, slice_obj.stop, 1)
+                return slice_obj_0, slice_obj_1
+        return slice_obj
 
     def _get_item(self, slice_obj):
-        base_slice_obj, slice_obj = self._wrap_slice_obj(slice_obj)
+        base_slice_obj = self._wrap_base_slice_obj(slice_obj)
         return self._get_item_from_slice_objs(base_slice_obj, slice_obj)
 
     @staticmethod
     def _split_slice_obj(slice_obj, cache):
-        # ToDo: implement this properly
-        return [(False, slice_obj)]
+        if isinstance(slice_obj, numbers.Number):
+            if slice_obj in cache:
+                return [(True, slice_obj)]
+            else:
+                return [(False, slice_obj)]
+        slice_objs = list()
+        start = slice_obj.start
+        for i in np.arange(slice_obj.start, slice_obj.stop, 1.):
+            if i in cache:
+                if i != start:
+                    slice_objs.append((False, slice(start, i, 1)))
+                slice_objs.append((True, i))
+                start = i + 1
+        if start < slice_obj.stop:
+            slice_objs.append((False, slice(start, slice_obj.stop, 1)))
+        elif len(slice_objs) == 0:
+            return [(False, slice_obj)]
+        return slice_objs
+
+    def _add_to_cache(self, so, item):
+        if isinstance(so, numbers.Number):
+            self._cache[so] = item
+        else:
+            for i in np.arange(so.start, so.stop-1e-3, 1.):
+                self._cache[i] = Dataset._slice_dataset(slice(i-so.start, i-so.start+1, 1), item)
 
     # Public #
     # -------#
 
     def __getitem__(self, slice_obj):
+        slice_obj = self._wrap_slice_obj(slice_obj)
         split_slice_objs = self._split_slice_obj(slice_obj, self._cache)
         items = list()
         for from_cache, so in split_slice_objs:
             if from_cache:
                 items.append(self._cache[so])
                 continue
-            items.append(self._get_item(so))
+            item = self._get_item(so)
+            self._add_to_cache(so, item)
+            items.append(item)
         if len(items) == 1:
             return items[0]
-        return ivy.Container.list_join(items)
+        items_as_lists = [item.map(lambda x, kc: x if isinstance(x, list) else [x]) for item in items]
+        return ivy.Container.list_join(items_as_lists)
 
     def map(self, name, map_func, num_parallel_calls=1, base_slice_fn=None):
         return Dataset(dataset=self,

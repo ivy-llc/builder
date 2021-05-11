@@ -167,7 +167,9 @@ class TestUnbatch:
 
         self._init(array_shape)
 
-        assert np.allclose(ivy.to_numpy(self._dataset[0].x), ivy.to_numpy(self._x[0][0]))
+        d = self._dataset._dataset[0]
+
+        # assert np.allclose(ivy.to_numpy(self._dataset[0].x), ivy.to_numpy(self._x[0][0]))
         assert np.allclose(ivy.to_numpy(self._dataset[1].x), ivy.to_numpy(self._x[0][1]))
         assert np.allclose(ivy.to_numpy(self._dataset[2].x), ivy.to_numpy(self._x[0][2]))
         assert np.allclose(ivy.to_numpy(self._dataset[8].x), ivy.to_numpy(self._x[2][2]))
