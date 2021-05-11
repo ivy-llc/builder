@@ -21,7 +21,7 @@ class Dataset:
         else:
             self._slice_dataset = slice_fn
         self._elementwise_query_fn = elementwise_query_fn
-        # ToDo: add caching to prevent repeat reads
+        self._cache = dict()
 
     # Private #
     # --------#
@@ -79,7 +79,7 @@ class Dataset:
             return self._trans_fn(base_dataset)
         return base_dataset
 
-    def _get_item(self, base_slice_obj, slice_obj):
+    def _get_item_from_slice_objs(self, base_slice_obj, slice_obj):
         if isinstance(base_slice_obj, tuple):
             item = ivy.Container.list_join((self._get_base_item(base_slice_obj[0]),
                                             self._get_base_item(base_slice_obj[1])))
@@ -101,13 +101,29 @@ class Dataset:
                 base_slice_obj = (slice_obj_0, slice_obj_1)
             return base_slice_obj, slice_obj
 
+    def _get_item(self, slice_obj):
+        base_slice_obj, slice_obj = self._wrap_slice_obj(slice_obj)
+        return self._get_item_from_slice_objs(base_slice_obj, slice_obj)
+
+    @staticmethod
+    def _split_slice_obj(slice_obj, cache):
+        # ToDo: implement this properly
+        return [(False, slice_obj)]
+
     # Public #
     # -------#
 
     def __getitem__(self, slice_obj):
-        base_slice_obj, slice_obj = self._wrap_slice_obj(slice_obj)
-        # ToDo: implement the caching here
-        return self._get_item(base_slice_obj, slice_obj)
+        split_slice_objs = self._split_slice_obj(slice_obj, self._cache)
+        items = list()
+        for from_cache, so in split_slice_objs:
+            if from_cache:
+                items.append(self._cache[so])
+                continue
+            items.append(self._get_item(so))
+        if len(items) == 1:
+            return items[0]
+        return ivy.Container.list_join(items)
 
     def map(self, name, map_func, num_parallel_calls=1, base_slice_fn=None):
         return Dataset(dataset=self,
