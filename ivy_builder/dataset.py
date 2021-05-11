@@ -5,10 +5,34 @@ import numbers
 import numpy as np
 
 
+# noinspection PyMissingConstructor
+class Cache:
+    
+    def __init__(self, max_size):
+        self._max_size = max_size
+        self._used_keys = list()
+        self._dict = dict()
+        
+    def __setitem__(self, key, value):
+        if key in self:
+            return
+        self._used_keys.append(key)
+        if len(self._used_keys) > self._max_size:
+            key_to_del = self._used_keys.pop(0)
+            del self._dict[key_to_del]
+        self._dict[key] = value
+        
+    def __getitem__(self, item):
+        return self._dict[item]
+
+    def __contains__(self, key):
+        return key in self._dict
+
+
 class Dataset:
 
     def __init__(self, dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
-                 elementwise_query_fn=True, with_caching=True):
+                 elementwise_query_fn=True, with_caching=True, cache_size=1):
         self._dataset = dataset
         self._name = name
         self._size = size
@@ -23,7 +47,8 @@ class Dataset:
             self._slice_dataset = slice_fn
         self._elementwise_query_fn = elementwise_query_fn
         self._with_caching = with_caching
-        self._cache = dict()
+        self._cache_size = cache_size
+        self._cache = Cache(cache_size)
 
     # Private #
     # --------#
@@ -146,6 +171,8 @@ class Dataset:
         slice_obj = self._wrap_slice_obj(slice_obj)
         split_slice_objs = self._split_slice_obj(slice_obj, self._cache)
         items = list()
+        items_for_cache = list()
+        sos_for_cache = list()
         for from_cache, so in split_slice_objs:
             if from_cache:
                 so_key = so if isinstance(so, numbers.Number) else so.start
@@ -153,8 +180,11 @@ class Dataset:
                 continue
             item = self._get_item(so)
             if self._with_caching:
-                self._add_to_cache(so, item)
+                sos_for_cache.append(so)
+                items_for_cache.append(item)
             items.append(item)
+        for so, item in zip(sos_for_cache, items_for_cache):
+            self._add_to_cache(so, item)
         if len(items) == 1:
             if isinstance(slice_obj, numbers.Number):
                 return items[0]
@@ -168,7 +198,8 @@ class Dataset:
                        size=self._size,
                        base_slice_fn=base_slice_fn,
                        trans_fn=map_func,
-                       with_caching=self._with_caching)
+                       with_caching=self._with_caching,
+                       cache_size=self._cache_size)
 
     def batch(self, name, batch_size):
         def batch_array(x, _):
@@ -194,7 +225,8 @@ class Dataset:
                        base_slice_fn=base_slice_fn,
                        trans_fn=batch_cont,
                        elementwise_query_fn=False,
-                       with_caching=self._with_caching)
+                       with_caching=self._with_caching,
+                       cache_size=int(math.ceil(self._cache_size / batch_size)))
 
     def unbatch(self, name):
 
@@ -243,21 +275,24 @@ class Dataset:
                        trans_fn=unbatch_fn,
                        slice_fn=slice_fn,
                        elementwise_query_fn=False,
-                       with_caching=self._with_caching)
+                       with_caching=self._with_caching,
+                       cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size)))
 
     def shuffle(self, name, shuffle_size):
         return Dataset(dataset=self,
                        name=name,
                        size=self._size,
                        trans_fn=lambda cont: cont.shuffle(),
-                       with_caching=self._with_caching)
+                       with_caching=self._with_caching,
+                       cache_size=self._cache_size)
 
     def prefetch(self, name, buffer_size):
         # ToDo: implement
         return Dataset(dataset=self,
                        name=name,
                        size=self._size,
-                       with_caching=self._with_caching)
+                       with_caching=self._with_caching,
+                       cache_size=self._cache_size)
 
     # Getters #
     # --------#
