@@ -178,9 +178,6 @@ class TestBatch:
         if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
             pytest.skip()
 
-        if call is not helpers.np_call or num_processes == 1 or array_shape == [1]:
-            pytest.skip()
-
         self._init(array_shape, num_processes)
 
         assert np.allclose(ivy.to_numpy(self._dataset[0:2].x[0]),
