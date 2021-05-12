@@ -302,10 +302,11 @@ class JSONDataLoader(DataLoader):
 
             dataset = Dataset(ivy.Container.list_stack(
                 [c.slice(0) for c in container_slices.unstack(0, container_slices.size)], 0),
-                'base', container_slices.size)
+                'base', container_slices.size, numpy_loading=True)
         else:
             # load containers with filepath entries
-            dataset = Dataset(ivy.Container({'fpaths': container_filepaths}), 'base', len(container_filepaths))
+            dataset = Dataset(ivy.Container({'fpaths': container_filepaths}), 'base', len(container_filepaths),
+                              numpy_loading=True)
             dataset = dataset.map('loaded_json', self._load_json_files, self._num_workers)
             dataset = dataset.map('parsed_json', self._parse_json_strings, self._num_workers)
             if 'unused_key_chains' in self._spec:
@@ -323,6 +324,9 @@ class JSONDataLoader(DataLoader):
                               self._load_images_from_filepath_tensors,
                               self._num_workers)
         dataset = dataset.batch('batched', self._batch_size)
+        dataset = dataset.map('from_numpy',
+                              lambda cont: cont.map(lambda x_, kc: ivy.array(x_)),
+                              numpy_loading=False)
         if self._spec.post_proc_fn is not None:
             dataset = dataset.map(map_func=self._spec.post_proc_fn, num_parallel_calls=self._num_workers)
         # dataset = dataset.prefetch(2)

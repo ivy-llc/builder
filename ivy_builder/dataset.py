@@ -3,6 +3,7 @@ import ivy
 import math
 import queue
 import numbers
+import ivy.numpy
 import numpy as np
 import multiprocessing
 
@@ -36,11 +37,10 @@ class Cache:
 class Dataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
-                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1):
+                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False):
         self._copy_args = dict(base_dataset=base_dataset, name=name, size=size, base_slice_fn=base_slice_fn,
                                trans_fn=trans_fn, slice_fn=slice_fn, elementwise_query_fn=elementwise_query_fn,
                                with_caching=with_caching, cache_size=cache_size, num_processes=1)
-        self._base_dataset = base_dataset
         self._name = name
         self._size = size
         if base_slice_fn is None:
@@ -57,6 +57,19 @@ class Dataset:
         self._cache_size = cache_size
         self._cache = Cache(cache_size)
         self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
+        self._numpy_loading = numpy_loading
+        if numpy_loading and isinstance(base_dataset, ivy.Container):
+
+            def to_numpy(x, kc):
+                if ivy.is_array(x):
+                    return ivy.to_numpy(x)
+                elif isinstance(x, list):
+                    return [ivy.to_numpy(v) if ivy.is_array(v) else v for v in x]
+                else:
+                    return x
+
+            base_dataset = base_dataset.map(to_numpy)
+        self._base_dataset = base_dataset
         if self._num_processes > 1:
             self._workers = list()
             self._slice_queues = list()
@@ -66,7 +79,7 @@ class Dataset:
                 index_queue = multiprocessing.Queue()
                 output_queue = multiprocessing.Queue()
                 worker = multiprocessing.Process(
-                    target=self._worker_fn, args=(index_queue, output_queue, dataset_copy))
+                    target=self._worker_fn, args=(index_queue, output_queue, dataset_copy, numpy_loading))
                 worker.daemon = True
                 worker.start()
                 self._slice_queues.append(index_queue)
@@ -87,7 +100,7 @@ class Dataset:
         return Dataset(**copy_args)
 
     @staticmethod
-    def _worker_fn(index_queue, output_queue, dataset):
+    def _worker_fn(index_queue, output_queue, dataset, numpy_loading):
         while True:
             try:
                 slice_obj = index_queue.get(timeout=5.0)
@@ -95,8 +108,13 @@ class Dataset:
                 continue
             if slice_obj is None:
                 break
+            if numpy_loading:
+                ivy.set_framework('numpy')
             # noinspection PyProtectedMember
-            output_queue.put(dataset._get_item(slice_obj))
+            item = dataset._get_item(slice_obj)
+            if numpy_loading:
+                ivy.unset_framework()
+            output_queue.put(item)
 
     @staticmethod
     def _ensure_number_is_int(val):
@@ -262,10 +280,18 @@ class Dataset:
     # -------#
 
     def __getitem__(self, slice_obj):
+        if self._numpy_loading:
+            ivy.set_framework('numpy')
         if self._num_processes < 2:
-            return self._get_item(slice_obj)
+            ret = self._get_item(slice_obj)
+            if self._numpy_loading:
+                ivy.unset_framework()
+            return ret
         if isinstance(slice_obj, numbers.Number):
-            return self._get_item(slice_obj)
+            ret = self._get_item(slice_obj)
+            if self._numpy_loading:
+                ivy.unset_framework()
+            return ret
         slice_size = slice_obj.stop - slice_obj.start
         num_sub_slices = min(slice_size, self._num_processes)
         slice_points = np.round(np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices+1))
@@ -276,9 +302,12 @@ class Dataset:
         items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=5.0)
                           for i in range(num_sub_slices)]
         # items_as_lists = [self._get_item(slice_obj) for slice_obj in sub_slices]
+        ret = ivy.Container.list_join(items_as_lists)
+        if self._numpy_loading:
+            ivy.unset_framework()
         return ivy.Container.list_join(items_as_lists)
 
-    def map(self, name, map_func, num_processes=1, base_slice_fn=None):
+    def map(self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None):
         return Dataset(base_dataset=self,
                        name=name,
                        size=self._size,
@@ -286,9 +315,10 @@ class Dataset:
                        trans_fn=map_func,
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
-                       num_processes=num_processes)
+                       num_processes=num_processes,
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
-    def batch(self, name, batch_size, num_processes=1):
+    def batch(self, name, batch_size, num_processes=1, numpy_loading=None):
         def batch_array(x, _):
             return [ivy.concatenate([ivy.expand_dims(item, 0) for item in x[i*batch_size:i*batch_size+batch_size]], 0)
                     for i in range(int(len(x)/batch_size))]
@@ -314,9 +344,10 @@ class Dataset:
                        elementwise_query_fn=False,
                        with_caching=self._with_caching,
                        cache_size=int(math.ceil(self._cache_size / batch_size)),
-                       num_processes=num_processes)
+                       num_processes=num_processes,
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
-    def unbatch(self, name, num_processes=1):
+    def unbatch(self, name, num_processes=1, numpy_loading=None):
 
         # ToDo: make this more efficient, without needing to traverse entire dataset during initialization
         #  this can be achieved with extra optional input for the leading sizes of each entry in the dataset
@@ -365,25 +396,28 @@ class Dataset:
                        elementwise_query_fn=False,
                        with_caching=self._with_caching,
                        cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size)),
-                       num_processes=num_processes)
+                       num_processes=num_processes,
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
-    def shuffle(self, name, shuffle_size, num_processes=1):
+    def shuffle(self, name, shuffle_size, num_processes=1, numpy_loading=None):
         return Dataset(base_dataset=self,
                        name=name,
                        size=self._size,
                        trans_fn=lambda cont: cont.shuffle(),
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
-                       num_processes=num_processes)
+                       num_processes=num_processes,
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
-    def prefetch(self, name, buffer_size, num_processes=1):
+    def prefetch(self, name, buffer_size, num_processes=1, numpy_loading=None):
         # ToDo: implement
         return Dataset(base_dataset=self,
                        name=name,
                        size=self._size,
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
-                       num_processes=num_processes)
+                       num_processes=num_processes,
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
     # Getters #
     # --------#
