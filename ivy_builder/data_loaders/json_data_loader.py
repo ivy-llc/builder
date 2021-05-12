@@ -18,10 +18,6 @@ class JSONDataLoader(DataLoader):
     def __init__(self, data_loader_spec: DataLoaderSpec):
         super(JSONDataLoader, self).__init__(data_loader_spec)
 
-        # prevents QT conflicts with other applications, such as PyRep
-        import cv2
-        self._cv2 = cv2
-
         # cpus
         if 'num_workers' in data_loader_spec:
             self._num_workers = data_loader_spec.num_workers
@@ -285,7 +281,7 @@ class JSONDataLoader(DataLoader):
         for key, val in first_container.to_iterator():
             if type(val) == str:
                 full_filepath = os.path.abspath(os.path.join(self._container_data_dir, val))
-                img = self._cv2.imread(full_filepath, -1)
+                img = cv2.imread(full_filepath, -1)
                 if img is not None:
                     self._img_channel_dims['/'.join(val.split('/')[:-1])] = img.shape[-1]
 

@@ -275,26 +275,7 @@ class Dataset:
          for i, sub_slice in enumerate(sub_slices)]
         items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=5.0)
                           for i in range(num_sub_slices)]
-        items_as_lists_true = [self._get_item(slice_obj) for slice_obj in sub_slices]
-        written = False
-        for item, item_true in zip(items_as_lists, items_as_lists_true):
-            if isinstance(item.x, list):
-                for it, it_true in zip(item.x, item_true.x):
-                    if not np.allclose(it, it_true):
-                        if written:
-                            continue
-                        with open('log_file', 'a+') as file:
-                            file.write('items_as_lists: {}\n'
-                                       'items_as_lists_true: {}\n'.format(items_as_lists, items_as_lists_true))
-                        written = True
-            else:
-                if not np.allclose(item.x, item_true.x):
-                    if written:
-                        continue
-                    with open('log_file', 'a+') as file:
-                        file.write('items_as_lists: {}\n'
-                                   'items_as_lists_true: {}\n'.format(items_as_lists, items_as_lists_true))
-                    written = True
+        # items_as_lists = [self._get_item(slice_obj) for slice_obj in sub_slices]
         return ivy.Container.list_join(items_as_lists)
 
     def map(self, name, map_func, num_processes=1, base_slice_fn=None):
