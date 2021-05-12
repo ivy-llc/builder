@@ -18,7 +18,7 @@ def test_json_loader(dev_str, f, call):
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 2])
     data_loader_spec = DataLoaderSpec(dataset_spec, None, shuffle_buffer_size=0, batch_size=3,
                                       window_size=2, num_sequences_to_use=6, num_training_sequences=3,
-                                      post_proc_fn=None, preload_containers=True)
+                                      post_proc_fn=None, preload_containers=True, num_workers=1)
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -37,7 +37,7 @@ def test_json_loader(dev_str, f, call):
     data_loader_spec = DataLoaderSpec(dataset_spec, None, shuffle_buffer_size=0, batch_size=3,
                                       window_size=3, num_sequences_to_use=6, num_training_sequences=3,
                                       post_proc_fn=None, preload_containers=False,
-                                      unused_key_chains=['observations/image/ego/ego_cam_px/depth'])
+                                      unused_key_chains=['observations/image/ego/ego_cam_px/depth'], num_workers=1)
     data_loader = JSONDataLoader(data_loader_spec)
 
     train_batch = data_loader.get_next_batch('training')
