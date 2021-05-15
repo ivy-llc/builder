@@ -77,7 +77,8 @@ class JSONDataLoader(DataLoader):
     def _to_tensor(x, key_chain=''):
         if type(x) == str:
             x = [[list(x.encode())]]
-        return ivy.array(x, dtype_str='uint8')
+            return ivy.array(x, dtype_str='uint8')
+        return ivy.array(x, dtype_str='float32')
 
     @staticmethod
     def _load_container_filepaths_as_lists(cont_dir, starting_example, ending_example):
@@ -225,7 +226,7 @@ class JSONDataLoader(DataLoader):
             imgs.append(img)
         return ivy.concatenate(imgs, 0)
 
-    def _depth_fn(self, filepaths_in_window):
+    def _float_fn(self, filepaths_in_window):
         imgs = list()
         # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
@@ -236,12 +237,31 @@ class JSONDataLoader(DataLoader):
             imgs.append(img)
         return ivy.concatenate(imgs, 0)
 
+    def _custom_img_fn(self, filepaths_in_window, fn):
+        imgs = list()
+        for filepath in filepaths_in_window:
+            str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
+            full_path = os.path.join(self._container_data_dir, str_path)
+            img_raw = cv2.imread(full_path, -1)
+            img = fn(img_raw)
+            imgs.append(img)
+        return ivy.concatenate(imgs, 0)
+
     def _str_fn(self, x, key_chain=''):
-        if 'image' in key_chain:
-            if 'depth' in key_chain:
-                return self._depth_fn(x)
-            else:
+        for float_str in self._spec.float_strs:
+            if float_str in key_chain:
+                return self._float_fn(x)
+        for uint8_str in self._spec.uint8_strs:
+            if uint8_str in key_chain:
                 return self._uint8_fn(x)
+        for i, custom_img_strs in enumerate(self._spec.custom_img_strs):
+            for custom_img_str in custom_img_strs:
+                if custom_img_str in key_chain:
+                    return self._custom_img_fn(x, self._spec.custom_img_fns[i])
+        for i, custom_strs in enumerate(self._spec.custom_strs):
+            for custom_str in custom_strs:
+                if custom_str in key_chain:
+                    return self._spec.custom_fns[i](x, self._container_data_dir)
         return x
 
     def _load_images_from_filepath_tensors(self, container):
