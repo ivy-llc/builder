@@ -13,10 +13,3 @@ class DatasetSpec(Container):
         """
         super().__init__(kwargs)
         self['dirs'] = dirs
-
-    # Getters #
-    # --------#
-
-    @property
-    def dirs(self):
-        return self['dirs']

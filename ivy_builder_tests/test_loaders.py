@@ -4,8 +4,8 @@ import os
 # local
 from ivy_builder.specs.dataset_dirs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
-from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 from ivy_builder.data_loaders.json_data_loader import JSONDataLoader
+from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderSpec
 
 
 def test_json_loader(dev_str, f, call):
@@ -16,11 +16,9 @@ def test_json_loader(dev_str, f, call):
     dataset_dirs = DatasetDirs(dataset_dir=ds_dir, containers_dir=os.path.join(ds_dir, 'containers'))
 
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 2])
-    data_loader_spec = DataLoaderSpec(dataset_spec, None, shuffle_buffer_size=0, batch_size=3,
-                                      window_size=2, num_sequences_to_use=6, num_training_sequences=3,
-                                      post_proc_fn=None, preload_containers=True, num_workers=1,
-                                      float_strs=['depth'], uint8_strs=['rgb'],
-                                      custom_img_strs=[[]], custom_img_fns=[], custom_strs=[[]], custom_fns=[])
+    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=2, num_sequences_to_use=6,
+                                          num_training_sequences=3, preload_containers=True, float_strs=['depth'],
+                                          uint8_strs=['rgb'])
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -36,12 +34,10 @@ def test_json_loader(dev_str, f, call):
         assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
 
     # test keychain pruning, no container pre-loading, and padded windowing
-    data_loader_spec = DataLoaderSpec(dataset_spec, None, shuffle_buffer_size=0, batch_size=3,
-                                      window_size=3, num_sequences_to_use=6, num_training_sequences=3,
-                                      post_proc_fn=None, preload_containers=False,
-                                      unused_key_chains=['observations/image/ego/ego_cam_px/depth'], num_workers=1,
-                                      float_strs=['depth'], uint8_strs=['rgb'],
-                                      custom_img_strs=[[]], custom_img_fns=[], custom_strs=[[]], custom_fns=[])
+    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=3, num_sequences_to_use=6,
+                                          num_training_sequences=3,
+                                          unused_key_chains=['observations/image/ego/ego_cam_px/depth'],
+                                          float_strs=['depth'], uint8_strs=['rgb'])
     data_loader = JSONDataLoader(data_loader_spec)
 
     train_batch = data_loader.get_next_batch('training')

@@ -8,14 +8,14 @@ import numpy as np
 import multiprocessing
 from ivy_builder.dataset import Dataset
 from ivy.core.container import Container
-from ivy_builder.specs import DataLoaderSpec
 from ivy_builder.abstract.data_loader import DataLoader
+from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderSpec
 
 
 # noinspection PyUnresolvedReferences
 class JSONDataLoader(DataLoader):
 
-    def __init__(self, data_loader_spec: DataLoaderSpec):
+    def __init__(self, data_loader_spec: JSONDataLoaderSpec):
         super(JSONDataLoader, self).__init__(data_loader_spec)
 
         # cpus
@@ -350,6 +350,8 @@ class JSONDataLoader(DataLoader):
         if self._spec.post_proc_fn is not None:
             dataset = dataset.map(map_func=self._spec.post_proc_fn, num_parallel_calls=self._num_workers)
         # dataset = dataset.prefetch(2)
+        if self._spec.prefetch_to_gpu:
+            dataset = dataset.to_gpu()
         if not ('single_pass' in self._spec and self._spec.single_pass):
             # dataset = dataset.repeat()
             pass

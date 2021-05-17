@@ -419,6 +419,23 @@ class Dataset:
                        num_processes=num_processes,
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
+    def to_gpu(self, name, num_processes=1, gpu_idx=0):
+
+        def item_to_gpu(x, _):
+            return ivy.array(x, dev_str='cuda:' + str(gpu_idx))
+
+        def cont_to_gpu(cont):
+            return cont.map(item_to_gpu)
+
+        return Dataset(base_dataset=self,
+                       name=name,
+                       size=self._size,
+                       trans_fn=cont_to_gpu,
+                       with_caching=self._with_caching,
+                       cache_size=self._cache_size,
+                       num_processes=num_processes,
+                       numpy_loading=False)
+
     # Getters #
     # --------#
 
