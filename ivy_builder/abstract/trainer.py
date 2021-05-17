@@ -121,19 +121,14 @@ class Trainer:
 
         # trainer variables
         self._global_step = 0
-        self._log_tensors = {}
 
         # set seed
         np.random.seed(self._spec.seed)
         ivy.seed(self._spec.seed)
 
         # uninitialized variables
-        self._log_dir_train = ''
-        self._vis_dir_train = ''
         self._chkpt = None
         self._chkpt_manager = None
-        self._summary_writers = dict()
-        self._log_dirs = list()
 
         # profiling
         self._save_trace = self._spec.save_trace
@@ -192,25 +187,6 @@ class Trainer:
         self._chkpt = Checkpoint(optimizer=self._optimizer, net=self._spec.network)
         self._chkpt_manager = CheckpointManager(self._chkpt, os.path.join(self._spec.log_dir, 'chkpts'), 20,
                                                 step_counter=self._global_step)
-
-    def _make_log_dirs(self):
-        for log_dir in self._log_dirs:
-            pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
-
-    def _init_log_dirs(self):
-
-        self._log_dir_train = os.path.join(self._spec.log_dir, 'log', 'scalars', 'training')
-
-        self._vis_dir_train = os.path.join(self._spec.log_dir, 'log', 'images', 'training')
-
-        self._log_dirs = [
-            self._log_dir_train,
-            self._vis_dir_train]
-
-        self._make_log_dirs()
-
-    def _init_logger(self):
-        self._init_log_dirs()
 
     def _log_scalars(self):
         self._write_scalar_summaries(self._spec.data_loader, self._spec.network, self._training_batch,
@@ -336,7 +312,6 @@ class Trainer:
         setup the trainer, ready for training
         """
         self._starting_iteration = self._initialize_model()
-        self._init_logger()
 
     def train(self, starting_iteration: int = 0, repeat_run: bool = False) -> None:
         """
