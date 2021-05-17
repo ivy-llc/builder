@@ -399,7 +399,7 @@ class Dataset:
                        num_processes=num_processes,
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
-    def shuffle(self, name, shuffle_size, num_processes=1, numpy_loading=None):
+    def shuffle(self, name, num_processes=1, numpy_loading=None):
         return Dataset(base_dataset=self,
                        name=name,
                        size=self._size,
