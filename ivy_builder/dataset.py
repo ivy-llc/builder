@@ -410,10 +410,23 @@ class Dataset:
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
     def prefetch(self, name, buffer_size, num_processes=1, numpy_loading=None):
-        # ToDo: implement
+
+        # noinspection PyUnresolvedReferences
+        def base_slice_fn(slc_obj, dataset):
+            if isinstance(slc_obj, numbers.Number):
+                so_start = int(round(slc_obj))
+                so_stop = int(round(min(slc_obj + 1 + buffer_size, math.floor(dataset.size))))
+            else:
+                so_start = int(round(slc_obj.start))
+                so_stop = int(round(min(slc_obj.stop + buffer_size, math.floor(dataset.size))))
+            so_stop = so_stop + 1 if so_stop == so_start else so_stop
+            base_slice_obj = slice(so_start, so_stop, 1)
+            return Dataset._slice_dataset(base_slice_obj, dataset)
+
         return Dataset(base_dataset=self,
                        name=name,
                        size=self._size,
+                       base_slice_fn=base_slice_fn,
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
                        num_processes=num_processes,
