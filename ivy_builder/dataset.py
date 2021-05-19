@@ -267,8 +267,9 @@ class Dataset:
                 sos_for_cache.append(so)
                 items_for_cache.append(item)
             items.append(item)
-        for so, item in zip(sos_for_cache, items_for_cache):
-            self._add_to_cache(so, item)
+        if self._cache_size > 0:
+            for so, item in zip(sos_for_cache, items_for_cache):
+                self._add_to_cache(so, item)
         if len(items) == 1:
             if isinstance(slice_obj, numbers.Number):
                 return items[0]
@@ -445,7 +446,7 @@ class Dataset:
                        size=self._size,
                        trans_fn=cont_to_gpu,
                        with_caching=self._with_caching,
-                       cache_size=self._cache_size,
+                       cache_size=0,
                        num_processes=num_processes,
                        numpy_loading=False)
 
