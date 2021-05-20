@@ -322,11 +322,11 @@ class JSONDataLoader(DataLoader):
 
             dataset = Dataset(ivy.Container.list_stack(
                 [c.slice(0) for c in container_slices.unstack(0, container_slices.size)], 0),
-                'base', container_slices.size, numpy_loading=True)
+                'base', container_slices.size, numpy_loading=True, cache_size=self._spec.cache_size)
         else:
             # load containers with filepath entries
             dataset = Dataset(ivy.Container({'fpaths': container_filepaths}), 'base', len(container_filepaths),
-                              numpy_loading=True)
+                              numpy_loading=True, cache_size=self._spec.cache_size)
             dataset = dataset.map('loaded_json', self._load_json_files, self._num_workers)
             dataset = dataset.map('parsed_json', self._parse_json_strings, self._num_workers)
             if 'unused_key_chains' in self._spec:
