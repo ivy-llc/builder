@@ -348,7 +348,7 @@ class Dataset:
                        num_processes=num_processes,
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
-    def unbatch(self, name, num_processes=1, numpy_loading=None):
+    def unbatch(self, name, num_processes=1, numpy_loading=None, cache_size=None):
 
         # ToDo: make this more efficient, without needing to traverse entire dataset during initialization
         #  this can be achieved with extra optional input for the leading sizes of each entry in the dataset
@@ -396,7 +396,8 @@ class Dataset:
                        slice_fn=slice_fn,
                        elementwise_query_fn=False,
                        with_caching=self._with_caching,
-                       cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size)),
+                       cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size))
+                       if cache_size is None else cache_size,
                        num_processes=num_processes,
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
