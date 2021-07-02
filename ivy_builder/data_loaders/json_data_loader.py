@@ -36,9 +36,12 @@ class JSONDataLoader(DataLoader):
 
         # variables
         self._window_size = self._spec.window_size
-        if 'sequence_lengths' in self._spec:
+        if 'sequence_lengths' in self._spec.dataset_spec:
             self._fixed_sequence_length = isinstance(self._spec.dataset_spec.sequence_lengths, int)
-            self._windows_per_seq = ivy.array(self._spec.dataset_spec.sequence_lengths) - (self._window_size - 1)
+            if self._fixed_sequence_length:
+                self._windows_per_seq = self._spec.dataset_spec.sequence_lengths - (self._window_size - 1)
+            else:
+                self._windows_per_seq = ivy.array(self._spec.dataset_spec.sequence_lengths) - (self._window_size - 1)
         else:
             self._fixed_sequence_length = False
         self._batch_size = self._spec.batch_size
@@ -139,8 +142,8 @@ class JSONDataLoader(DataLoader):
 
     def _group_tensor_into_windowed_tensor_simple(self, x, seq_info):
         if self._fixed_sequence_length:
-            return ivy.reshape(ivy.gather_nd(x, self._gather_idxs),
-                               [self._windows_per_seq, self._window_size] + x.shape[1:])
+            return ivy.reshape(ivy.gather_nd(x, ivy.array(self._gather_idxs)),
+                               (self._windows_per_seq, self._window_size) + x.shape[1:])
         else:
             num_windows_in_seq = int(ivy.to_numpy(ivy.maximum(seq_info.length[0] - self._window_size + 1, 1)))
             window_idxs_in_seq = ivy.arange(num_windows_in_seq, 0, 1)
@@ -177,8 +180,7 @@ class JSONDataLoader(DataLoader):
                 seq_info = container.seq_info
             else:
                 seq_info = None
-            return container.map(lambda x, _:
-                                 self._group_tensor_into_windowed_tensor_simple(x, seq_info))
+            return container.map(lambda x, _: self._group_tensor_into_windowed_tensor_simple(x, seq_info))
 
     # Dynamic File Reading #
     # ---------------------#
@@ -288,7 +290,7 @@ class JSONDataLoader(DataLoader):
                 gather_idxs_list.append(ivy.expand_dims(ivy.arange(x[0] + self._window_size, x[0], 1), 0))
             gather_idxs = ivy.concatenate(gather_idxs_list, 0)
             self._gather_idxs = \
-                ivy.reshape(gather_idxs, (self._windows_per_seq * self._window_size, 1)).numpy().tolist()
+                ivy.to_numpy(ivy.reshape(gather_idxs, (self._windows_per_seq * self._window_size, 1))).tolist()
         else:
             self._sequence_lengths = [len(item) for item in container_filepaths]
 

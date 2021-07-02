@@ -8,6 +8,29 @@ from ivy_builder.data_loaders.json_data_loader import JSONDataLoader
 from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderSpec
 
 
+def test_json_loader_fixed_seq_len(dev_str, f, call):
+
+    # dataset dir
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    ds_dir = os.path.join(current_dir, 'dataset')
+    dataset_dirs = DatasetDirs(dataset_dir=ds_dir, containers_dir=os.path.join(ds_dir, 'containers'))
+
+    dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=2)
+    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=1, window_size=1, num_sequences_to_use=1,
+                                          num_training_sequences=1, preload_containers=True, float_strs=['depth'],
+                                          uint8_strs=['rgb'])
+
+    # data loader
+    data_loader = JSONDataLoader(data_loader_spec)
+
+    # testing
+    for i in range(2):
+        train_batch = data_loader.get_next_batch('training')
+        assert train_batch.actions.shape == (1, 1, 6)
+        assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
+        assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
+
+
 def test_json_loader(dev_str, f, call):
 
     # dataset dir
