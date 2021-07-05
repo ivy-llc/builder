@@ -26,7 +26,8 @@ def _convert_tune_config(config):
     for i, (key, arg) in enumerate(config.items()):
         spec_key = [spec_key for spec_key in SPEC_KEYS if spec_key in key]
         if not spec_key:
-            raise Exception('Invalid spec key found in config.')
+            return_dict[key] = arg
+            continue
         min_val = arg['min']
         max_val = arg['max']
         mean_val = (max_val + min_val) / 2
@@ -105,8 +106,9 @@ class Tuner:
         import ivy_builder.builder as builder
         self._builder = builder
 
-    def tune(self, name, config, num_samples, max_t, num_gpus):
+    def tune(self, name, config, num_samples, num_gpus):
 
+        # classes and args for builder
         data_loader_class = self._data_loader_class
         network_class = self._network_class
         trainer_class = self._trainer_class
@@ -121,7 +123,22 @@ class Tuner:
         trainer_spec_args = self._trainer_spec_args
         trainer_spec_class = self._trainer_spec_class
 
+        # builder
         builder = self._builder
+
+        # trainer spec
+        trainer_spec = builder.build_trainer_spec(data_loader_class,
+                                                  network_class,
+                                                  dataset_dirs_args,
+                                                  dataset_dirs_class,
+                                                  dataset_spec_args,
+                                                  dataset_spec_class,
+                                                  data_loader_spec_args,
+                                                  data_loader_spec_class,
+                                                  network_spec_args,
+                                                  network_spec_class,
+                                                  trainer_spec_args,
+                                                  trainer_spec_class)
 
         # Create Trainable class #
         # -----------------------#
@@ -186,7 +203,7 @@ class Tuner:
             metric="cost",
             mode="min",
             grace_period=1,
-            max_t=max_t)
+            max_t=int(np.ceil(trainer_spec.total_iterations/250)))
 
         num_cpus = multiprocessing.cpu_count()
         config = _convert_tune_config(config)
@@ -200,7 +217,7 @@ class Tuner:
                  progress_reporter=reporter,
                  name=name,
                  scheduler=ahb,
-                 stop={"training_iteration": max_t},
+                 stop={"training_iteration": int(np.ceil(trainer_spec.total_iterations/250))},
                  num_samples=num_samples,
                  resources_per_trial={
                      "cpu": num_cpus,
