@@ -105,7 +105,7 @@ class Tuner:
         import ivy_builder.builder as builder
         self._builder = builder
 
-    def run_tune(self, name, config, num_samples, max_t, num_gpus):
+    def tune(self, name, config, num_samples, max_t, num_gpus):
 
         data_loader_class = self._data_loader_class
         network_class = self._network_class

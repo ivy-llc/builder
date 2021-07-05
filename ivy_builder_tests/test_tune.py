@@ -86,8 +86,8 @@ def test_tune_integration(dev_str, call):
     trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'log_freq': 1, 'train_steps_per_tune_step': 2}
     tuner = builder.build_tuner(ExampleDataLoader, ExampleNetwork, ExampleTrainer, trainer_spec_args=trainer_spec_args)
     num_gpus = 1 if tf.config.list_physical_devices('GPU') else 0
-    tuner.run_tune('asynchyperband_test',
-                   Container({'ts_initial_learning_rate':
+    tuner.tune('asynchyperband_test',
+               Container({'ts_initial_learning_rate':
                                   {'min': -6, 'max': -3, 'gaussian': False, 'exponential': True,
                                    'as_int': False}}), 2, 2, num_gpus)
     builder_helpers.remove_dirs()
