@@ -15,6 +15,7 @@ from ivy_builder.specs.dataset_spec import DatasetSpec
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 from ivy_builder.specs.network_spec import NetworkSpec
 from ivy_builder.specs.trainer_spec import TrainerSpec
+from ivy_builder.specs.tuner_spec import TunerSpec
 
 SPEC_KEYS = ['dd', 'ds', 'dls', 'ns', 'ts']
 
@@ -62,7 +63,7 @@ def _convert_tune_config(config):
     return Container(return_dict)
 
 
-class TuneTrainer:
+class Tuner:
 
     def __init__(self,
                  data_loader_class,
@@ -77,7 +78,9 @@ class TuneTrainer:
                  network_spec_args: dict = None,
                  network_spec_class: NetworkSpec.__base__ = NetworkSpec,
                  trainer_spec_args: dict = None,
-                 trainer_spec_class: TrainerSpec.__base__ = TrainerSpec):
+                 trainer_spec_class: TrainerSpec.__base__ = TrainerSpec,
+                 tuner_spec_args: dict = None,
+                 tuner_spec_class: TrainerSpec.__base__ = TunerSpec):
         """
         base class for any tune trainers
         """

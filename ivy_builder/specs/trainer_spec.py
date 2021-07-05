@@ -1,14 +1,11 @@
 # local
 from ivy.core.container import Container
 from ivy_builder.abstract.network import Network
-# ToDo: fix this import error
-# from ivy_builder.abstract.data_loader import DataLoader
 
 
 class TrainerSpec(Container):
 
     def __init__(self,
-                 # data_loader: DataLoader,
                  data_loader: None,
                  network: Network,
                  log_dir: str = 'log',
