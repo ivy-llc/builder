@@ -7,6 +7,7 @@ from ivy_builder.specs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
 from ivy_builder.specs import NetworkSpec
 from ivy_builder.specs.trainer_spec import TrainerSpec
+from ivy_builder.abstract.tune_trainer import TuneTrainer
 
 __properties_to_ignore = ['activity_regularizer', 'dtype', 'dynamic', 'inbound_nodes', 'input', 'input_mask',
                           'input_shape', 'input_spec', 'layers', 'losses', 'metrics', 'metrics_names', 'name',
@@ -228,38 +229,6 @@ def build_trainer_spec(data_loader_class,
     return trainer_spec_class(**trainer_spec_args)
 
 
-def build_tune_trainer(data_loader_class,
-                       network_class,
-                       trainer_class,
-                       tune_trainer_class,
-                       dataset_dirs_args=None,
-                       dataset_dirs_class=DatasetDirs,
-                       dataset_spec_args=None,
-                       dataset_spec_class=DatasetSpec,
-                       data_loader_spec_args=None,
-                       data_loader_spec_class=DataLoaderSpec,
-                       network_spec_args=None,
-                       network_spec_class=NetworkSpec,
-                       trainer_spec_args=None,
-                       trainer_spec_class=TrainerSpec):
-    """
-    build trainer
-    """
-    return tune_trainer_class(data_loader_class,
-                              network_class,
-                              trainer_class,
-                              dataset_dirs_args,
-                              dataset_dirs_class,
-                              dataset_spec_args,
-                              dataset_spec_class,
-                              data_loader_spec_args,
-                              data_loader_spec_class,
-                              network_spec_args,
-                              network_spec_class,
-                              trainer_spec_args,
-                              trainer_spec_class)
-
-
 def build_trainer(data_loader_class,
                   network_class,
                   trainer_class,
@@ -293,3 +262,35 @@ def build_trainer(data_loader_class,
 
     # return trainer
     return trainer_class(trainer_spec)
+
+
+def build_tune_trainer(data_loader_class,
+                       network_class,
+                       trainer_class,
+                       tune_trainer_class=TuneTrainer,
+                       dataset_dirs_args=None,
+                       dataset_dirs_class=DatasetDirs,
+                       dataset_spec_args=None,
+                       dataset_spec_class=DatasetSpec,
+                       data_loader_spec_args=None,
+                       data_loader_spec_class=DataLoaderSpec,
+                       network_spec_args=None,
+                       network_spec_class=NetworkSpec,
+                       trainer_spec_args=None,
+                       trainer_spec_class=TrainerSpec):
+    """
+    build tune trainer
+    """
+    return tune_trainer_class(data_loader_class,
+                              network_class,
+                              trainer_class,
+                              dataset_dirs_args,
+                              dataset_dirs_class,
+                              dataset_spec_args,
+                              dataset_spec_class,
+                              data_loader_spec_args,
+                              data_loader_spec_class,
+                              network_spec_args,
+                              network_spec_class,
+                              trainer_spec_args,
+                              trainer_spec_class)

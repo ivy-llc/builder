@@ -2,3 +2,4 @@ ivy-core
 gitpython
 opencv-python
 tensorflow-io
+ray[tune]

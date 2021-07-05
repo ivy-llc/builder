@@ -118,9 +118,11 @@ class Trainer:
 
         # uninitialized variables
         self._starting_iteration = None
+        self._total_iterations = None
 
         # trainer variables
         self._global_step = 0
+        self._moving_average_loss = 0
 
         # set seed
         np.random.seed(self._spec.seed)
@@ -220,6 +222,7 @@ class Trainer:
     def _train_step(self, with_output=False):
         training_batch = self._spec.data_loader.get_next_training_batch()
         cost, grads = ivy.execute_with_gradients(lambda v: self._compute_cost(training_batch, v), self._spec.network.v)
+        self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
         self._spec.network.v = self._optimizer.step(self._spec.network.v, grads)
         if with_output:
             return training_batch, cost
@@ -235,13 +238,14 @@ class Trainer:
             else:
                 self._total_cost = self._train_step()
 
-    def _train(self, vis_mode=False, starting_iteration=None, repeat_run=False):
+    def _train(self, vis_mode=False, starting_iteration=None, total_iterations=None):
 
         if starting_iteration:
             self._starting_iteration = starting_iteration
-
-        if repeat_run:
-            self._total_iterations = self._spec.total_iterations + self._starting_iteration
+        else:
+            self._starting_iteration = 0
+        if total_iterations:
+            self._total_iterations = total_iterations
         else:
             self._total_iterations = self._spec.total_iterations
 
@@ -313,11 +317,11 @@ class Trainer:
         """
         self._starting_iteration = self._initialize_model()
 
-    def train(self, starting_iteration: int = 0, repeat_run: bool = False) -> None:
+    def train(self, starting_iteration: int = 0, total_iterations: int = None) -> None:
         """
         run the trainer, returning the iteration step reached
         """
-        return self._train(False, starting_iteration, repeat_run)
+        return self._train(False, starting_iteration, total_iterations)
 
     def visualize(self) -> None:
         """
@@ -331,3 +335,11 @@ class Trainer:
     @property
     def learning_rate(self):
         return self._learning_rate_func(self._global_step)
+
+    @property
+    def spec(self):
+        return self._spec
+
+    @property
+    def moving_average_loss(self):
+        return self._moving_average_loss
