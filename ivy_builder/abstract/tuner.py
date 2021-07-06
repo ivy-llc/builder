@@ -2,6 +2,7 @@
 import os
 import ivy
 import json
+import logging
 import numpy as np
 from ray import tune
 import multiprocessing
@@ -10,6 +11,7 @@ from ray.tune.schedulers.async_hyperband import AsyncHyperBandScheduler
 
 # local
 from ivy.core.container import Container
+from ivy_builder import builder as builder_module
 from ivy_builder.specs.dataset_dirs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
@@ -20,7 +22,7 @@ from ivy_builder.specs.tuner_spec import TunerSpec
 SPEC_KEYS = ['dd', 'ds', 'dls', 'ns', 'ts']
 
 
-def _convert_tune_config(config):
+def _convert_tuner_spec(config):
     return_dict = dict()
 
     for i, (key, arg) in enumerate(config.items()):
@@ -98,17 +100,28 @@ class Tuner:
         self._network_spec_class = network_spec_class
         self._trainer_spec_args = trainer_spec_args
         self._trainer_spec_class = trainer_spec_class
+        self._tuner_spec_args = tuner_spec_args
+        self._tuner_spec_class = tuner_spec_class
 
         # initialized on _setup
         self._trainer = None
 
         # builder
-        import ivy_builder.builder as builder
-        self._builder = builder
+        while len(ivy.framework_stack) > 0:
+            logging.info('unsetting framework {}, framework stack must be empty when'
+                         'initializing tuner class.'.format(ivy.framework_stack[-1]))
+            ivy.unset_framework()
+        self._builder = builder_module
 
-    def tune(self, name, config, num_samples, num_gpus):
+    def tune(self, name, num_samples, num_gpus):
 
-        # classes and args for builder
+        # Create Trainable class #
+        # -----------------------#
+
+        # builder for TuneTrainable
+        builder = self._builder
+
+        # classes and args for TuneTrainable
         data_loader_class = self._data_loader_class
         network_class = self._network_class
         trainer_class = self._trainer_class
@@ -122,33 +135,15 @@ class Tuner:
         network_spec_class = self._network_spec_class
         trainer_spec_args = self._trainer_spec_args
         trainer_spec_class = self._trainer_spec_class
-
-        # builder
-        builder = self._builder
-
-        # trainer spec
-        trainer_spec = builder.build_trainer_spec(data_loader_class,
-                                                  network_class,
-                                                  dataset_dirs_args,
-                                                  dataset_dirs_class,
-                                                  dataset_spec_args,
-                                                  dataset_spec_class,
-                                                  data_loader_spec_args,
-                                                  data_loader_spec_class,
-                                                  network_spec_args,
-                                                  network_spec_class,
-                                                  trainer_spec_args,
-                                                  trainer_spec_class)
-
-        # Create Trainable class #
-        # -----------------------#
+        tuner_spec_args = self._tuner_spec_args
+        tuner_spec_class = self._tuner_spec_class
 
         class TuneTrainable(tune.Trainable):
 
             def setup(self, _):
+                ivy.set_framework(self.config['framework'])
                 self.timestep = 0
                 self._trainer_global_step = 0
-                ivy.set_framework(self.config['framework'])
                 self._train_steps_per_tune_step = self.config['train_steps_per_tune_step']
 
                 new_args = dict()
@@ -195,6 +190,22 @@ class Tuner:
                     self.timestep = json.loads(f.read())["timestep"]
                 self._trainer.restore(checkpoint_path, self._trainer_global_step)
 
+            def cleanup(self):
+                ivy.unset_framework()
+
+        # Build local tune specification #
+        # -------------------------------#
+
+        # tuner spec
+        ivy.set_framework(self._tuner_spec_args['framework'])
+        tuner_spec = self._builder.build_tuner_spec(
+            self._data_loader_class, self._network_class, self._trainer_class, self._dataset_dirs_args,
+            self._dataset_dirs_class, self._dataset_spec_args, self._dataset_spec_class, self._data_loader_spec_args,
+            self._data_loader_spec_class, self._network_spec_args, self._network_spec_class, self._trainer_spec_args,
+            self._trainer_spec_class, self._tuner_spec_args, self._tuner_spec_class)
+        tuner_spec = _convert_tuner_spec(tuner_spec)
+        ivy.unset_framework()
+
         # Run this trainable class #
         # -------------------------#
 
@@ -203,13 +214,9 @@ class Tuner:
             metric="cost",
             mode="min",
             grace_period=1,
-            max_t=int(np.ceil(trainer_spec.total_iterations/250)))
+            max_t=int(np.ceil(tuner_spec.trainer.spec.total_iterations/tuner_spec.train_steps_per_tune_step)))
 
         num_cpus = multiprocessing.cpu_count()
-        config = _convert_tune_config(config)
-        config['framework'] = ivy.get_framework_str()
-        config['train_steps_per_tune_step'] = trainer_spec_args['train_steps_per_tune_step']
-        ivy.unset_framework()
 
         reporter = CLIReporter(['cost'])
 
@@ -217,11 +224,11 @@ class Tuner:
                  progress_reporter=reporter,
                  name=name,
                  scheduler=ahb,
-                 stop={"training_iteration": int(np.ceil(trainer_spec.total_iterations/250))},
+                 stop={"training_iteration":
+                           int(np.ceil(tuner_spec.trainer.spec.total_iterations/tuner_spec.train_steps_per_tune_step))},
                  num_samples=num_samples,
                  resources_per_trial={
                      "cpu": num_cpus,
                      "gpu": num_gpus
                  },
-                 config=config)
-        ivy.set_framework(config['framework'])
+                 config=tuner_spec)
