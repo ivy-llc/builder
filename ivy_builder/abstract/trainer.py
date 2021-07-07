@@ -89,33 +89,6 @@ class Trainer:
         # specification
         self._spec = spec
 
-        # remove/create log dir
-        if self._spec.overwrite_log_dir:
-            shutil.rmtree(self._spec.log_dir, ignore_errors=True)
-        os.makedirs(self._spec.log_dir, exist_ok=True)
-
-        # write spec json
-        spec_dir = os.path.join(self._spec.log_dir, 'spec')
-        os.makedirs(spec_dir, exist_ok=True)
-        complete_spec_filepath = _get_valid_filepath(spec_dir, 'complete_spec', '.json')
-        spec_dict = spec_to_dict(spec)
-        save_dict_as_json(spec_dict, complete_spec_filepath)
-
-        # write general info
-        info_dir = os.path.join(self._spec.log_dir, 'info')
-        os.makedirs(info_dir, exist_ok=True)
-        info_filepath = _get_valid_filepath(info_dir, 'info', '.txt')
-        try:
-            repo = git.Repo(search_parent_directories=True)
-            sha = repo.head.object.hexsha
-        except (git.exc.InvalidGitRepositoryError, ValueError):
-            sha = 'NOT A GIT REPO'
-        with open(info_filepath, 'w+') as info_file:
-            info_file.writelines(['time of execution:\n',
-                                  str(datetime.now()) + '\n\n',
-                                  'git commit hash at time of execution:\n',
-                                  sha + '\n'])
-
         # uninitialized variables
         self._starting_iteration = None
         self._total_iterations = None
@@ -198,7 +171,38 @@ class Trainer:
         self._chkpt_manager.save(self._global_step)
         logging.info('network checkpoint saved @ step ' + str(self._global_step))
 
+    def _save_spec_to_disk(self):
+
+        # remove/create log dir
+        if self._spec.overwrite_log_dir:
+            shutil.rmtree(self._spec.log_dir, ignore_errors=True)
+        os.makedirs(self._spec.log_dir, exist_ok=True)
+
+        # write spec json
+        spec_dir = os.path.join(self._spec.log_dir, 'spec')
+        os.makedirs(spec_dir, exist_ok=True)
+        complete_spec_filepath = _get_valid_filepath(spec_dir, 'complete_spec', '.json')
+        spec_dict = spec_to_dict(self._spec)
+        save_dict_as_json(spec_dict, complete_spec_filepath)
+
+    def _save_info_to_disk(self):
+        info_dir = os.path.join(self._spec.log_dir, 'info')
+        os.makedirs(info_dir, exist_ok=True)
+        info_filepath = _get_valid_filepath(info_dir, 'info', '.txt')
+        try:
+            repo = git.Repo(search_parent_directories=True)
+            sha = repo.head.object.hexsha
+        except (git.exc.InvalidGitRepositoryError, ValueError):
+            sha = 'NOT A GIT REPO'
+        with open(info_filepath, 'w+') as info_file:
+            info_file.writelines(['time of execution:\n',
+                                  str(datetime.now()) + '\n\n',
+                                  'git commit hash at time of execution:\n',
+                                  sha + '\n'])
+
     def _initialize_model(self, checkpoint_path=None):
+        self._save_spec_to_disk()
+        self._save_info_to_disk()
         starting_iteration = 0
         self._init_checkpoint_manager()
         if not checkpoint_path:

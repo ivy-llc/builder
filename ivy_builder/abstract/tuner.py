@@ -135,7 +135,7 @@ class Tuner:
             ivy.unset_framework()
         self._builder = builder_module
 
-    def tune(self, name, num_samples, parallel_trials, grace_period):
+    def tune(self, name, num_samples, parallel_trials, grace_period, checkpoint_freq):
 
         # Create Trainable class #
         # -----------------------#
@@ -169,7 +169,9 @@ class Tuner:
                 self.timestep = 0
                 self._trainer_global_step = 0
                 self._train_steps_per_tune_step = self.config['train_steps_per_tune_step']
-
+                self._config_str = '_'.join([str(key) + '_' + str(val)
+                                             for key, val in self.config.items() if isinstance(val, (float, int))])
+                trainer_spec_args['log_dir'] = os.path.join(trainer_spec_args['log_dir'], self._config_str)
                 new_args = dict()
                 for class_key, args in zip(SPEC_KEYS, [dataset_dirs_args, dataset_spec_args, data_loader_spec_args,
                                                        network_spec_args, trainer_spec_args]):
@@ -200,19 +202,20 @@ class Tuner:
                                                                 self._trainer_global_step +
                                                                 self._train_steps_per_tune_step)
                 self.timestep += 1
-                return {'cost': ivy.to_numpy(self._trainer.moving_average_loss)}
+                return {'timestep': self.timestep,
+                        'cost': ivy.to_numpy(self._trainer.moving_average_loss)}
 
             def save_checkpoint(self, checkpoint_dir):
-                path = os.path.join(checkpoint_dir, 'checkpoint')
-                with open(path, "w") as f:
-                    f.write(json.dumps({"timestep": self.timestep}))
-                self._trainer.save(checkpoint_dir)
-                return path
+                os.makedirs(checkpoint_dir, exist_ok=True)
+                save_name = 'step_{}'.format(self.timestep)
+                save_path = os.path.join(checkpoint_dir, save_name)
+                self._trainer.save(save_path)
+                print('saved checkpoint to path: {}'.format(save_path))
+                return save_path
 
             def load_checkpoint(self, checkpoint_path):
-                with open(checkpoint_path) as f:
-                    self.timestep = json.loads(f.read())["timestep"]
                 self._trainer.restore(checkpoint_path, self._trainer_global_step)
+                print('loaded checkpoint from {}'.format(checkpoint_path))
 
             def cleanup(self):
                 ivy.unset_framework()
@@ -259,4 +262,6 @@ class Tuner:
                      "gpu": gpus_per_trial
                  },
                  config=tuner_spec,
-                 local_dir=tuner_spec.trainer.spec.log_dir)
+                 local_dir=tuner_spec.trainer.spec.log_dir,
+                 checkpoint_freq=checkpoint_freq,
+                 checkpoint_at_end=True)
