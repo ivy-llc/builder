@@ -143,6 +143,12 @@ class Trainer:
         """
         raise NotImplementedError
 
+    def _init(self) -> None:
+        """
+        Initialize the model
+        """
+        pass
+
     # Getters #
 
     @property
@@ -201,6 +207,7 @@ class Trainer:
                                   sha + '\n'])
 
     def _initialize_model(self, checkpoint_path=None):
+        self._init()
         self._save_spec_to_disk()
         self._save_info_to_disk()
         starting_iteration = 0

@@ -156,8 +156,6 @@ class Tuner:
         network_spec_args = self._network_spec_args
         network_spec_class = self._network_spec_class
         trainer_spec_args = self._trainer_spec_args
-        trainer_spec_args['save_freq'] = -1
-        trainer_spec_args['with_writer'] = False
         trainer_spec_class = self._trainer_spec_class
         tuner_spec_args = self._tuner_spec_args
         tuner_spec_class = self._tuner_spec_class
@@ -262,6 +260,6 @@ class Tuner:
                      "gpu": gpus_per_trial
                  },
                  config=tuner_spec,
-                 local_dir=tuner_spec.trainer.spec.log_dir,
+                 local_dir='/'.join(tuner_spec.trainer.spec.log_dir.split('/')[:-1]),
                  checkpoint_freq=checkpoint_freq,
                  checkpoint_at_end=True)
