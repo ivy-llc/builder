@@ -34,9 +34,9 @@ def _convert_tuner_spec(config):
         max_val = arg['max']
         mean_val = (max_val + min_val) / 2
         sd_val = max_val - mean_val
-        exponential = arg['exponential']
-        with_gaussian = arg['gaussian']
-        as_int = arg['as_int']
+        exponential = 'exponential' in arg and arg['exponential']
+        with_gaussian = 'gaussian' in arg and arg['gaussian']
+        as_int = 'as_int' in arg and arg['as_int']
         if with_gaussian:
             if exponential:
                 if as_int:
