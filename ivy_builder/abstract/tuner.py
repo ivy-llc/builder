@@ -34,35 +34,57 @@ def _convert_tuner_spec(config):
         max_val = arg['max']
         mean_val = (max_val + min_val) / 2
         sd_val = max_val - mean_val
+        gaussian = 'gaussian' in arg and arg['gaussian']
+        uniform = 'uniform' in arg and arg['uniform']
+        grid = 'grid' in arg and arg['grid']
         exponential = 'exponential' in arg and arg['exponential']
-        with_gaussian = 'gaussian' in arg and arg['gaussian']
         as_int = 'as_int' in arg and arg['as_int']
-        if with_gaussian:
+        if gaussian:
             if exponential:
                 if as_int:
-                    sample_func = lambda spec, m=mean_val, s=sd_val: int(np.round(10 ** np.random.normal(m, s)))
+                    sample_func = lambda spec, m=mean_val, s=sd_val:\
+                        int(np.round(np.exp(np.random.normal(np.log(m), np.log(s)))))
                 else:
-                    sample_func = lambda spec, m=mean_val, s=sd_val: 10 ** np.random.normal(m, s)
+                    sample_func = lambda spec, m=mean_val, s=sd_val:\
+                        np.exp(np.random.normal(np.log(m), np.log(s)))
             else:
                 if as_int:
-                    sample_func = lambda spec, m=mean_val, s=sd_val: int(np.round(np.random.normal(m, s)))
+                    sample_func = lambda spec, m=mean_val, s=sd_val:\
+                        int(np.round(np.random.normal(m, s)))
                 else:
-                    sample_func = lambda spec, m=mean_val, s=sd_val: np.random.normal(m, s)
-        else:
+                    sample_func = lambda spec, m=mean_val, s=sd_val:\
+                        np.random.normal(m, s)
+            return_dict[key] = tune.sample_from(sample_func)
+        elif uniform:
             if exponential:
                 if as_int:
-                    sample_func = \
-                        lambda spec, mi=min_val, ma=max_val: int(np.round(10 ** np.random.uniform(mi, ma)))
+                    sample_func = lambda spec, mi=min_val, ma=max_val:\
+                        int(np.round(np.exp(np.random.uniform(np.log(mi), np.log(ma)))))
                 else:
-                    sample_func = lambda spec, mi=min_val, ma=max_val: 10 ** np.random.uniform(mi, ma)
+                    sample_func = lambda spec, mi=min_val, ma=max_val:\
+                        np.exp(np.random.uniform(np.log(mi), np.log(ma)))
             else:
                 if as_int:
-                    sample_func = \
-                        lambda spec, mi=min_val, ma=max_val: int(np.round(np.random.uniform(mi, ma)))
+                    sample_func = lambda spec, mi=min_val, ma=max_val: int(np.round(np.random.uniform(mi, ma)))
                 else:
                     sample_func = lambda spec, mi=min_val, ma=max_val: np.random.uniform(mi, ma)
-        return_dict[key] = tune.sample_from(sample_func)
-
+            return_dict[key] = tune.sample_from(sample_func)
+        elif grid:
+            num_samples = arg['num_samples']
+            if exponential:
+                if as_int:
+                    grid_vals = np.round(np.exp(np.linspace(
+                        np.log(min_val), np.log(max_val), num_samples))).astype(np.int32).tolist()
+                else:
+                    grid_vals = np.round(np.exp(np.linspace(np.log(min_val), np.log(max_val), num_samples))).tolist()
+            else:
+                if as_int:
+                    grid_vals = np.round(np.linspace(min_val, max_val, num_samples)).astype(np.uint32).tolist()
+                else:
+                    grid_vals = np.linspace(min_val, max_val, num_samples).tolist()
+            return_dict[key] = tune.grid_search(grid_vals)
+        else:
+            raise Exception('invalid mode, one of [ gaussian | uniform | grid ] must be selected.')
     return Container(return_dict)
 
 
@@ -113,7 +135,7 @@ class Tuner:
             ivy.unset_framework()
         self._builder = builder_module
 
-    def tune(self, name, num_samples, num_gpus):
+    def tune(self, name, num_samples, parallel_trials, grace_period):
 
         # Create Trainable class #
         # -----------------------#
@@ -134,6 +156,8 @@ class Tuner:
         network_spec_args = self._network_spec_args
         network_spec_class = self._network_spec_class
         trainer_spec_args = self._trainer_spec_args
+        trainer_spec_args['save_freq'] = -1
+        trainer_spec_args['with_writer'] = False
         trainer_spec_class = self._trainer_spec_class
         tuner_spec_args = self._tuner_spec_args
         tuner_spec_class = self._tuner_spec_class
@@ -204,7 +228,6 @@ class Tuner:
             self._data_loader_spec_class, self._network_spec_args, self._network_spec_class, self._trainer_spec_args,
             self._trainer_spec_class, self._tuner_spec_args, self._tuner_spec_class)
         tuner_spec = _convert_tuner_spec(tuner_spec)
-        ivy.unset_framework()
 
         # Run this trainable class #
         # -------------------------#
@@ -213,10 +236,14 @@ class Tuner:
             time_attr="training_iteration",
             metric="cost",
             mode="min",
-            grace_period=1,
+            grace_period=grace_period,
             max_t=int(np.ceil(tuner_spec.trainer.spec.total_iterations/tuner_spec.train_steps_per_tune_step)))
 
         num_cpus = multiprocessing.cpu_count()
+        num_gpus = ivy.num_gpus()
+        cpus_per_trial = num_cpus/parallel_trials
+        gpus_per_trial = num_gpus/parallel_trials
+        ivy.unset_framework()
 
         reporter = CLIReporter(['cost'])
 
@@ -228,7 +255,8 @@ class Tuner:
                            int(np.ceil(tuner_spec.trainer.spec.total_iterations/tuner_spec.train_steps_per_tune_step))},
                  num_samples=num_samples,
                  resources_per_trial={
-                     "cpu": num_cpus,
-                     "gpu": num_gpus
+                     "cpu": cpus_per_trial,
+                     "gpu": gpus_per_trial
                  },
-                 config=tuner_spec)
+                 config=tuner_spec,
+                 local_dir=tuner_spec.trainer.spec.log_dir)
