@@ -90,7 +90,7 @@ class Trainer:
         self._spec = spec
 
         # uninitialized variables
-        self._starting_iteration = None
+        self._starting_iteration = 0
         self._total_iterations = None
 
         # trainer variables
@@ -254,8 +254,6 @@ class Trainer:
 
         if starting_iteration:
             self._starting_iteration = starting_iteration
-        else:
-            self._starting_iteration = 0
         if total_iterations:
             self._total_iterations = total_iterations
         else:
@@ -329,7 +327,7 @@ class Trainer:
         """
         self._starting_iteration = self._initialize_model()
 
-    def train(self, starting_iteration: int = 0, total_iterations: int = None) -> None:
+    def train(self, starting_iteration: int = None, total_iterations: int = None) -> None:
         """
         run the trainer, returning the iteration step reached
         """
