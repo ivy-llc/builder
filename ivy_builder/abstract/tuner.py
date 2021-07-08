@@ -1,7 +1,6 @@
 # global
 import os
 import ivy
-import json
 import logging
 import numpy as np
 from ray import tune
@@ -177,7 +176,8 @@ class Tuner:
                 self._trainer_global_step = 0
                 self._train_steps_per_tune_step = self.config['train_steps_per_tune_step']
                 self._config_str = '_'.join([str(key) + '_' + str(val)
-                                             for key, val in self.config.items() if isinstance(val, (float, int))])
+                                             for key, val in self.config.items()
+                                             if (isinstance(val, (float, int)) and key != 'train_steps_per_tune_step')])
                 trainer_spec_args['log_dir'] = os.path.join(trainer_spec_args['log_dir'], self._config_str)
                 new_args = dict()
                 for class_key, args in zip(SPEC_KEYS, [dataset_dirs_args, dataset_spec_args, data_loader_spec_args,
@@ -256,7 +256,8 @@ class Tuner:
                      "cpu": cpus_per_trial,
                      "gpu": gpus_per_trial
                  },
-                 config=self._spec,
+                 config=dict([(key, val) for key, val in self._spec.items()
+                              if (isinstance(val, dict) or key in ['framework', 'train_steps_per_tune_step'])]),
                  local_dir='/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]),
                  checkpoint_freq=self._spec.checkpoint_freq,
                  checkpoint_at_end=True)
