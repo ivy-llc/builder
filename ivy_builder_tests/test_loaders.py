@@ -1,6 +1,7 @@
 # global
 import os
 import pytest
+import ivy_tests.helpers as helpers
 
 # local
 from ivy_builder.specs.dataset_dirs import DatasetDirs
@@ -64,6 +65,7 @@ def test_json_loader(dev_str, f, call, preload_containers):
     # test keychain pruning, no container pre-loading, and padded windowing
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=3, num_sequences_to_use=6,
                                           num_training_sequences=3, preload_containers=preload_containers,
+                                          shuffle_buffer_size=3,
                                           unused_key_chains=['observations/image/ego/ego_cam_px/depth'],
                                           float_strs=['depth'], uint8_strs=['rgb'])
     data_loader = JSONDataLoader(data_loader_spec)

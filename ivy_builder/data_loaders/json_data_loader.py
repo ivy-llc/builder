@@ -339,8 +339,8 @@ class JSONDataLoader(DataLoader):
                               self._group_container_into_windowed_container,
                               self._num_workers)
         dataset = dataset.unbatch('unbatched', cache_size=self._spec.cache_size)
-        if self._spec.shuffle:
-            dataset = dataset.shuffle('shuffled')
+        if self._spec.shuffle_data:
+            dataset = dataset.shuffle('shuffled', self._spec.shuffle_buffer_size)
         dataset = dataset.map('loaded_images',
                               self._load_images_from_filepath_tensors,
                               self._num_workers)

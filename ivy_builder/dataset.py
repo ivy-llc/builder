@@ -355,7 +355,8 @@ class Dataset:
         unbatch_slice_dict = dict()
         slice_dict = dict()
         size_so_far = 0
-        for i in range(self._size):
+        # ToDo: verify this math.ceil is correct
+        for i in range(math.ceil(self._size)):
             data = Dataset._slice_dataset(i, self)
             for j in range(data.size):
                 unbatch_slice_dict[size_so_far + j] = i
@@ -401,15 +402,24 @@ class Dataset:
                        num_processes=num_processes,
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
-    def shuffle(self, name, num_processes=1, numpy_loading=None):
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=self._size,
-                       trans_fn=lambda cont: cont.shuffle(),
-                       with_caching=self._with_caching,
-                       cache_size=self._cache_size,
-                       num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+    def shuffle(self, name, shuffle_buffer_size, num_processes=1, numpy_loading=None):
+        pre_shuffled = self.batch('pre_' + name,
+                                  shuffle_buffer_size,
+                                  num_processes=num_processes,
+                                  numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+        shuffled = Dataset(base_dataset=pre_shuffled,
+                           name=name,
+                           size=pre_shuffled.size,
+                           trans_fn=lambda cont: cont.shuffle(),
+                           with_caching=self._with_caching,
+                           cache_size=self._cache_size,
+                           num_processes=num_processes,
+                           numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+        post_shuffled = shuffled.unbatch('post_' + name,
+                                         num_processes=num_processes,
+                                         numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
+                                         cache_size=self._cache_size)
+        return post_shuffled
 
     def prefetch(self, name, buffer_size, num_processes=1, numpy_loading=None):
 

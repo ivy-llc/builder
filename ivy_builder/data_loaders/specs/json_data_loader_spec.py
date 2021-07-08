@@ -5,10 +5,12 @@ from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 class JSONDataLoaderSpec(DataLoaderSpec):
 
     def __init__(self, dataset_spec, batch_size, window_size, num_training_sequences, num_sequences_to_use,
-                 num_workers=1, cache_size=1, unused_key_chains=None, preload_containers=False, shuffle=True,
-                 post_proc_fn=None, prefetch_to_gpu=False, single_pass=False, float_strs=None, uint8_strs=None,
-                 custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None, **kwargs):
+                 num_workers=1, cache_size=1, unused_key_chains=None, preload_containers=False, shuffle_data=True,
+                 shuffle_buffer_size=None, post_proc_fn=None, prefetch_to_gpu=False, single_pass=False, float_strs=None,
+                 uint8_strs=None, custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None,
+                 **kwargs):
 
+        shuffle_buffer_size = window_size**2 if shuffle_buffer_size is None else shuffle_buffer_size
         unused_key_chains = [] if unused_key_chains is None else unused_key_chains
         float_strs = [] if float_strs is None else float_strs
         uint8_strs = [] if uint8_strs is None else uint8_strs
@@ -26,7 +28,8 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  cache_size=cache_size,
                                                  unused_key_chains=unused_key_chains,
                                                  preload_containers=preload_containers,
-                                                 shuffle=shuffle,
+                                                 shuffle_data=shuffle_data,
+                                                 shuffle_buffer_size=shuffle_buffer_size,
                                                  post_proc_fn=post_proc_fn,
                                                  prefetch_to_gpu=prefetch_to_gpu,
                                                  single_pass=single_pass,
