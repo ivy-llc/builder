@@ -135,7 +135,16 @@ class Tuner:
             ivy.unset_framework()
         self._builder = builder_module
 
-    def tune(self, name, num_samples, parallel_trials, grace_period, checkpoint_freq):
+        # tuner spec
+        ivy.set_framework(self._tuner_spec_args['framework'])
+        self._spec = self._builder.build_tuner_spec(
+            self._data_loader_class, self._network_class, self._trainer_class, self._dataset_dirs_args,
+            self._dataset_dirs_class, self._dataset_spec_args, self._dataset_spec_class, self._data_loader_spec_args,
+            self._data_loader_spec_class, self._network_spec_args, self._network_spec_class, self._trainer_spec_args,
+            self._trainer_spec_class, self._tuner_spec_args, self._tuner_spec_class)
+        self._spec = _convert_tuner_spec(self._spec)
+
+    def tune(self):
 
         # Create Trainable class #
         # -----------------------#
@@ -218,18 +227,6 @@ class Tuner:
             def cleanup(self):
                 ivy.unset_framework()
 
-        # Build local tune specification #
-        # -------------------------------#
-
-        # tuner spec
-        ivy.set_framework(self._tuner_spec_args['framework'])
-        tuner_spec = self._builder.build_tuner_spec(
-            self._data_loader_class, self._network_class, self._trainer_class, self._dataset_dirs_args,
-            self._dataset_dirs_class, self._dataset_spec_args, self._dataset_spec_class, self._data_loader_spec_args,
-            self._data_loader_spec_class, self._network_spec_args, self._network_spec_class, self._trainer_spec_args,
-            self._trainer_spec_class, self._tuner_spec_args, self._tuner_spec_class)
-        tuner_spec = _convert_tuner_spec(tuner_spec)
-
         # Run this trainable class #
         # -------------------------#
 
@@ -237,29 +234,29 @@ class Tuner:
             time_attr="training_iteration",
             metric="cost",
             mode="min",
-            grace_period=grace_period,
-            max_t=int(np.ceil(tuner_spec.trainer.spec.total_iterations/tuner_spec.train_steps_per_tune_step)))
+            grace_period=self._spec.grace_period,
+            max_t=int(np.ceil(self._spec.trainer.spec.total_iterations/self._spec.train_steps_per_tune_step)))
 
         num_cpus = multiprocessing.cpu_count()
         num_gpus = ivy.num_gpus()
-        cpus_per_trial = num_cpus/parallel_trials
-        gpus_per_trial = num_gpus/parallel_trials
+        cpus_per_trial = num_cpus/self._spec.parallel_trials
+        gpus_per_trial = num_gpus/self._spec.parallel_trials
         ivy.unset_framework()
 
         reporter = CLIReporter(['cost'])
 
         tune.run(TuneTrainable,
                  progress_reporter=reporter,
-                 name=name,
+                 name=self._spec.name,
                  scheduler=ahb,
                  stop={"training_iteration":
-                           int(np.ceil(tuner_spec.trainer.spec.total_iterations/tuner_spec.train_steps_per_tune_step))},
-                 num_samples=num_samples,
+                           int(np.ceil(self._spec.trainer.spec.total_iterations/self._spec.train_steps_per_tune_step))},
+                 num_samples=self._spec.num_samples,
                  resources_per_trial={
                      "cpu": cpus_per_trial,
                      "gpu": gpus_per_trial
                  },
-                 config=tuner_spec,
-                 local_dir='/'.join(tuner_spec.trainer.spec.log_dir.split('/')[:-1]),
-                 checkpoint_freq=checkpoint_freq,
+                 config=self._spec,
+                 local_dir='/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]),
+                 checkpoint_freq=self._spec.checkpoint_freq,
                  checkpoint_at_end=True)

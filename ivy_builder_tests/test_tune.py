@@ -88,9 +88,14 @@ def test_tune_integration(dev_str, call):
     tuner_spec_args = {'framework': ivy.get_framework_str(),
                        'train_steps_per_tune_step': 2,
                        'ts_initial_learning_rate':
-                           {'min': 10 ** -6, 'max': 10 ** -3, 'uniform': True, 'exponential': True, 'as_int': False}}
+                           {'min': 10 ** -6, 'max': 10 ** -3, 'uniform': True, 'exponential': True, 'as_int': False},
+                       'name': 'asynchyperband_test',
+                       'num_samples': 5,
+                       'parallel_trials': 1,
+                       'grace_period': 1,
+                       'checkpoint_freq': 0}
     tuner = builder.build_tuner(ExampleDataLoader, ExampleNetwork, ExampleTrainer, trainer_spec_args=trainer_spec_args,
                                 tuner_spec_args=tuner_spec_args)
     num_gpus = 1 if tf.config.list_physical_devices('GPU') else 0
-    tuner.tune('asynchyperband_test', 5, 1, 1, 0)
+    tuner.tune()
     builder_helpers.remove_dirs()
