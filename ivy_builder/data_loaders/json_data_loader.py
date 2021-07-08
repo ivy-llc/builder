@@ -324,7 +324,8 @@ class JSONDataLoader(DataLoader):
 
         # padding to make rectangular
         container_filepaths = [item + ['']*(max_seq_len - len(item)) for item in container_filepaths]
-        np.random.shuffle(container_filepaths)
+        if self._spec.shuffle_data:
+            np.random.shuffle(container_filepaths)
 
         if self._spec.preload_containers:
             # load containers with vector data and image filepath entries
