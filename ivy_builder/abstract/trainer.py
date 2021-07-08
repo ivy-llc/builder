@@ -66,7 +66,7 @@ class CheckpointManager:
             if len(contents) == 0:
                 self._latest_checkpoint_fpath = None
             else:
-                contents.sort()
+                contents.sort(key=lambda x: int(x.split('-')[-1].split('.hdf5')[0]))
                 self._latest_checkpoint_fpath = os.path.join(self._directory, contents[-1])
         else:
             self._latest_checkpoint_fpath = None
