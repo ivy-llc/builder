@@ -221,6 +221,7 @@ class Trainer:
             logging.info('loaded checkpoints from {}'.format(checkpoint_path))
             starting_iteration = int(checkpoint_path.split('-')[-1].split('.')[0])
             logging.info('#--------------#\n# MODEL LOADED #\n#--------------#')
+            return starting_iteration
         else:
             logging.info('#-------------#\n# MODEL BUILT #\n#-------------#')
         if isinstance(self._spec.starting_iteration, int):
