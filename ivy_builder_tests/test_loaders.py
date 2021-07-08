@@ -1,5 +1,6 @@
 # global
 import os
+import pytest
 
 # local
 from ivy_builder.specs.dataset_dirs import DatasetDirs
@@ -8,7 +9,9 @@ from ivy_builder.data_loaders.json_data_loader import JSONDataLoader
 from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderSpec
 
 
-def test_json_loader_fixed_seq_len(dev_str, f, call):
+@pytest.mark.parametrize(
+    "preload_containers", [True, False])
+def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers):
 
     # dataset dir
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -17,8 +20,8 @@ def test_json_loader_fixed_seq_len(dev_str, f, call):
 
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=2)
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=1, window_size=1, num_sequences_to_use=1,
-                                          num_training_sequences=1, preload_containers=True, float_strs=['depth'],
-                                          uint8_strs=['rgb'])
+                                          num_training_sequences=1, preload_containers=preload_containers,
+                                          float_strs=['depth'], uint8_strs=['rgb'])
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -31,7 +34,9 @@ def test_json_loader_fixed_seq_len(dev_str, f, call):
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
 
 
-def test_json_loader(dev_str, f, call):
+@pytest.mark.parametrize(
+    "preload_containers", [True, False])
+def test_json_loader(dev_str, f, call, preload_containers):
 
     # dataset dir
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -40,8 +45,8 @@ def test_json_loader(dev_str, f, call):
 
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 2])
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=2, num_sequences_to_use=6,
-                                          num_training_sequences=3, preload_containers=True, float_strs=['depth'],
-                                          uint8_strs=['rgb'])
+                                          num_training_sequences=3, preload_containers=preload_containers,
+                                          float_strs=['depth'], uint8_strs=['rgb'])
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -58,7 +63,7 @@ def test_json_loader(dev_str, f, call):
 
     # test keychain pruning, no container pre-loading, and padded windowing
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=3, num_sequences_to_use=6,
-                                          num_training_sequences=3,
+                                          num_training_sequences=3, preload_containers=preload_containers,
                                           unused_key_chains=['observations/image/ego/ego_cam_px/depth'],
                                           float_strs=['depth'], uint8_strs=['rgb'])
     data_loader = JSONDataLoader(data_loader_spec)
