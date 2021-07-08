@@ -4,3 +4,5 @@ from . import network
 from .network import *
 from . import trainer
 from .trainer import *
+from . import tuner
+from .tuner import *

@@ -8,3 +8,5 @@ from . import network_spec
 from .network_spec import *
 from . import trainer_spec
 from .trainer_spec import *
+from . import tuner_spec
+from .tuner_spec import *
