@@ -22,3 +22,7 @@ class Network(ivy.Module):
     @property
     def spec(self):
         return self._spec
+
+    @property
+    def device(self):
+        return self._spec.device

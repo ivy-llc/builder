@@ -39,8 +39,8 @@ class Checkpoint:
 
     def restore(self, checkpoint_path):
         checkpoint = ivy.Container.from_disk(checkpoint_path)
-        self._net.v = checkpoint.network.map(lambda x, kc: ivy.variable(x))
-        self._optimizer.set_state(checkpoint.optimizer)
+        self._net.v = checkpoint.network.map(lambda x, kc: ivy.variable(ivy.to_dev(x, self._net.spec.device)))
+        self._optimizer.set_state(checkpoint.optimizer.map(lambda x, kc: ivy.to_dev(x, self._net.spec.device)))
 
     @property
     def optimizer(self):

@@ -84,8 +84,8 @@ class ExampleDataLoaderSpec(DataLoaderSpec):
 
 class ExampleNetworkSpec(NetworkSpec):
 
-    def __init__(self, num_layers):
-        super().__init__()
+    def __init__(self, device, num_layers):
+        super().__init__(device)
         self._num_layers = num_layers
 
     # Getters #
