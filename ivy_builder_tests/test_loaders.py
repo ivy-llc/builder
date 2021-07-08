@@ -1,7 +1,6 @@
 # global
 import os
 import pytest
-import ivy_tests.helpers as helpers
 
 # local
 from ivy_builder.specs.dataset_dirs import DatasetDirs
@@ -22,7 +21,7 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers):
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=2)
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=1, window_size=1, num_sequences_to_use=1,
                                           num_training_sequences=1, preload_containers=preload_containers,
-                                          float_strs=['depth'], uint8_strs=['rgb'])
+                                          array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'])
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -33,6 +32,7 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers):
         assert train_batch.actions.shape == (1, 1, 6)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
+        assert train_batch.array.data.shape == (1, 1, 3)
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ def test_json_loader(dev_str, f, call, preload_containers):
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 2])
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=2, num_sequences_to_use=6,
                                           num_training_sequences=3, preload_containers=preload_containers,
-                                          float_strs=['depth'], uint8_strs=['rgb'])
+                                          array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'])
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -58,16 +58,18 @@ def test_json_loader(dev_str, f, call, preload_containers):
         assert train_batch.actions.shape == (3, 2, 6)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
+        assert train_batch.array.data.shape == (3, 2, 3)
         valid_batch = data_loader.get_next_batch('validation')
         assert valid_batch.actions.shape == (3, 2, 6)
         assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
+        assert valid_batch.array.data.shape == (3, 2, 3)
 
     # test keychain pruning, no container pre-loading, and padded windowing
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=3, num_sequences_to_use=6,
                                           num_training_sequences=3, preload_containers=preload_containers,
                                           shuffle_buffer_size=3,
                                           unused_key_chains=['observations/image/ego/ego_cam_px/depth'],
-                                          float_strs=['depth'], uint8_strs=['rgb'])
+                                          array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'])
     data_loader = JSONDataLoader(data_loader_spec)
 
     train_batch = data_loader.get_next_batch('training')
@@ -75,6 +77,8 @@ def test_json_loader(dev_str, f, call, preload_containers):
     assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 3, 32, 32, 3)
     assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 3, 32, 32, 3)
     assert 'depth' not in train_batch.observations.image.ego.ego_cam_px
+    assert train_batch.array.data.shape == (3, 3, 3)
     valid_batch = data_loader.get_next_batch('validation')
     assert valid_batch.actions.shape == (3, 3, 6)
     assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 3, 32, 32, 3)
+    assert valid_batch.array.data.shape == (3, 3, 3)

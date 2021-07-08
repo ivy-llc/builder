@@ -215,6 +215,18 @@ class JSONDataLoader(DataLoader):
             container = container.prune_key_chain(unused_key_chain)
         return container
 
+    # arrays
+
+    def _array_fn(self, filepaths_in_window):
+        conts = list()
+        # ToDo: replace this with map_fn function once implemented
+        for filepath in filepaths_in_window:
+            str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
+            full_path = os.path.join(self._container_data_dir, str_path)
+            cont = ivy.Container.from_disk(full_path)
+            conts.append(cont)
+        return ivy.Container.concat(conts, 0)
+
     # images
 
     def _uint8_fn(self, filepaths_in_window):
@@ -250,6 +262,9 @@ class JSONDataLoader(DataLoader):
         return ivy.concatenate(imgs, 0)
 
     def _str_fn(self, x, key_chain=''):
+        for array_str in self._spec.array_strs:
+            if array_str in key_chain:
+                return self._array_fn(x)
         for float_str in self._spec.float_strs:
             if float_str in key_chain:
                 return self._float_fn(x)
@@ -266,7 +281,7 @@ class JSONDataLoader(DataLoader):
                     return self._spec.custom_fns[i](x, self._container_data_dir)
         return x
 
-    def _load_images_from_filepath_tensors(self, container):
+    def _load_data_from_filepath_tensors(self, container):
         return container.map(self._str_fn)
 
     # Dataset Creation #
@@ -341,8 +356,8 @@ class JSONDataLoader(DataLoader):
         dataset = dataset.unbatch('unbatched', cache_size=self._spec.cache_size)
         if self._spec.shuffle_data:
             dataset = dataset.shuffle('shuffled', self._spec.shuffle_buffer_size)
-        dataset = dataset.map('loaded_images',
-                              self._load_images_from_filepath_tensors,
+        dataset = dataset.map('loaded_data',
+                              self._load_data_from_filepath_tensors,
                               self._num_workers)
         dataset = dataset.batch('batched', self._batch_size)
         dataset = dataset.map('from_numpy',
