@@ -90,7 +90,10 @@ class Trainer:
         self._spec = spec
 
         # uninitialized variables
-        self._starting_iteration = 0
+        if spec.starting_iteration is not None:
+            self._starting_iteration = spec.starting_iteration
+        else:
+            self._starting_iteration = 0
         self._total_iterations = None
 
         # trainer variables
@@ -325,7 +328,9 @@ class Trainer:
         """
         setup the trainer, ready for training
         """
-        self._starting_iteration = self._initialize_model()
+        starting_iteration = self._initialize_model()
+        if self._spec.starting_iteration is None:
+            self._starting_iteration = starting_iteration
 
     def train(self, starting_iteration: int = None, total_iterations: int = None) -> None:
         """
