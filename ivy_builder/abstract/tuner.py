@@ -176,7 +176,7 @@ class Tuner:
                 self.timestep = 0
                 self._trainer_global_step = 0
                 self._train_steps_per_tune_step = self.config['train_steps_per_tune_step']
-                self._config_str = '_'.join([str(key) + '_' + "%.2f" % val if isinstance(val, float) else str(val)
+                self._config_str = '_'.join([str(key) + '_' + ("%.2f" % val if isinstance(val, float) else str(val))
                                              for key, val in self.config.items()
                                              if (isinstance(val, (float, int)) and key != 'train_steps_per_tune_step')])
                 trainer_spec_args['log_dir'] = os.path.join(trainer_spec_args['log_dir'], self._config_str)
