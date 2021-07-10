@@ -1,6 +1,7 @@
 # global
 import os
 import pytest
+import numpy as np
 
 # local
 from ivy_builder.specs.dataset_dirs import DatasetDirs
@@ -12,6 +13,10 @@ from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderS
 @pytest.mark.parametrize(
     "preload_containers", [True, False])
 def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers):
+
+    # seed
+    f.seed(0)
+    np.random.seed(0)
 
     # dataset dir
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -38,6 +43,10 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers):
 @pytest.mark.parametrize(
     "preload_containers", [True, False])
 def test_json_loader(dev_str, f, call, preload_containers):
+
+    # seed
+    f.seed(0)
+    np.random.seed(0)
 
     # dataset dir
     current_dir = os.path.dirname(os.path.realpath(__file__))

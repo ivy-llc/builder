@@ -458,8 +458,8 @@ class TestShuffle:
         if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
             pytest.skip()
 
-        ivy.seed(0)
-        np.random.seed(0)
+        ivy.seed(1)
+        np.random.seed(1)
         self._init(array_shape, num_processes)
 
         assert len(self._dataset[0:3].x) == 3

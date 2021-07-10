@@ -348,20 +348,26 @@ class Dataset:
                        num_processes=num_processes,
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
-    def unbatch(self, name, num_processes=1, numpy_loading=None, cache_size=None):
+    def unbatch(self, name, num_processes=1, numpy_loading=None, cache_size=None, batch_sizes=None):
 
-        # ToDo: make this more efficient, without needing to traverse entire dataset during initialization
-        #  this can be achieved with extra optional input for the leading sizes of each entry in the dataset
         unbatch_slice_dict = dict()
         slice_dict = dict()
         size_so_far = 0
-        # ToDo: verify this math.ceil is correct
-        for i in range(math.ceil(self._size)):
-            data = Dataset._slice_dataset(i, self)
-            for j in range(data.size):
+        size = math.ceil(self._size)
+        if isinstance(batch_sizes, int):
+            batch_sizes = [batch_sizes]*size
+        for i in range(size):
+            if batch_sizes is None:
+                data = Dataset._slice_dataset(i, self)
+                data_size = data.size
+            else:
+                data_size = batch_sizes[i]
+            if i == size - 1 and self._size % 1 != 0:
+                data_size = int(data_size * (self._size - math.floor(self._size)))
+            for j in range(data_size):
                 unbatch_slice_dict[size_so_far + j] = i
                 slice_dict[size_so_far + j] = j
-            size_so_far += data.size
+            size_so_far += data_size
         unrolled_size = size_so_far
 
         def base_slice_fn(slice_obj, dataset):
@@ -418,7 +424,8 @@ class Dataset:
         post_shuffled = shuffled.unbatch('post_' + name,
                                          num_processes=num_processes,
                                          numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
-                                         cache_size=self._cache_size)
+                                         cache_size=self._cache_size,
+                                         batch_sizes=shuffle_buffer_size)
         return post_shuffled
 
     def prefetch(self, name, buffer_size, num_processes=1, numpy_loading=None):

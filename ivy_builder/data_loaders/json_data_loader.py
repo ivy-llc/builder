@@ -159,7 +159,8 @@ class JSONDataLoader(DataLoader):
         else:
             valid_first_frame_pruned = ivy.cast(valid_first_frame[:1-self._window_size, 0], 'bool')
         if ivy.reduce_sum(ivy.cast(valid_first_frame_pruned, 'int32'))[0] == 0:
-            valid_first_frame_pruned = ivy.cast(ivy.one_hot(0, self._sequence_lengths - self._window_size + 1), 'bool')
+            valid_first_frame_pruned =\
+                ivy.cast(ivy.one_hot(0, self._sequence_lengths[0] - self._window_size + 1), 'bool')
         window_idxs_single = ivy.indices_where(valid_first_frame_pruned)
 
         gather_idxs_list = list()
@@ -295,9 +296,15 @@ class JSONDataLoader(DataLoader):
         max_seq_len = max(max([len(item) for item in container_filepaths]), self._window_size)
         if self._spec.num_sequences_to_use != -1:
             container_filepaths = container_filepaths[0:self._spec.num_sequences_to_use]
+
+        # shuffle sequences
+        if self._spec.shuffle_data:
+            np.random.shuffle(container_filepaths)
+
+        # extract sequence lengths
         if self._fixed_sequence_length:
-            self._sequence_lengths = len(container_filepaths[0])
-            self._windows_per_seq = self._sequence_lengths - self._window_size + 1
+            self._sequence_lengths = [len(container_filepaths[0])] * len(container_filepaths)
+            self._windows_per_seq = self._sequence_lengths[0] - self._window_size + 1
             # windowing values
             window_idxs_per_seq = ivy.reshape(ivy.arange(self._windows_per_seq, 0, 1), (self._windows_per_seq, 1))
             gather_idxs_list = list()
@@ -309,24 +316,10 @@ class JSONDataLoader(DataLoader):
         else:
             self._sequence_lengths = [len(item) for item in container_filepaths]
 
-        # identify which directories are for rgb loading and which are for rgba->float loading
-        self._img_channel_dims = dict()
-        with open(container_filepaths[0][0]) as fp:
-            first_container_dict = json.load(fp)
-        first_container = Container(first_container_dict)
-
-        for key, val in first_container.to_iterator():
-            if type(val) == str:
-                full_filepath = os.path.abspath(os.path.join(self._container_data_dir, val))
-                img = cv2.imread(full_filepath, -1)
-                if img is not None:
-                    self._img_channel_dims['/'.join(val.split('/')[:-1])] = img.shape[-1]
-
         # padding to make rectangular
         container_filepaths = [item + ['']*(max_seq_len - len(item)) for item in container_filepaths]
-        if self._spec.shuffle_data:
-            np.random.shuffle(container_filepaths)
 
+        # maybe pre-load containers
         if self._spec.preload_containers:
             # load containers with vector data and image filepath entries
             container_slices = self._get_containers_w_filepath_img_entries_as_tensor_slices(container_filepaths)
@@ -354,7 +347,8 @@ class JSONDataLoader(DataLoader):
         dataset = dataset.map('windowed_container',
                               self._group_container_into_windowed_container,
                               self._num_workers)
-        dataset = dataset.unbatch('unbatched', cache_size=self._spec.cache_size)
+        dataset = dataset.unbatch('unbatched', cache_size=self._spec.cache_size,
+                                  batch_sizes=[max(item - self._window_size + 1, 1) for item in self._sequence_lengths])
         if self._spec.shuffle_data:
             dataset = dataset.shuffle('shuffled', self._spec.shuffle_buffer_size)
         dataset = dataset.map('loaded_data',
