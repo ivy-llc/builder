@@ -258,7 +258,8 @@ class Tuner:
                      "gpu": gpus_per_trial
                  },
                  config=dict([(key, val) for key, val in self._spec.items()
-                              if (isinstance(val, dict) or key in ['framework', 'train_steps_per_tune_step'])]),
+                              if (isinstance(val, dict) or isinstance(val, tune.sample.Function)
+                                  or key in ['framework', 'train_steps_per_tune_step'])]),
                  local_dir='/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]),
                  checkpoint_freq=self._spec.checkpoint_freq,
                  checkpoint_at_end=True)
