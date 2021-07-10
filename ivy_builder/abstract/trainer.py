@@ -236,7 +236,8 @@ class Trainer:
 
     def _train_step(self, with_output=False):
         training_batch = self._spec.data_loader.get_next_training_batch()
-        cost, grads = ivy.execute_with_gradients(lambda v: self._compute_cost(training_batch, v), self._spec.network.v)
+        cost, grads = ivy.execute_with_gradients(
+            lambda v: self._compute_cost(training_batch, v=v), self._spec.network.v)
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
         self._spec.network.v = self._optimizer.step(self._spec.network.v, grads)
         if with_output:
