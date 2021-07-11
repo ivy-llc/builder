@@ -13,7 +13,7 @@ class Network(ivy.Module):
         """
         base class for any networks
         """
-        super(Network, self).__init__(v=v)
+        super(Network, self).__init__(v=v, dev_str=network_spec.device)
         self._spec = network_spec
 
     # Getters #
