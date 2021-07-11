@@ -38,7 +38,7 @@ class Checkpoint:
         self._net = net
 
     def restore(self, checkpoint_path):
-        checkpoint = ivy.Container.from_disk(checkpoint_path)
+        checkpoint = ivy.Container.from_disk_as_hdf5(checkpoint_path)
         self._net.v = checkpoint.network.map(lambda x, kc: ivy.variable(ivy.to_dev(x, self._net.spec.device)))
         self._optimizer.set_state(checkpoint.optimizer.map(lambda x, kc: ivy.to_dev(x, self._net.spec.device)))
 
@@ -79,7 +79,7 @@ class CheckpointManager:
         checkpoint = ivy.Container({'network': self._checkpoint.net.v,
                                     'optimizer': self._checkpoint.optimizer.state})
         self._latest_checkpoint_fpath = os.path.join(self._directory, 'chkpt-{}.hdf5'.format(step))
-        checkpoint.to_disk(self._latest_checkpoint_fpath)
+        checkpoint.to_disk_as_hdf5(self._latest_checkpoint_fpath)
 
 
 class Trainer:
@@ -313,7 +313,7 @@ class Trainer:
         checkpoint = ivy.Container({'network': self._spec.network.v,
                                     'optimizer': self._optimizer.state})
         os.makedirs('/'.join(checkpoint_path.split('/')[:-1]), exist_ok=True)
-        checkpoint.to_disk(checkpoint_path)
+        checkpoint.to_disk_as_hdf5(checkpoint_path)
 
     def restore(self, checkpoint_path: str, global_step: int = None) -> None:
         """

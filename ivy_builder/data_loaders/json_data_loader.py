@@ -224,7 +224,13 @@ class JSONDataLoader(DataLoader):
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
-            cont = ivy.Container.from_disk(full_path)
+            if self._spec.array_mode == 'hdf5':
+                cont = ivy.Container.from_disk_as_hdf5(full_path + '.hdf5')
+            elif self._spec.array_mode == 'pickled':
+                cont = ivy.Container.from_disk_as_pickled(full_path + '.pickled')
+            else:
+                raise Exception('array_mode must be one of [ hdf5 | pickled ],'
+                                'but found {}'.format(self._spec.array_mode))
             conts.append(cont)
         return ivy.Container.concat(conts, 0)
 

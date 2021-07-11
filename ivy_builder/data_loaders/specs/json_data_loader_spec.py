@@ -8,7 +8,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                  num_workers=1, cache_size=1, unused_key_chains=None, preload_containers=False, shuffle_data=True,
                  shuffle_buffer_size=None, post_proc_fn=None, prefetch_to_gpu=False, single_pass=False, array_strs=None,
                  float_strs=None, uint8_strs=None, custom_img_strs=None, custom_img_fns=None, custom_strs=None,
-                 custom_fns=None, **kwargs):
+                 custom_fns=None, array_mode='pickled', **kwargs):
 
         shuffle_buffer_size = window_size**2 if shuffle_buffer_size is None else shuffle_buffer_size
         unused_key_chains = [] if unused_key_chains is None else unused_key_chains
@@ -41,4 +41,5 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  custom_img_fns=custom_img_fns,
                                                  custom_strs=custom_strs,
                                                  custom_fns=custom_fns,
+                                                 array_mode=array_mode,
                                                  **kwargs)

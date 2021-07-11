@@ -12,7 +12,9 @@ from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderS
 
 @pytest.mark.parametrize(
     "preload_containers", [True, False])
-def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers):
+@pytest.mark.parametrize(
+    "array_mode", ['hdf5', 'pickled'])
+def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers, array_mode):
 
     # seed
     f.seed(0)
@@ -26,7 +28,8 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers):
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=2)
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=1, window_size=1, num_sequences_to_use=1,
                                           num_training_sequences=1, preload_containers=preload_containers,
-                                          array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'])
+                                          array_mode=array_mode, array_strs=['array'], float_strs=['depth'],
+                                          uint8_strs=['rgb'])
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -42,7 +45,9 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers):
 
 @pytest.mark.parametrize(
     "preload_containers", [True, False])
-def test_json_loader(dev_str, f, call, preload_containers):
+@pytest.mark.parametrize(
+    "array_mode", ['hdf5', 'pickled'])
+def test_json_loader(dev_str, f, call, preload_containers, array_mode):
 
     # seed
     f.seed(0)
@@ -56,7 +61,8 @@ def test_json_loader(dev_str, f, call, preload_containers):
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 2])
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=2, num_sequences_to_use=6,
                                           num_training_sequences=3, preload_containers=preload_containers,
-                                          array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'])
+                                          array_mode=array_mode, array_strs=['array'], float_strs=['depth'],
+                                          uint8_strs=['rgb'])
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
@@ -76,7 +82,7 @@ def test_json_loader(dev_str, f, call, preload_containers):
     # test keychain pruning, no container pre-loading, and padded windowing
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=3, num_sequences_to_use=6,
                                           num_training_sequences=3, preload_containers=preload_containers,
-                                          shuffle_buffer_size=3,
+                                          array_mode=array_mode, shuffle_buffer_size=3,
                                           unused_key_chains=['observations/image/ego/ego_cam_px/depth'],
                                           array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'])
     data_loader = JSONDataLoader(data_loader_spec)
