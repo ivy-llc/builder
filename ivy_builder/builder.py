@@ -38,29 +38,15 @@ def save_dict_as_json(dict_to_save, json_filepath):
         json.dump(dict_to_save, json_data_file, indent=4)
 
 
-def spec_to_dict(obj, spec_dict=None):
-    def __is_jsonable(x):
-        try:
-            json.dumps(x)
-            return True
-        except (TypeError, OverflowError):
-            return False
-
-    if spec_dict is None:
-        spec_dict = dict()
-    property_keys = [key for key in dir(type(obj)) if key != '__abstractmethods__' and
-                     isinstance(getattr(type(obj), key), property) and
-                     key not in __properties_to_ignore and key[0] != '_']
-    if not property_keys:
-        return spec_dict
-    property_values = [getattr(obj, key) for key in property_keys]
-    property_dict = dict(zip(property_keys, property_values))
-    serializable_property_values = [value if __is_jsonable(value) else str(value) for value in property_values]
-    serializable_property_dict = dict(zip(property_keys, serializable_property_values))
-    spec_dict[str(type(obj)).split('.')[-1].split("'")[0]] = serializable_property_dict
-    for value in property_dict.values():
-        spec_dict = spec_to_dict(value, spec_dict)
-    return spec_dict
+def spec_to_dict(spec):
+    prev_spec_len = len([x for x in spec.to_iterator()])
+    spec = spec.map(lambda x, kc: x.spec if hasattr(x, 'spec') else x)
+    new_spec_len = len([x for x in spec.to_iterator()])
+    while new_spec_len > prev_spec_len:
+        prev_spec_len = new_spec_len
+        spec = spec.map(lambda x, kc: x.spec if hasattr(x, 'spec') else x)
+        new_spec_len = len([x for x in spec.to_iterator()])
+    return spec.to_dict()
 
 
 def build_dataset_dirs(dataset_dirs_args=None,
