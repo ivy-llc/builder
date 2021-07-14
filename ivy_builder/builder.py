@@ -39,6 +39,14 @@ def save_dict_as_json(dict_to_save, json_filepath):
 
 
 def spec_to_dict(spec):
+
+    def _is_jsonable(x):
+        try:
+            json.dumps(x)
+            return True
+        except (TypeError, OverflowError):
+            return False
+
     prev_spec_len = len([x for x in spec.to_iterator()])
     spec = spec.map(lambda x, kc: x.spec if hasattr(x, 'spec') else x)
     new_spec_len = len([x for x in spec.to_iterator()])
@@ -46,6 +54,7 @@ def spec_to_dict(spec):
         prev_spec_len = new_spec_len
         spec = spec.map(lambda x, kc: x.spec if hasattr(x, 'spec') else x)
         new_spec_len = len([x for x in spec.to_iterator()])
+    spec = spec.map(lambda x, kc: x if _is_jsonable(x) else str(x))
     return spec.to_dict()
 
 

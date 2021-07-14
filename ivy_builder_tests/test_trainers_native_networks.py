@@ -53,7 +53,7 @@ def test_trainer_with_native_network(dev_str, call):
 
     # duplicate networks
     ivy.random.seed(0)
-    torch_network = Network(ivy.Container({}))
+    torch_network = Network(ivy.Container({'device': 'cpu:0'}))
     ivy_network = copy.deepcopy(torch_network)
 
     # input
