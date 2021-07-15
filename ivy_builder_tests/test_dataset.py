@@ -137,12 +137,11 @@ class TestBatch:
 
         self._init(array_shape, num_processes)
 
-        assert np.allclose(ivy.to_numpy(self._dataset[0].x),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[0:3]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[1].x),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[3:6]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[2].x),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[6:9]], 0)))
+        assert np.allclose(ivy.to_numpy(self._dataset[0].x), np.array([[0], [1], [2]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[1].x), np.array([[3], [4], [5]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[2].x), np.array([[6], [7], [8]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[1/3].x), np.array([[1], [2], [3]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[2/3].x), np.array([[2], [3], [4]]).reshape([3] + array_shape))
 
         del self._dataset
 
@@ -157,15 +156,12 @@ class TestBatch:
 
         self._init(array_shape, num_processes)
 
-        assert np.allclose(ivy.to_numpy(self._dataset[3].x),
-                           ivy.to_numpy(ivy.concatenate(
-                               [ivy.expand_dims(a, 0) for a in self._x[-1:] + self._x[0:2]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[4].x),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[2:5]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[-1].x),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[7:10]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[-2].x),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[4:7]], 0)))
+        assert np.allclose(ivy.to_numpy(self._dataset[3].x), np.array([[9], [0], [1]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[4].x), np.array([[2], [3], [4]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[-1].x), np.array([[7], [8], [9]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[-2].x), np.array([[4], [5], [6]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[-1/3].x), np.array([[9], [0], [1]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[-2/3].x), np.array([[8], [9], [0]]).reshape([3] + array_shape))
 
         del self._dataset
 
@@ -180,12 +176,13 @@ class TestBatch:
 
         self._init(array_shape, num_processes)
 
-        assert np.allclose(ivy.to_numpy(self._dataset[0:2].x[0]),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[0:3]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[0:2].x[1]),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[3:6]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[2:3].x[0]),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[6:9]], 0)))
+        assert np.allclose(ivy.to_numpy(self._dataset[0:2].x[0]), np.array([[0], [1], [2]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[0:2].x[1]), np.array([[3], [4], [5]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[2:3].x[0]), np.array([[6], [7], [8]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[1/3:4/3].x[0]),
+                           np.array([[1], [2], [3]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[2/3:5/3].x[0]),
+                           np.array([[2], [3], [4]]).reshape([3] + array_shape))
 
         del self._dataset
 
@@ -198,20 +195,16 @@ class TestBatch:
         if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
             pytest.skip()
 
-        if call is not helpers.np_call or num_processes == 1:
-            pytest.skip()
-
         self._init(array_shape, num_processes)
 
-        assert np.allclose(ivy.to_numpy(self._dataset[-1:0].x[0]),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[7:10]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[-1:1].x[0]),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[7:10]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[-1:1].x[1]),
-                           ivy.to_numpy(ivy.concatenate([ivy.expand_dims(a, 0) for a in self._x[0:3]], 0)))
-        assert np.allclose(ivy.to_numpy(self._dataset[3:4].x[0]),
-                           ivy.to_numpy(ivy.concatenate(
-                               [ivy.expand_dims(a, 0) for a in self._x[-1:] + self._x[0:2]], 0)))
+        assert np.allclose(ivy.to_numpy(self._dataset[-1:0].x[0]), np.array([[7], [8], [9]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[-1:1].x[0]), np.array([[7], [8], [9]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[-1:1].x[1]), np.array([[0], [1], [2]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[3:4].x[0]), np.array([[9], [0], [1]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[-4/3:-1/3].x[0]),
+                           np.array([[6], [7], [8]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[10/3:13/3].x[0]),
+                           np.array([[0], [1], [2]]).reshape([3] + array_shape))
 
         del self._dataset
 

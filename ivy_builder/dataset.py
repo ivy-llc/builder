@@ -118,9 +118,10 @@ class Dataset:
 
     @staticmethod
     def _ensure_number_is_int(val):
-        if val % 1 > 1e-6:
+        val_rounded = round(val)
+        if abs(val_rounded - val) > 1e-6:
             raise Exception('Trying to slice ivy Container with non-integer slice {}'.format(val))
-        return int(round(val))
+        return int(val_rounded)
 
     @staticmethod
     def _slice_dataset(slice_obj, dataset):
@@ -142,9 +143,7 @@ class Dataset:
     @staticmethod
     def _default_base_slice_fn(slice_obj, dataset):
         if isinstance(slice_obj, numbers.Number):
-            slice_obj = slice(int(round(slice_obj)), int(round(slice_obj+1)), 1)
-        else:
-            slice_obj = slice(int(round(slice_obj.start)), int(round(slice_obj.stop)), int(round(slice_obj.step)))
+            slice_obj = slice(slice_obj, slice_obj+1, 1)
         return Dataset._slice_dataset(slice_obj, dataset)
 
     @staticmethod
@@ -293,16 +292,15 @@ class Dataset:
             if self._numpy_loading:
                 ivy.unset_framework()
             return ret
-        slice_size = slice_obj.stop - slice_obj.start
+        slice_size = int(round(slice_obj.stop - slice_obj.start))
         num_sub_slices = min(slice_size, self._num_processes)
-        slice_points = np.round(np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices+1))
+        slice_points = np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices+1)
         sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
         offset = np.random.randint(0, self._num_processes)
         [self._slice_queues[int((i + offset) % self._num_processes)].put(sub_slice)
          for i, sub_slice in enumerate(sub_slices)]
         items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=5.0)
                           for i in range(num_sub_slices)]
-        # items_as_lists = [self._get_item(slice_obj) for slice_obj in sub_slices]
         ret = ivy.Container.list_join(items_as_lists)
         if self._numpy_loading:
             ivy.unset_framework()
@@ -454,7 +452,7 @@ class Dataset:
     def to_gpu(self, name, num_processes=1, gpu_idx=0):
 
         def item_to_gpu(x, _):
-            return ivy.array(x, dev_str='cuda:' + str(gpu_idx))
+            return ivy.array(x, dev_str='gpu:' + str(gpu_idx))
 
         def cont_to_gpu(cont):
             return cont.map(item_to_gpu)
