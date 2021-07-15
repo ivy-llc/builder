@@ -453,8 +453,8 @@ class TestShuffle:
         if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
             pytest.skip()
 
-        ivy.seed(1)
-        np.random.seed(1)
+        ivy.seed(0)
+        np.random.seed(0)
         self._init(array_shape, num_processes)
 
         assert len(self._dataset[0:3].x) == 3
@@ -466,9 +466,10 @@ class TestShuffle:
 
         check0 = not np.allclose(ivy.to_numpy(self._dataset[0:3].x[0]), ivy.to_numpy(self._x[0]))
         check1 = not np.allclose(ivy.to_numpy(self._dataset[3:6].x[1]), ivy.to_numpy(self._x[4]))
-        check2 = not np.allclose(ivy.to_numpy(self._dataset[6:9].x[2]), ivy.to_numpy(self._x[8]))
+        check2 = not np.allclose(ivy.to_numpy(self._dataset[6:9].x[0]), ivy.to_numpy(self._x[6]))
+        check3 = not np.allclose(ivy.to_numpy(self._dataset[6:9].x[1]), ivy.to_numpy(self._x[7]))
 
-        assert check0 or check1 or check2
+        assert check0 or check1 or check2 or check3
 
         del self._dataset
 
@@ -481,8 +482,8 @@ class TestShuffle:
         if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
             pytest.skip()
 
-        ivy.seed(1)
-        np.random.seed(1)
+        ivy.seed(0)
+        np.random.seed(0)
         self._init(array_shape, num_processes)
 
         assert len(self._dataset[-1:1].x) == 2
