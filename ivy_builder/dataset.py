@@ -183,20 +183,23 @@ class Dataset:
         if isinstance(slice_obj, numbers.Number):
             return slice_obj % self._size
         else:
-            so_start = slice_obj.start % self._size
-            so_stop = slice_obj.stop % self._size if slice_obj.stop != math.ceil(self.size) else slice_obj.stop
-            return slice(so_start, so_stop, 1)
+            so_start_orig = slice_obj.start
+            so_stop_orig = slice_obj.stop
+            so_start_wrapped = so_start_orig % self._size
+            if abs(so_stop_orig - so_start_orig - 1) < 1e-6:
+                return slice(so_start_wrapped, so_start_wrapped + 1, 1)
+            so_stop_wrapped = so_stop_orig % self._size
+            if abs(so_stop_wrapped) < 1:
+                so_stop_wrapped = self._size + so_stop_wrapped
+            return slice(so_start_wrapped, so_stop_wrapped, 1)
 
     def _wrap_base_slice_obj(self, slice_obj):
         if isinstance(slice_obj, numbers.Number):
             return slice_obj
-        else:
-            if slice_obj.stop == 0:
-                slice_obj = slice(slice_obj.start, self._size, 1)
-            if slice_obj.stop < slice_obj.start:
-                slice_obj_0 = slice(slice_obj.start, self._size, 1)
-                slice_obj_1 = slice(0, slice_obj.stop, 1)
-                return slice_obj_0, slice_obj_1
+        elif slice_obj.stop < slice_obj.start:
+            slice_obj_0 = slice(slice_obj.start, self._size, 1)
+            slice_obj_1 = slice(0, slice_obj.stop, 1)
+            return slice_obj_0, slice_obj_1
         return slice_obj
 
     @staticmethod

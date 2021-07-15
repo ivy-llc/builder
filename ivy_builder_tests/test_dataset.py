@@ -205,6 +205,8 @@ class TestBatch:
                            np.array([[6], [7], [8]]).reshape([3] + array_shape))
         assert np.allclose(ivy.to_numpy(self._dataset[10/3:13/3].x[0]),
                            np.array([[0], [1], [2]]).reshape([3] + array_shape))
+        assert np.allclose(ivy.to_numpy(self._dataset[8/3:11/3].x[0]),
+                           np.array([[8], [9], [0]]).reshape([3] + array_shape))
 
         del self._dataset
 
