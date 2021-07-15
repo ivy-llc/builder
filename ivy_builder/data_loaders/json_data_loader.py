@@ -366,7 +366,7 @@ class JSONDataLoader(DataLoader):
                               numpy_loading=False)
         if self._spec.post_proc_fn is not None:
             dataset = dataset.map(map_func=self._spec.post_proc_fn, num_parallel_calls=self._num_workers)
-        dataset = dataset.prefetch('prefetch', 2)
+        dataset = dataset.prefetch('prefetch', self._spec.num_to_prefetch)
         if self._spec.prefetch_to_gpu:
             dataset = dataset.to_gpu('to_gpu')
         return dataset

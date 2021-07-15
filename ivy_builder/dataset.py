@@ -440,12 +440,11 @@ class Dataset:
         # noinspection PyUnresolvedReferences
         def base_slice_fn(slc_obj, dataset):
             if isinstance(slc_obj, numbers.Number):
-                so_start = int(round(slc_obj))
-                so_stop = int(round(min(slc_obj + 1 + buffer_size, math.floor(dataset.size))))
+                so_start = slc_obj
+                so_stop = slc_obj + 1 + buffer_size
             else:
-                so_start = int(round(slc_obj.start))
-                so_stop = int(round(min(slc_obj.stop + buffer_size, math.floor(dataset.size))))
-            so_stop = so_stop + 1 if so_stop == so_start else so_stop
+                so_start = slc_obj.start
+                so_stop = slc_obj.stop + buffer_size
             base_slice_obj = slice(so_start, so_stop, 1)
             return Dataset._slice_dataset(base_slice_obj, dataset)
 
