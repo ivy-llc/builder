@@ -117,6 +117,10 @@ class Dataset:
             output_queue.put(item)
 
     @staticmethod
+    def _is_int(val):
+        return abs(round(val) - val) < 1e-6
+
+    @staticmethod
     def _ensure_number_is_int(val):
         val_rounded = round(val)
         if abs(val_rounded - val) > 1e-6:
@@ -295,6 +299,8 @@ class Dataset:
         slice_size = int(round(slice_obj.stop - slice_obj.start))
         num_sub_slices = min(slice_size, self._num_processes)
         slice_points = np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices+1)
+        if Dataset._is_int(slice_obj.start) and Dataset._is_int(slice_obj.stop):
+            slice_points = np.round(slice_points)
         sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
         offset = np.random.randint(0, self._num_processes)
         [self._slice_queues[int((i + offset) % self._num_processes)].put(sub_slice)
