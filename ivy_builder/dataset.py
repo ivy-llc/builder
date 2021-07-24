@@ -197,8 +197,10 @@ class Dataset:
         if isinstance(slice_obj, numbers.Number):
             return slice_obj
         elif slice_obj.stop < slice_obj.start:
-            slice_obj_0 = slice(slice_obj.start, self._size, 1)
-            slice_obj_1 = slice(0, slice_obj.stop, 1)
+            end_idx_0 = slice_obj.start + math.ceil(self._size - slice_obj.start)
+            slice_obj_0 = slice(slice_obj.start, end_idx_0, 1)
+            start_idx_1 = end_idx_0 - self._size
+            slice_obj_1 = slice(start_idx_1, slice_obj.stop, 1)
             return slice_obj_0, slice_obj_1
         return slice_obj
 
