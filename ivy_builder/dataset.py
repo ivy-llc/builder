@@ -370,7 +370,7 @@ class Dataset:
             else:
                 data_size = batch_sizes[i]
             if i == size - 1 and self._size % 1 != 0:
-                data_size = int(data_size * (self._size - math.floor(self._size)))
+                data_size = int(round(data_size * (self._size - math.floor(self._size))))
             for j in range(data_size):
                 unbatch_slice_dict[size_so_far + j] = i
                 slice_dict[size_so_far + j] = j
