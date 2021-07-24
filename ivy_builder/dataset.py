@@ -416,6 +416,8 @@ class Dataset:
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
     def shuffle(self, name, shuffle_buffer_size, num_processes=1, numpy_loading=None):
+        if shuffle_buffer_size == 0:
+            return self
         pre_shuffled = self.batch('pre_' + name,
                                   shuffle_buffer_size,
                                   num_processes=num_processes,
