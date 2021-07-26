@@ -17,7 +17,7 @@ from distutils.core import setup
 import setuptools
 
 setup(name='ivy-builder',
-      version='1.1.3',
+      version='1.1.5',
       description='Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n'
                   'Tested with Ivy 1.1.3',
       author='Ivy Team',
