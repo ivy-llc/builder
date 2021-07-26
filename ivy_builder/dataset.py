@@ -140,7 +140,7 @@ class Dataset:
                 else:
                     so_step = Dataset._ensure_number_is_int(slice_obj.step)
                 slice_obj = slice(so_start, so_stop, so_step)
-            return dataset.slice(slice_obj)
+            return dataset[slice_obj]
         else:
             return dataset[slice_obj]
 
@@ -166,7 +166,7 @@ class Dataset:
         base_dataset = self._slice_base_dataset(slice_obj, self._base_dataset)
         if self._trans_fn is not None:
             if self._elementwise_query_fn:
-                vals = [self._trans_fn(base_dataset.slice(i)) for i in range(base_dataset.size)]
+                vals = [self._trans_fn(base_dataset[i]) for i in range(base_dataset.size)]
                 return ivy.Container.list_stack(vals, 0)
             return self._trans_fn(base_dataset)
         return base_dataset

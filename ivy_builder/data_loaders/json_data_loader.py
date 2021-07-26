@@ -203,10 +203,10 @@ class JSONDataLoader(DataLoader):
     def _parse_json_strings(self, containers):
         json_strings_stack = containers.json_str
         highest_idx_entry = len([item for item in containers.json_str if item != '']) - 1
-        json_container_stack = [Container(json.loads(json_str)).map(self._to_tensor).slice(0)
+        json_container_stack = [Container(json.loads(json_str)).map(self._to_tensor)[0]
                                 if json_str != '' else
                                 Container(json.loads(json_strings_stack[highest_idx_entry])).map(
-                                    self._to_tensor).slice(0) for json_str in json_strings_stack]
+                                    self._to_tensor)[0] for json_str in json_strings_stack]
         return Container.concat(json_container_stack, 0)
 
     # container pruning
@@ -338,7 +338,7 @@ class JSONDataLoader(DataLoader):
                 container_slices = self._prune_unused_key_chains(container_slices)
 
             dataset = Dataset(ivy.Container.list_stack(
-                [c.slice(0) for c in container_slices.unstack(0, container_slices.size)], 0),
+                [c[0] for c in container_slices.unstack(0, container_slices.size)], 0),
                 'base', container_slices.size, numpy_loading=True, cache_size=self._spec.cache_size)
         else:
             # load containers with filepath entries
