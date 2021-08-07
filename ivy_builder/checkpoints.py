@@ -25,7 +25,7 @@ class Checkpoint:
 
 class CheckpointManager:
 
-    def __init__(self, checkpoint, directory, max_to_keep, step_counter):
+    def __init__(self, checkpoint, directory, max_to_keep=20, step_counter=0):
         self._checkpoint = checkpoint
         self._directory = directory
         self._max_to_keep = max_to_keep
