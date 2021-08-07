@@ -134,7 +134,7 @@ def build_network_specification(network_spec_args=None,
     return network_spec_class(**network_spec_args)
 
 
-def build_network(network_class,
+def build_network(network_class=None,
                   network_spec_args=None,
                   network_spec_class=NetworkSpec):
     """
@@ -149,11 +149,16 @@ def build_network(network_class,
     network_class = ivy.default(
         _import_arg_specified_class_if_present(network_spec, 'network_class'), network_class)
 
+    # verify network_class exists
+    if not ivy.exists(network_class):
+        raise Exception('network_class must either be specified in this build_network() method,'
+                        'or network_class attribute must be specified in the network_spec instance')
+
     # network
     return network_class(network_spec)
 
 
-def build_data_loader_spec(network_class,
+def build_data_loader_spec(network_class=None,
                            dataset_dirs_args=None,
                            dataset_dirs_class=DatasetDirs,
                            dataset_spec_args=None,
@@ -190,8 +195,8 @@ def build_data_loader_spec(network_class,
     return data_loader_spec_class(**data_loader_spec_args)
 
 
-def build_data_loader(data_loader_class,
-                      network_class,
+def build_data_loader(data_loader_class=None,
+                      network_class=None,
                       dataset_dirs_args=None,
                       dataset_dirs_class=DatasetDirs,
                       dataset_spec_args=None,
@@ -215,21 +220,21 @@ def build_data_loader(data_loader_class,
                                               network_spec_args,
                                               network_spec_class)
 
-    if 'data_loader_class' in data_loader_spec:
-        mod_str = '.'.join(data_loader_spec.data_loader_class.split('.')[:-1])
-        class_str = data_loader_spec.data_loader_class.split('.')[-1]
-        data_loader_class = getattr(importlib.import_module(mod_str), class_str)
-
     # override data_loader_class if specified in data_loader_spec
     data_loader_class = ivy.default(
         _import_arg_specified_class_if_present(data_loader_spec, 'data_loader_class'), data_loader_class)
+
+    # verify data_loader_class exists
+    if not ivy.exists(data_loader_class):
+        raise Exception('data_loader_class must either be specified in this build_data_loader() method,'
+                        'or data_loader_class attribute must be specified in the data_loader_spec instance')
 
     # return data loader
     return data_loader_class(data_loader_spec)
 
 
-def build_trainer_spec(data_loader_class,
-                       network_class,
+def build_trainer_spec(data_loader_class=None,
+                       network_class=None,
                        dataset_dirs_args=None,
                        dataset_dirs_class=DatasetDirs,
                        dataset_spec_args=None,
@@ -270,9 +275,9 @@ def build_trainer_spec(data_loader_class,
     return trainer_spec_class(**trainer_spec_args)
 
 
-def build_trainer(data_loader_class,
-                  network_class,
-                  trainer_class,
+def build_trainer(data_loader_class=None,
+                  network_class=None,
+                  trainer_class=None,
                   dataset_dirs_args=None,
                   dataset_dirs_class=DatasetDirs,
                   dataset_spec_args=None,
@@ -305,13 +310,18 @@ def build_trainer(data_loader_class,
     trainer_class = ivy.default(
         _import_arg_specified_class_if_present(trainer_spec, 'trainer_class'), trainer_class)
 
+    # verify trainer_class exists
+    if not ivy.exists(trainer_class):
+        raise Exception('trainer_class must either be specified in this build_trainer() method,'
+                        'or trainer_class attribute must be specified in the trainer_spec instance')
+
     # return trainer
     return trainer_class(trainer_spec)
 
 
-def build_tuner_spec(data_loader_class,
-                     network_class,
-                     trainer_class,
+def build_tuner_spec(data_loader_class=None,
+                     network_class=None,
+                     trainer_class=None,
                      dataset_dirs_args=None,
                      dataset_dirs_class=DatasetDirs,
                      dataset_spec_args=None,
@@ -350,9 +360,9 @@ def build_tuner_spec(data_loader_class,
                             **tuner_spec_args)
 
 
-def build_tuner(data_loader_class,
-                network_class,
-                trainer_class,
+def build_tuner(data_loader_class=None,
+                network_class=None,
+                trainer_class=None,
                 dataset_dirs_args=None,
                 dataset_dirs_class=DatasetDirs,
                 dataset_spec_args=None,
