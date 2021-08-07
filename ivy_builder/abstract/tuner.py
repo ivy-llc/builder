@@ -105,7 +105,9 @@ class Tuner:
                  trainer_spec_args: dict = None,
                  trainer_spec_class: TrainerSpec.__base__ = TrainerSpec,
                  tuner_spec_args: dict = None,
-                 tuner_spec_class: TrainerSpec.__base__ = TunerSpec):
+                 tuner_spec_class: TrainerSpec.__base__ = TunerSpec,
+                 json_spec_path: str = None,
+                 spec_dict: dict = None):
         """
         base class for any tune trainers
         """
@@ -124,6 +126,8 @@ class Tuner:
         self._trainer_spec_class = trainer_spec_class
         self._tuner_spec_args = tuner_spec_args
         self._tuner_spec_class = tuner_spec_class
+        self._json_spec_path = json_spec_path
+        self._spec_dict = spec_dict
 
         # initialized on _setup
         self._trainer = None
@@ -141,7 +145,8 @@ class Tuner:
             self._data_loader_class, self._network_class, self._trainer_class, self._dataset_dirs_args,
             self._dataset_dirs_class, self._dataset_spec_args, self._dataset_spec_class, self._data_loader_spec_args,
             self._data_loader_spec_class, self._network_spec_args, self._network_spec_class, self._trainer_spec_args,
-            self._trainer_spec_class, self._tuner_spec_args, self._tuner_spec_class)
+            self._trainer_spec_class, self._tuner_spec_args, self._tuner_spec_class, self._json_spec_path,
+            self._spec_dict)
         self._spec = _convert_tuner_spec(self._spec)
 
     def tune(self):
@@ -202,7 +207,9 @@ class Tuner:
                                                       new_args['ns'],
                                                       network_spec_class,
                                                       new_args['ts'],
-                                                      trainer_spec_class)
+                                                      trainer_spec_class,
+                                                      tuner_spec_args,
+                                                      tuner_spec_class)
                 self._trainer.setup()
 
             def step(self):
