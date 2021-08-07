@@ -15,6 +15,7 @@ from ivy_builder.abstract.network import Network
 from ivy_builder.specs.trainer_spec import TrainerSpec
 from ivy_builder.abstract.data_loader import DataLoader
 from ivy_builder.builder import spec_to_dict, save_dict_as_json
+from ivy_builder.checkpoints import Checkpoint, CheckpointManager
 
 logging.getLogger().setLevel(logging.INFO)
 logging.basicConfig(format='%(message)s')
@@ -29,57 +30,6 @@ def _get_valid_filepath(base_dir, base_filename, file_type):
             i += 1
             continue
         return filepath
-
-
-class Checkpoint:
-
-    def __init__(self, optimizer, net):
-        self._optimizer = optimizer
-        self._net = net
-
-    def restore(self, checkpoint_path):
-        checkpoint = ivy.Container.from_disk_as_hdf5(checkpoint_path)
-        self._net.v = checkpoint.network.map(lambda x, kc: ivy.variable(ivy.to_dev(x, self._net.spec.device)))
-        self._optimizer.set_state(checkpoint.optimizer.map(lambda x, kc: ivy.to_dev(x, self._net.spec.device)))
-
-    @property
-    def optimizer(self):
-        return self._optimizer
-
-    @property
-    def net(self):
-        return self._net
-
-
-class CheckpointManager:
-
-    def __init__(self, checkpoint, directory, max_to_keep, step_counter):
-        self._checkpoint = checkpoint
-        self._directory = directory
-        self._max_to_keep = max_to_keep
-        self._step_counter = step_counter
-        self._get_latest_checkpoint_fpath()
-
-    def _get_latest_checkpoint_fpath(self):
-        if os.path.exists(self._directory):
-            contents = os.listdir(self._directory)
-            if len(contents) == 0:
-                self._latest_checkpoint_fpath = None
-            else:
-                contents.sort(key=lambda x: int(x.split('-')[-1].split('.hdf5')[0]))
-                self._latest_checkpoint_fpath = os.path.join(self._directory, contents[-1])
-        else:
-            self._latest_checkpoint_fpath = None
-
-    @property
-    def latest_checkpoint_fpath(self):
-        return self._latest_checkpoint_fpath
-
-    def save(self, step):
-        checkpoint = ivy.Container({'network': self._checkpoint.net.v,
-                                    'optimizer': self._checkpoint.optimizer.state})
-        self._latest_checkpoint_fpath = os.path.join(self._directory, 'chkpt-{}.hdf5'.format(step))
-        checkpoint.to_disk_as_hdf5(self._latest_checkpoint_fpath)
 
 
 class Trainer:
@@ -220,7 +170,7 @@ class Trainer:
         if self._spec.ld_chkpt is True and checkpoint_path is None:
             raise Exception('Unable to load checkpoint, no checkpoint files found.')
         if self._spec.ld_chkpt is True and checkpoint_path is not None:
-            load_status = self._chkpt.restore(checkpoint_path)
+            self._chkpt.restore(checkpoint_path)
             logging.info('loaded checkpoints from {}'.format(checkpoint_path))
             starting_iteration = int(checkpoint_path.split('-')[-1].split('.')[0])
             logging.info('#--------------#\n# MODEL LOADED #\n#--------------#')
@@ -275,7 +225,6 @@ class Trainer:
             vis_freq = self._spec.vis_freq
 
         local_counter = 0
-        tracing = False
 
         while self._global_step < int(self._total_iterations) or int(self._total_iterations) == -1:
 
