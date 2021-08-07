@@ -31,10 +31,12 @@ def parse_json_to_dict(json_filepath):
     with open(json_filepath) as json_data_file:
         loaded_dict = json.load(json_data_file)
     for k, v in loaded_dict.items():
-        if k == 'parent':
-            rel_fpath = v
-            fpath = os.path.abspath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
-            return_dict = {**return_dict, **parse_json_to_dict(fpath)}
+        if k == 'parents':
+            rel_fpaths = v
+            for rel_fpath in rel_fpaths:
+                rel_fpath = os.path.join(rel_fpath, json_filepath.split('/')[-1])
+                fpath = os.path.abspath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
+                return_dict = {**return_dict, **parse_json_to_dict(fpath)}
     return {**return_dict, **loaded_dict}
 
 
