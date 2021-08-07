@@ -27,8 +27,15 @@ def parse_json_to_dict(json_filepath):
     """
     return the data from json file in the form of a python dict
     """
+    return_dict = dict()
     with open(json_filepath) as json_data_file:
-        return json.load(json_data_file)
+        loaded_dict = json.load(json_data_file)
+    for k, v in loaded_dict.items():
+        if k == 'parent':
+            rel_fpath = v
+            fpath = os.path.abspath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
+            return_dict = {**return_dict, **parse_json_to_dict(fpath)}
+    return {**return_dict, **loaded_dict}
 
 
 def save_dict_as_json(dict_to_save, json_filepath):
