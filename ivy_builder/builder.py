@@ -59,6 +59,20 @@ def spec_to_dict(spec):
     return spec.to_dict()
 
 
+def command_line_str_to_spec_dict(spec_str):
+    """
+    save the python dict as a json file at specified filepath
+    """
+    if spec_str is not None:
+        spec_dict = json.loads(spec_str.replace("'", '"'))
+    else:
+        spec_dict = {}
+    for key in ['dataset_dirs', 'dataset', 'data_loader', 'network', 'trainer', 'tuner']:
+        if key not in spec_dict:
+            spec_dict[key] = {}
+    return spec_dict
+
+
 def build_dataset_dirs(dataset_dirs_args=None,
                        dataset_dirs_class=DatasetDirs,
                        json_spec_path=None,
@@ -106,7 +120,9 @@ def build_dataset_spec(dataset_dirs_args=None,
 
     # build dataset directories
     dataset_dirs = build_dataset_dirs(dataset_dirs_args,
-                                      dataset_dirs_class)
+                                      dataset_dirs_class,
+                                      json_spec_path,
+                                      spec_dict)
 
     # define dataset specification arguments
     if dataset_spec_args is None:
@@ -218,12 +234,16 @@ def build_data_loader_spec(network_class=None,
     dataset_spec = build_dataset_spec(dataset_dirs_args,
                                       dataset_dirs_class,
                                       dataset_spec_args,
-                                      dataset_spec_class)
+                                      dataset_spec_class,
+                                      json_spec_path,
+                                      spec_dict)
 
     # build network
     network = build_network(network_class,
                             network_spec_args,
-                            network_spec_class)
+                            network_spec_class,
+                            json_spec_path,
+                            spec_dict)
 
     # define data loader specification arguments
     if data_loader_spec_args is None:
@@ -322,7 +342,9 @@ def build_trainer_spec(data_loader_class=None,
                                     data_loader_spec_args,
                                     data_loader_spec_class,
                                     network_spec_args,
-                                    network_spec_class)
+                                    network_spec_class,
+                                    json_spec_path,
+                                    spec_dict)
 
     # define trainer specification arguments
     if trainer_spec_args is None:
@@ -432,7 +454,9 @@ def build_tuner_spec(data_loader_class=None,
                             network_spec_args,
                             network_spec_class,
                             trainer_spec_args,
-                            trainer_spec_class)
+                            trainer_spec_class,
+                            json_spec_path,
+                            spec_dict)
 
     # define dataset directories specification arguments
     if tuner_spec_args is None:
