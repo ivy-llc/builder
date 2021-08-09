@@ -37,7 +37,7 @@ class Network(BaseNetwork):
 
     @v.setter
     def v(self, value):
-        if value.size == 0:
+        if not value:
             return
         for i, p in enumerate(self._mlp.parameters()):
             p.data = value[str(i)].detach().data

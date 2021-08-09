@@ -18,7 +18,7 @@ class TestQueries:
              ivy.array(6), ivy.array(7), ivy.array(8)]
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': self._x})
-        self._dataset = Dataset(dataset_container, 'base', dataset_container.size, num_processes=num_processes)
+        self._dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes)
 
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
@@ -123,7 +123,7 @@ class TestBatch:
              ivy.array(5), ivy.array(6), ivy.array(7), ivy.array(8), ivy.array(9)]
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': self._x})
-        dataset = Dataset(dataset_container, 'base', dataset_container.size, num_processes=num_processes)
+        dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes)
         self._dataset = dataset.batch('batched', 3, num_processes=num_processes)
 
     @pytest.mark.parametrize(
@@ -217,7 +217,7 @@ class TestUnbatch:
         x = [ivy.array([[0], [1], [2]]), ivy.array([[3], [4], [5]]), ivy.array([[6], [7], [8]])]
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': x})
-        dataset = Dataset(dataset_container, 'base', dataset_container.size, num_processes=num_processes)
+        dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes)
         self._dataset = dataset.unbatch('unbatched', num_processes=num_processes)
 
     @pytest.mark.parametrize(
@@ -298,7 +298,7 @@ class TestUnbatchAndBatch:
         self._x = [ivy.array([0, 1]),
                    ivy.array([2, 3, 4, 5, 6, 7, 8, 9])]
         dataset_container = ivy.Container({'x': self._x})
-        dataset = Dataset(dataset_container, 'base', dataset_container.size, num_processes=num_processes)
+        dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes)
         dataset = dataset.unbatch('unbatched', num_processes=num_processes)
         self._dataset = dataset.batch('batched', 3, num_processes=num_processes)
 
@@ -384,7 +384,7 @@ class TestShuffle:
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': self._x})
         self._dataset = Dataset(
-            dataset_container, 'base', dataset_container.size, num_processes=num_processes).shuffle('shuffled', 9)
+            dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes).shuffle('shuffled', 9)
 
     @pytest.mark.parametrize(
         "array_shape", [[1], []])

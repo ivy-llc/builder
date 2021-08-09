@@ -166,7 +166,7 @@ class Dataset:
         base_dataset = self._slice_base_dataset(slice_obj, self._base_dataset)
         if self._trans_fn is not None:
             if self._elementwise_query_fn:
-                vals = [self._trans_fn(base_dataset[i]) for i in range(base_dataset.size)]
+                vals = [self._trans_fn(base_dataset[i]) for i in range(base_dataset.shape[0])]
                 return ivy.Container.list_stack(vals, 0)
             return self._trans_fn(base_dataset)
         return base_dataset
@@ -368,7 +368,7 @@ class Dataset:
         for i in range(size):
             if batch_sizes is None:
                 data = Dataset._slice_dataset(i, self)
-                data_size = data.size
+                data_size = data.shape[0]
             else:
                 data_size = batch_sizes[i]
             if i == size - 1 and self._size % 1 != 0:

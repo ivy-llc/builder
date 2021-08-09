@@ -338,8 +338,8 @@ class JSONDataLoader(DataLoader):
                 container_slices = self._prune_unused_key_chains(container_slices)
 
             dataset = Dataset(ivy.Container.list_stack(
-                [c[0] for c in container_slices.unstack(0, container_slices.size)], 0),
-                'base', container_slices.size, numpy_loading=True, cache_size=self._spec.cache_size)
+                [c[0] for c in container_slices.unstack(0, container_slices.shape[0])], 0),
+                'base', container_slices.shape[0], numpy_loading=True, cache_size=self._spec.cache_size)
         else:
             # load containers with filepath entries
             dataset = Dataset(ivy.Container({'fpaths': container_filepaths}), 'base', len(container_filepaths),
