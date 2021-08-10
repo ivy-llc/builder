@@ -474,7 +474,7 @@ class Dataset:
                        size=self._size,
                        trans_fn=cont_to_gpu,
                        with_caching=self._with_caching,
-                       cache_size=0,
+                       cache_size=self._cache_size,
                        num_processes=num_processes,
                        numpy_loading=False)
 

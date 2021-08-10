@@ -26,7 +26,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  num_training_sequences=num_training_sequences,
                                                  num_sequences_to_use=num_sequences_to_use,
                                                  num_workers=num_workers,
-                                                 cache_size=cache_size,
+                                                 cache_size=max(cache_size, num_to_prefetch),
                                                  unused_key_chains=unused_key_chains,
                                                  preload_containers=preload_containers,
                                                  shuffle_data=shuffle_data,

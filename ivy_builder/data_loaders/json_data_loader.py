@@ -34,6 +34,9 @@ class JSONDataLoader(DataLoader):
         self._spec = data_loader_spec
         self._container_data_dir = os.path.join(self._spec.dataset_spec.dirs.dataset_dir, 'containers/')
 
+        # base cache size
+        self._base_cache_size = self._spec.cache_size * self._spec.batch_size * self._spec.window_size
+
         # variables
         self._window_size = self._spec.window_size
         if 'sequence_lengths' in self._spec.dataset_spec:
@@ -339,11 +342,11 @@ class JSONDataLoader(DataLoader):
 
             dataset = Dataset(ivy.Container.list_stack(
                 [c[0] for c in container_slices.unstack(0, container_slices.shape[0])], 0),
-                'base', container_slices.shape[0], numpy_loading=True, cache_size=self._spec.cache_size)
+                'base', container_slices.shape[0], numpy_loading=True, cache_size=self._base_cache_size)
         else:
             # load containers with filepath entries
             dataset = Dataset(ivy.Container({'fpaths': container_filepaths}), 'base', len(container_filepaths),
-                              numpy_loading=True, cache_size=self._spec.cache_size)
+                              numpy_loading=True, cache_size=self._base_cache_size)
             dataset = dataset.map('loaded_json', self._load_json_files, self._num_workers)
             dataset = dataset.map('parsed_json', self._parse_json_strings, self._num_workers)
             if 'unused_key_chains' in self._spec:
@@ -353,7 +356,7 @@ class JSONDataLoader(DataLoader):
         dataset = dataset.map('windowed_container',
                               self._group_container_into_windowed_container,
                               self._num_workers)
-        dataset = dataset.unbatch('unbatched', cache_size=self._spec.cache_size,
+        dataset = dataset.unbatch('unbatched',
                                   batch_sizes=[max(item - self._window_size + 1, 1) for item in self._sequence_lengths])
         if self._spec.shuffle_data:
             dataset = dataset.shuffle('shuffled', self._spec.shuffle_buffer_size)
@@ -366,9 +369,9 @@ class JSONDataLoader(DataLoader):
                               numpy_loading=False)
         if self._spec.post_proc_fn is not None:
             dataset = dataset.map(map_func=self._spec.post_proc_fn, num_parallel_calls=self._num_workers)
-        dataset = dataset.prefetch('prefetch', self._spec.num_to_prefetch)
         if self._spec.prefetch_to_gpu:
             dataset = dataset.to_gpu('to_gpu')
+        dataset = dataset.prefetch('prefetch', self._spec.num_to_prefetch)
         return dataset
 
     # Public Methods #
