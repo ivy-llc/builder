@@ -2,6 +2,7 @@
 import os
 import cv2
 import ivy
+import math
 import json
 import logging
 import numpy as np
@@ -20,9 +21,9 @@ class JSONDataLoader(DataLoader):
 
         # cpus
         if 'num_workers' in data_loader_spec:
-            self._num_workers = data_loader_spec.num_workers
+            self._total_num_workers = data_loader_spec.num_workers
         else:
-            self._num_workers = multiprocessing.cpu_count()
+            self._total_num_workers = multiprocessing.cpu_count()
 
         # first frame validity
         if 'first_frame_validity_fn' in data_loader_spec:
@@ -49,14 +50,14 @@ class JSONDataLoader(DataLoader):
             self._fixed_sequence_length = False
         self._batch_size = self._spec.batch_size
 
-        # parallelism
-        self._parallel_window_iterations = min(self._window_size, self._num_workers)
-
         # train and validation idxs
         start_idx_train = 0
         end_idx_train = self._spec.num_training_sequences - 1
         start_idx_valid = self._spec.num_training_sequences
         end_idx_valid = self._spec.num_sequences_to_use - 1
+
+        # compute num workers for each component
+        self._compute_num_workers()
 
         # train dataset
         self._training_dataset = self._get_dataset(start_idx_train, end_idx_train)
@@ -139,6 +140,56 @@ class JSONDataLoader(DataLoader):
             joined_window_containers = Container.concat(window_containers, 1)
             all_containers.append(joined_window_containers)
         return Container.concat(all_containers, 0)
+
+    # Multiprocessing Sizes #
+    # ----------------------#
+
+    def _compute_num_workers(self):
+
+        # init
+        num_workers = self._total_num_workers
+        self._num_workers = ivy.Container()
+
+        # prefetch
+        self._num_workers.prefetch = self._spec.num_to_prefetch
+        num_workers = math.ceil(num_workers/(self._num_workers.prefetch+1))
+
+        # post processed
+        self._num_workers.post_processed = \
+            min(num_workers, ivy.default(self._spec.if_exists('num_post_proc_workers'), 1))
+        num_workers = math.ceil(num_workers/self._num_workers.post_processed)
+
+        # from numpy
+        self._num_workers.from_numpy = 1
+
+        # batched
+        self._num_workers.batched = min(num_workers, self._batch_size)
+
+        # ToDo: add multi-processing support for these lower level datasets
+
+        # loaded data
+        self._num_workers.loaded_data = 1
+
+        # shuffled
+        self._num_workers.shuffled = 1
+
+        # unbatch
+        self._num_workers.unbatched = 1
+
+        # windowed
+        self._num_workers.windowed = 1
+
+        # valid first frames
+        self._num_workers.valid_first_frames = 1
+
+        # keychain pruned
+        self._num_workers.keychain_pruned = 1
+
+        # parsed json
+        self._num_workers.parsed_json = 1
+
+        # loaded json
+        self._num_workers.loaded_json = 1
 
     # Dynamic Windowing #
     # ------------------#
@@ -340,38 +391,64 @@ class JSONDataLoader(DataLoader):
             if 'unused_key_chains' in self._spec:
                 container_slices = self._prune_unused_key_chains(container_slices)
 
-            dataset = Dataset(ivy.Container.list_stack(
-                [c[0] for c in container_slices.unstack(0, container_slices.shape[0])], 0),
-                'base', container_slices.shape[0], numpy_loading=True, cache_size=self._base_cache_size)
+            dataset = Dataset(
+                ivy.Container.list_stack([c[0] for c in container_slices.unstack(0, container_slices.shape[0])], 0),
+                'base',
+                container_slices.shape[0],
+                numpy_loading=True,
+                cache_size=self._base_cache_size)
         else:
             # load containers with filepath entries
-            dataset = Dataset(ivy.Container({'fpaths': container_filepaths}), 'base', len(container_filepaths),
-                              numpy_loading=True, cache_size=self._base_cache_size)
-            dataset = dataset.map('loaded_json', self._load_json_files, self._num_workers)
-            dataset = dataset.map('parsed_json', self._parse_json_strings, self._num_workers)
+            dataset = Dataset(ivy.Container({'fpaths': container_filepaths}),
+                              'base',
+                              len(container_filepaths),
+                              numpy_loading=True,
+                              cache_size=self._base_cache_size)
+            dataset = dataset.map('loaded_json',
+                                  self._load_json_files,
+                                  self._num_workers.loaded_json)
+            dataset = dataset.map('parsed_json',
+                                  self._parse_json_strings,
+                                  self._num_workers.parsed_json)
             if 'unused_key_chains' in self._spec:
-                dataset = dataset.map('keychain_pruned', self._prune_unused_key_chains, self._num_workers)
+                dataset = dataset.map('keychain_pruned',
+                                      self._prune_unused_key_chains,
+                                      self._num_workers.keychain_pruned)
             if self._first_frame_validity_fn is not None:
-                dataset = dataset.map('valid_first_frames', lambda x_: self._first_frame_validity_fn(x_, None))
-        dataset = dataset.map('windowed_container',
+                dataset = dataset.map('valid_first_frames',
+                                      lambda x_: self._first_frame_validity_fn(x_, None),
+                                      self._num_workers.valid_first_frames)
+        dataset = dataset.map('windowed',
                               self._group_container_into_windowed_container,
-                              self._num_workers)
+                              self._num_workers.windowed)
         dataset = dataset.unbatch('unbatched',
+                                  self._num_workers.unbatched,
                                   batch_sizes=[max(item - self._window_size + 1, 1) for item in self._sequence_lengths])
         if self._spec.shuffle_data:
-            dataset = dataset.shuffle('shuffled', self._spec.shuffle_buffer_size)
+            dataset = dataset.shuffle('shuffled',
+                                      self._spec.shuffle_buffer_size,
+                                      self._num_workers.shuffled)
         dataset = dataset.map('loaded_data',
                               self._load_data_from_filepath_tensors,
-                              self._num_workers)
-        dataset = dataset.batch('batched', self._batch_size)
+                              self._num_workers.loaded_data)
+        dataset = dataset.batch('batched',
+                                self._batch_size,
+                                self._num_workers.batched)
         dataset = dataset.map('from_numpy',
                               lambda cont: cont.map(lambda x_, kc: ivy.array(x_)),
+                              self._num_workers.from_numpy,
                               numpy_loading=False)
-        if self._spec.post_proc_fn is not None:
-            dataset = dataset.map(map_func=self._spec.post_proc_fn, num_parallel_calls=self._num_workers)
+        if ivy.exists(self._spec.post_proc_fn):
+            dataset = dataset.map('post_processed',
+                                  self._spec.post_proc_fn,
+                                  self._num_workers.post_processed)
+        dataset = dataset.prefetch('prefetch',
+                                   self._spec.num_to_prefetch,
+                                   self._num_workers.prefetch)
+        # ToDo: find way to make pre-fetching to GPU actually pre-fetch, ideally using multi-processing.
+        #  For example, swapping prefetch and to_gpu ops around would work if to_gpu could accept self._num_workers.
         if self._spec.prefetch_to_gpu:
             dataset = dataset.to_gpu('to_gpu')
-        dataset = dataset.prefetch('prefetch', self._spec.num_to_prefetch)
         return dataset
 
     # Public Methods #

@@ -37,17 +37,17 @@ class Cache:
 class Dataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
-                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False):
-        self._copy_args = dict(base_dataset=base_dataset, name=name, size=size, base_slice_fn=base_slice_fn,
-                               trans_fn=trans_fn, slice_fn=slice_fn, elementwise_query_fn=elementwise_query_fn,
-                               with_caching=with_caching, cache_size=cache_size, num_processes=1)
+                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
+                 blocking_retreival=True, is_subprocess=False):
         self._name = name
         self._size = size
+        self._base_slice_fn = base_slice_fn
         if base_slice_fn is None:
             self._slice_base_dataset = self._default_base_slice_fn
         else:
             self._slice_base_dataset = base_slice_fn
         self._trans_fn = trans_fn
+        self._slice_fn = slice_fn
         if slice_fn is None:
             self._slice_dataset = self._default_slice_fn
         else:
@@ -58,6 +58,8 @@ class Dataset:
         self._cache = Cache(cache_size)
         self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
+        self._blocking_retreival = blocking_retreival
+        self._is_subprocess = is_subprocess
         if numpy_loading and isinstance(base_dataset, ivy.Container):
 
             def to_numpy(x, kc):
@@ -70,48 +72,62 @@ class Dataset:
 
             base_dataset = base_dataset.map(to_numpy)
         self._base_dataset = base_dataset
+        self._workers_initialized = False
+        self._has_workers = False
+
+    # Private #
+    # --------#
+
+    def _deep_copy(self, num_processes=None):
+        # noinspection PyProtectedMember
+        return Dataset(
+            base_dataset=self._base_dataset if isinstance(self._base_dataset, ivy.Container)
+            else self._base_dataset._deep_copy(), name=self._name, size=self._size,
+            base_slice_fn=self._base_slice_fn, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
+            elementwise_query_fn=self._elementwise_query_fn, with_caching=self._with_caching,
+            cache_size=self._cache_size, num_processes=ivy.default(num_processes, self._num_processes),
+            numpy_loading=self._numpy_loading, blocking_retreival=self._blocking_retreival, is_subprocess=True)
+
+    def _initialize_all_workers(self):
+        if not isinstance(self._base_dataset, ivy.Container):
+            # noinspection PyProtectedMember
+            self._base_dataset._initialize_all_workers()
         if self._num_processes > 1:
             self._workers = list()
             self._slice_queues = list()
             self._output_queues = list()
             for i in range(self._num_processes):
-                dataset_copy = self._deep_copy()
+                dataset_copy = self._deep_copy(1)
                 index_queue = multiprocessing.Queue()
                 output_queue = multiprocessing.Queue()
                 worker = multiprocessing.Process(
-                    target=self._worker_fn, args=(index_queue, output_queue, dataset_copy, numpy_loading))
-                worker.daemon = True
+                    target=self._worker_fn, args=(index_queue, output_queue, dataset_copy, self._numpy_loading))
                 worker.start()
                 self._slice_queues.append(index_queue)
                 self._output_queues.append(output_queue)
                 self._workers.append(worker)
-
-    # Private #
-    # --------#
-
-    def _deep_copy(self):
-        base_dataset = self._copy_args['base_dataset']
-        if isinstance(base_dataset, ivy.Container):
-            return Dataset(**self._copy_args)
-        # noinspection PyProtectedMember
-        base_dataset = base_dataset._deep_copy()
-        copy_args = dict(**self._copy_args)
-        copy_args['base_dataset'] = base_dataset
-        return Dataset(**copy_args)
+            self._has_workers = True
+        self._workers_initialized = True
 
     @staticmethod
     def _worker_fn(index_queue, output_queue, dataset, numpy_loading):
+        workers_initialized = False
         while True:
             try:
                 slice_obj = index_queue.get(timeout=5.0)
             except queue.Empty:
                 continue
             if slice_obj is None:
-                break
+                dataset_name = dataset.name
+                # noinspection PyProtectedMember
+                dataset._end_multiprocessing()
+                return
             if numpy_loading:
                 ivy.set_framework('numpy')
             # noinspection PyProtectedMember
-            item = dataset._get_item(slice_obj)
+            dataset._workers_initialized = workers_initialized
+            item = dataset[slice_obj]
+            workers_initialized = True
             if numpy_loading:
                 ivy.unset_framework()
             output_queue.put(item)
@@ -233,7 +249,10 @@ class Dataset:
                 self._cache[i] = Dataset._slice_dataset(i-so.start, item)
 
     def _end_multiprocessing(self):
-        if self._num_processes > 1:
+        if not isinstance(self._base_dataset, ivy.Container):
+            # noinspection PyProtectedMember
+            self._base_dataset._end_multiprocessing()
+        if self._has_workers:
             try:
                 for i, w in enumerate(self._workers):
                     self._slice_queues[i].put(None)
@@ -289,6 +308,8 @@ class Dataset:
     # -------#
 
     def __getitem__(self, slice_obj):
+        if not self._workers_initialized:
+            self._initialize_all_workers()
         if self._numpy_loading:
             ivy.set_framework('numpy')
         if self._num_processes < 2:
@@ -310,12 +331,16 @@ class Dataset:
         offset = np.random.randint(0, self._num_processes)
         [self._slice_queues[int((i + offset) % self._num_processes)].put(sub_slice)
          for i, sub_slice in enumerate(sub_slices)]
-        items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=5.0)
-                          for i in range(num_sub_slices)]
-        ret = ivy.Container.list_join(items_as_lists)
+        if self._blocking_retreival:
+            items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=5.0)
+                              for i in range(num_sub_slices)]
+            if self._numpy_loading:
+                ivy.unset_framework()
+            return ivy.Container.list_join(items_as_lists)
         if self._numpy_loading:
             ivy.unset_framework()
-        return ivy.Container.list_join(items_as_lists)
+        queues = [self._output_queues[int((i + offset) % self._num_processes)] for i in range(num_sub_slices)]
+        return ivy.Container.from_queues(queues)
 
     def map(self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None):
         return Dataset(base_dataset=self,
@@ -451,6 +476,8 @@ class Dataset:
                 so_stop = slc_obj.stop + buffer_size
             base_slice_obj = slice(so_start, so_stop, 1)
             return Dataset._slice_dataset(base_slice_obj, dataset)
+
+        # self._blocking_retreival = False
 
         return Dataset(base_dataset=self,
                        name=name,
