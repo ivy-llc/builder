@@ -113,7 +113,7 @@ class Dataset:
     def _worker_fn(index_queue, output_queue, dataset, numpy_loading):
         while True:
             try:
-                slice_obj = index_queue.get(timeout=5.0)
+                slice_obj = index_queue.get(timeout=1.0)
             except queue.Empty:
                 continue
             if slice_obj is None:
@@ -253,7 +253,7 @@ class Dataset:
             try:
                 for i, w in enumerate(self._workers):
                     self._slice_queues[i].put(None)
-                    w.join(timeout=5.0)
+                    w.join(timeout=0.1)
                 for q in self._slice_queues:
                     q.cancel_join_thread()
                     q.close()
@@ -333,7 +333,7 @@ class Dataset:
         [self._slice_queues[int((i + offset) % self._num_processes)].put(sub_slice)
          for i, sub_slice in enumerate(sub_slices)]
         if self._blocking_retreival:
-            items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=5.0)
+            items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=1.0)
                               for i in range(num_sub_slices)]
             if self._numpy_loading:
                 ivy.unset_framework()
@@ -478,7 +478,7 @@ class Dataset:
             base_slice_obj = slice(so_start, so_stop, 1)
             return Dataset._slice_dataset(base_slice_obj, dataset)
 
-        # self._blocking_retreival = False
+        self._blocking_retreival = False
         self._num_processes = num_processes
 
         return Dataset(base_dataset=self,
