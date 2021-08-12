@@ -42,6 +42,10 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers, array_m
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
         assert train_batch.array.data.shape == (1, 1, 3)
 
+    # delete
+    data_loader.__del__()
+    del data_loader
+
 
 @pytest.mark.parametrize(
     "preload_containers", [True, False])
@@ -98,6 +102,10 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode):
     assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 3, 32, 32, 3)
     assert valid_batch.array.data.shape == (3, 3, 3)
 
+    # delete
+    data_loader.__del__()
+    del data_loader
+
 
 def test_json_loader_no_windowing(dev_str, f, call):
 
@@ -130,3 +138,7 @@ def test_json_loader_no_windowing(dev_str, f, call):
         assert valid_batch.actions.shape == (4, 1, 6)
         assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (4, 1, 32, 32, 3)
         assert valid_batch.array.data.shape == (4, 1, 3)
+
+    # delete
+    data_loader.__del__()
+    del data_loader

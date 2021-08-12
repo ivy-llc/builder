@@ -1,4 +1,6 @@
 numpy
+torch
+pytest
 ivy-core
 gitpython
 opencv-python

@@ -5,7 +5,7 @@ import queue
 import numbers
 import ivy.numpy
 import numpy as np
-import multiprocessing
+import torch.multiprocessing as multiprocessing
 
 
 # noinspection PyMissingConstructor
@@ -111,7 +111,6 @@ class Dataset:
 
     @staticmethod
     def _worker_fn(index_queue, output_queue, dataset, numpy_loading):
-        workers_initialized = False
         while True:
             try:
                 slice_obj = index_queue.get(timeout=5.0)
@@ -125,10 +124,7 @@ class Dataset:
                 return
             if numpy_loading:
                 ivy.set_framework('numpy')
-            # noinspection PyProtectedMember
-            dataset._workers_initialized = workers_initialized
             item = dataset[slice_obj]
-            workers_initialized = True
             if numpy_loading:
                 ivy.unset_framework()
             output_queue.put(item)

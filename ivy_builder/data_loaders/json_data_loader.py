@@ -77,6 +77,15 @@ class JSONDataLoader(DataLoader):
         # counter
         self._counter = 0
 
+    # Built-Ins #
+    # ----------#
+
+    def __del__(self):
+        del self._training_iterator
+        del self._training_dataset
+        del self._validation_iterator
+        del self._validation_dataset
+
     # Dataset in RAM #
     # ---------------#
 
