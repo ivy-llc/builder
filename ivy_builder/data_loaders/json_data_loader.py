@@ -155,9 +155,7 @@ class JSONDataLoader(DataLoader):
         num_workers = math.ceil(num_workers/(self._num_workers.prefetch+1))
 
         # post processed
-        self._num_workers.post_processed = \
-            min(num_workers, ivy.default(self._spec.if_exists('num_post_proc_workers'), 1))
-        num_workers = math.ceil(num_workers/self._num_workers.post_processed)
+        self._num_workers.post_processed = 1
 
         # from numpy
         self._num_workers.from_numpy = 1

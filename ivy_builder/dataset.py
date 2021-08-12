@@ -118,7 +118,6 @@ class Dataset:
             except queue.Empty:
                 continue
             if slice_obj is None:
-                dataset_name = dataset.name
                 # noinspection PyProtectedMember
                 dataset._end_multiprocessing()
                 return
@@ -325,6 +324,7 @@ class Dataset:
         slice_size = int(round(slice_obj.stop - slice_obj.start))
         num_sub_slices = min(slice_size, self._num_processes)
         slice_points = np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices+1)
+        slice_sizes = (slice_points[1:] - slice_points[:-1]).astype(np.int32)
         if Dataset._is_int(slice_obj.start) and Dataset._is_int(slice_obj.stop):
             slice_points = np.round(slice_points)
         sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
@@ -340,7 +340,7 @@ class Dataset:
         if self._numpy_loading:
             ivy.unset_framework()
         queues = [self._output_queues[int((i + offset) % self._num_processes)] for i in range(num_sub_slices)]
-        return ivy.Container.from_queues(queues)
+        return ivy.Container(queues=queues, queue_load_sizes=slice_sizes)
 
     def map(self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None):
         return Dataset(base_dataset=self,
@@ -478,6 +478,7 @@ class Dataset:
             return Dataset._slice_dataset(base_slice_obj, dataset)
 
         # self._blocking_retreival = False
+        self._num_processes = num_processes
 
         return Dataset(base_dataset=self,
                        name=name,
@@ -485,7 +486,7 @@ class Dataset:
                        base_slice_fn=base_slice_fn,
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
-                       num_processes=num_processes,
+                       num_processes=1,
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
     def to_gpu(self, name, num_processes=1, gpu_idx=0):
