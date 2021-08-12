@@ -89,7 +89,7 @@ class Dataset:
             numpy_loading=self._numpy_loading, blocking_retreival=self._blocking_retreival, is_subprocess=True)
 
     def _initialize_all_workers(self):
-        if not isinstance(self._base_dataset, ivy.Container):
+        if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
             # noinspection PyProtectedMember
             self._base_dataset._initialize_all_workers()
         if self._num_processes > 1:
@@ -118,6 +118,8 @@ class Dataset:
             except queue.Empty:
                 continue
             if slice_obj is None:
+                # ToDo: work out why this command below works, but del dataset hangs, despite only calling
+                #  _end_multiprocessing(), perhaps processes have trouble explicitly deleting arguments passed in?
                 # noinspection PyProtectedMember
                 dataset._end_multiprocessing()
                 return
@@ -248,7 +250,7 @@ class Dataset:
                 self._cache[i] = Dataset._slice_dataset(i-so.start, item)
 
     def _end_multiprocessing(self):
-        if not isinstance(self._base_dataset, ivy.Container):
+        if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
             # noinspection PyProtectedMember
             self._base_dataset._end_multiprocessing()
         if self._has_workers:
@@ -269,6 +271,9 @@ class Dataset:
                 del self._workers
                 del self._slice_queues
                 del self._output_queues
+        # This line below is only needed because _end_multiprocessing() is called explicitly from inside the worker_fn.
+        #  If the dataset can be deleted directly from inside worker_fn, then this subsequent delete will not be called.
+        self._has_workers = False
 
     def __del__(self):
         self._end_multiprocessing()
@@ -392,7 +397,7 @@ class Dataset:
             batch_sizes = [batch_sizes]*size
         for i in range(size):
             if batch_sizes is None:
-                data = Dataset._slice_dataset(i, self)
+                data = self._get_item(i)
                 data_size = data.shape[0]
             else:
                 data_size = batch_sizes[i]
