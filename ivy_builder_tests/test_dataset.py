@@ -1,4 +1,6 @@
 # global
+import time
+
 import ivy
 import pytest
 import numpy as np
@@ -543,3 +545,51 @@ class TestShuffle:
         # delete
         self._dataset.__del__()
         del self._dataset
+
+
+class TestPrefetch:
+
+    def _init(self, array_shape, num_processes):
+        x = [ivy.array(0), ivy.array(1), ivy.array(2), ivy.array(3), ivy.array(4),
+             ivy.array(5), ivy.array(6), ivy.array(7), ivy.array(8), ivy.array(9)]
+        self._x = [ivy.reshape(item, array_shape) for item in x]
+        dataset_container = ivy.Container({'x': self._x})
+        dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], with_caching=True, cache_size=0,
+                          num_processes=num_processes)
+
+        def sleep_fn(cont):
+            time.sleep(0.01)
+            return cont
+
+        self._dataset_wo_prefetch = dataset.map('sleep', sleep_fn)
+        self._dataset_w_prefetch = dataset.prefetch('prefetch', 1)
+
+    # noinspection PyStatementEffect
+    @pytest.mark.parametrize(
+        "array_shape", [[1], []])
+    @pytest.mark.parametrize(
+        "num_processes", [1, 2])
+    def test_single(self, dev_str, f, call, array_shape, num_processes):
+
+        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+            pytest.skip()
+
+        self._init(array_shape, num_processes)
+
+        for i in range(10):
+            start_time = time.perf_counter()
+            self._dataset_wo_prefetch[i]
+            assert time.perf_counter() - start_time > 0.01
+
+        for i in range(10):
+            start_time = time.perf_counter()
+            self._dataset_w_prefetch[i]
+            if i > 0:
+                assert time.perf_counter() - start_time < 0.01
+            time.sleep(0.01)
+
+        # delete
+        self._dataset_wo_prefetch.__del__()
+        del self._dataset_wo_prefetch
+        self._dataset_w_prefetch.__del__()
+        del self._dataset_w_prefetch
