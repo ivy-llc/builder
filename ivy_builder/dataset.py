@@ -1,9 +1,10 @@
 # global
-import abc
 import ivy
+import time
 import math
 import queue
 import numbers
+import threading
 import ivy.numpy
 import numpy as np
 import torch.multiprocessing as multiprocessing
@@ -35,45 +36,144 @@ class Cache:
         return key in self._dict
 
 
-class Dataset(abc.ABC):
+class IteratorDataset:
 
-    def __init__(self, base_dataset, name, size, with_caching=True, cache_size=1, num_processes=1):
+    def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=10.0,
+                 parallel_method='thread'):
+
+        # config
         self._name = name
         self._size = size
-        self._with_caching = with_caching
-        self._cache_size = cache_size
-        self._cache = Cache(cache_size)
-        self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
+
+        # base dataset
         self._base_dataset = base_dataset
 
-
-class IteratorDataset(Dataset):
-
-    def __init__(self, base_dataset, name, size, with_caching=True, cache_size=1, num_processes=1):
-
-        # ToDo: implement this fully, with iterator prefetching etc.
-
-        # iterator
+        # base dataset iterator
         self._base_dataset_iterator = iter(base_dataset)
 
-        # initialize parent class
-        Dataset.__init__(self, base_dataset, name, size, with_caching, cache_size, num_processes)
+        # pre-fetch sub-process
+        self._with_prefetching = with_prefetching
+        self._prefetch_timeout = prefetch_timeout
+        self._parallel_method = parallel_method
+        if self._with_prefetching:
+            self._prefetch_running = False
+            if self._parallel_method == 'process':
+                self._input_queue = multiprocessing.Queue()
+                self._output_queue = multiprocessing.Queue()
+                self._worker = multiprocessing.Process(
+                    target=self._process_worker_fn, args=(self._base_dataset_iterator, self._input_queue,
+                                                          self._output_queue))
+                self._get_next = self._get_from_process
+            elif self._parallel_method == 'thread':
+                self._thread = threading.Thread(target=self._thread_worker_fn)
+                self._lock_for_next = threading.Lock()
+                self._lock_for_spin = threading.Lock()
+                self._keep_spinning = True
+                self._next = None
+                self._get_next = self._get_from_thread
+            else:
+                raise Exception('parallel method must be one of [ process | thread ], but found {}'.format(
+                    self._parallel_method))
+
+    # Private #
+    # --------#
+
+    @staticmethod
+    def _process_worker_fn(base_dataset, input_queue, output_queue):
+        keep_going = True
+        while keep_going:
+            try:
+                keep_going = input_queue.get(timeout=1.0)
+            except queue.Empty:
+                continue
+            output_queue.put(next(base_dataset))
+        base_dataset.close()
+
+    def _thread_worker_fn(self):
+        while True:
+            time.sleep(0.01)
+            self._lock_for_next.acquire()
+            if not ivy.exists(self._next):
+                self._next = next(self._base_dataset_iterator)
+            self._lock_for_next.release()
+            self._lock_for_spin.acquire()
+            if not self._keep_spinning:
+                self._lock_for_spin.release()
+                break
+            self._lock_for_spin.release()
+
+    def _get_from_thread(self):
+        time_taken = 0
+        while True:
+            self._lock_for_next.acquire()
+            if ivy.exists(self._next):
+                self._lock_for_next.release()
+                break
+            self._lock_for_next.release()
+            time.sleep(0.01)
+            time_taken += 0.01
+            if time_taken > self._prefetch_timeout:
+                raise Exception('Prefetch timed out')
+        self._lock_for_next.acquire()
+        ret = self._next
+        self._next = None
+        self._lock_for_next.release()
+        return ret
+
+    def _get_from_process(self):
+        ret = self._output_queue.get(timeout=self._prefetch_timeout)
+        self._input_queue.put(True)
+        return ret
+
+    def _start_prefetching(self):
+        if self._parallel_method == 'process':
+            self._worker.start()
+            self._input_queue.put(True)
+        else:
+            self._thread.start()
 
     def __next__(self):
-        return next(self._base_dataset_iterator)
+        if not self._with_prefetching:
+            return next(self._base_dataset_iterator)
+        if not self._prefetch_running:
+            self._start_prefetching()
+            self._prefetch_running = True
+        return self._get_next()
 
     def __del__(self):
         self.close()
 
     def close(self):
         self._base_dataset.close()
+        if self._with_prefetching:
+            if self._parallel_method == 'process':
+                try:
+                    self._input_queue.put(False)
+                    self._worker.join(timeout=0.1)
+                    self._input_queue.cancel_join_thread()
+                    self._input_queue.close()
+                    self._output_queue.cancel_join_thread()
+                    self._output_queue.close()
+                finally:
+                    if self._worker.is_alive():
+                        self._worker.terminate()
+                    del self._worker
+                    del self._input_queue
+                    del self._output_queue
+            else:
+                self._lock_for_spin.acquire()
+                self._keep_spinning = False
+                self._lock_for_spin.release()
+                self._thread.join()
 
 
-class MapDataset(Dataset):
+class MapDataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
                  elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
                  blocking_retreival=True, is_subprocess=False):
+        self._name = name
+        self._size = size
         self._base_slice_fn = base_slice_fn
         if base_slice_fn is None:
             self._slice_base_dataset = self._default_base_slice_fn
@@ -86,6 +186,10 @@ class MapDataset(Dataset):
         else:
             self._slice_dataset = slice_fn
         self._elementwise_query_fn = elementwise_query_fn
+        self._with_caching = with_caching
+        self._cache_size = cache_size
+        self._cache = Cache(cache_size)
+        self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
         self._blocking_retreival = blocking_retreival
         self._is_subprocess = is_subprocess
@@ -100,11 +204,9 @@ class MapDataset(Dataset):
                     return x
 
             base_dataset = base_dataset.map(to_numpy)
+        self._base_dataset = base_dataset
         self._workers_initialized = False
         self._has_workers = False
-
-        # initialize parent class
-        Dataset.__init__(self, base_dataset, name, size, with_caching, cache_size, num_processes)
 
     # Private #
     # --------#
@@ -150,7 +252,6 @@ class MapDataset(Dataset):
             if slice_obj is None:
                 # ToDo: work out why this command below works, but del dataset hangs, despite only calling
                 #  close(), perhaps processes have trouble explicitly deleting arguments passed in?
-                # noinspection PyProtectedMember
                 dataset.close()
                 return
             if numpy_loading:
@@ -512,17 +613,14 @@ class MapDataset(Dataset):
                           num_processes=num_processes,
                           numpy_loading=False)
 
-    def to_iterator(self, name, num_processes=1):
+    def to_iterator(self, name, with_prefetching=True):
         return IteratorDataset(base_dataset=self,
                                name=name,
                                size=self._size,
-                               with_caching=self._with_caching,
-                               cache_size=self._cache_size,
-                               num_processes=num_processes)
+                               with_prefetching=with_prefetching)
 
     def close(self):
         if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
-            # noinspection PyProtectedMember
             self._base_dataset.close()
         if self._has_workers:
             try:

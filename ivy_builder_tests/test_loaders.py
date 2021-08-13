@@ -83,6 +83,10 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode):
         assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
         assert valid_batch.array.data.shape == (3, 2, 3)
 
+    # delete
+    data_loader.close()
+    del data_loader
+
     # test keychain pruning, no container pre-loading, and padded windowing
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=3, num_sequences_to_use=6,
                                           num_training_sequences=3, preload_containers=preload_containers,
