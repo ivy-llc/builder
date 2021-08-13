@@ -58,6 +58,7 @@ def test_visualizing(dev_str, call):
         trainer.visualize()
     except OSError:
         pass
+    trainer.close()
     builder_helpers.remove_dirs()
 
 
@@ -74,12 +75,14 @@ def test_checkpoint_loading(dev_str, call):
                                     trainer_spec_args=trainer_spec_args)
     trainer.setup()
     trainer.train()
+    trainer.close()
     trainer_spec_args = {'total_iterations': 20, 'ld_chkpt': True, 'save_freq': 1}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
                                     trainer_spec_args=trainer_spec_args)
     trainer.setup()
     trainer.train()
+    trainer.close()
     checkpoint_nums = [int(fname.split('-')[-1].split('.')[0]) for fname in os.listdir('log/chkpts')]
     assert max(checkpoint_nums) == 19
     builder_helpers.remove_dirs()
@@ -120,6 +123,7 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     trainer.train()
     initial_cost = trainer._total_cost
     assert trainer._global_step == 1
+    trainer.close()
 
     ivy.seed(0)
     steps_to_take_first = 10
@@ -132,6 +136,7 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     trainer.train()
     ten_step_cost = trainer._total_cost
     assert trainer._global_step == steps_to_take_first
+    trainer.close()
     assert initial_cost > ten_step_cost
 
     steps_to_take_second = 20
@@ -144,6 +149,7 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     trainer.train()
     twenty_step_cost = trainer._total_cost
     assert trainer._global_step == steps_to_take_second
+    trainer.close()
     assert ten_step_cost > twenty_step_cost
     builder_helpers.remove_dirs()
 
@@ -166,6 +172,7 @@ def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, call):
     trainer.train()
     chkpt1_path = os.path.join('chkpt/', 'test_chkpt1.hdf5')
     trainer.save(chkpt1_path)
+    trainer.close()
     assert os.path.exists(chkpt1_path)
 
     data_loader_spec_args = {'batch_size': 1}
@@ -178,5 +185,6 @@ def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, call):
     trainer.train()
     chkpt3_path = os.path.join('chkpt/', 'test_chkpt3.hdf5')
     trainer.save(chkpt3_path)
+    trainer.close()
     assert os.path.exists(chkpt3_path)
     builder_helpers.remove_dirs()

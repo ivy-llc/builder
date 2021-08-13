@@ -41,8 +41,8 @@ class TestQueries:
         assert np.allclose(ivy.to_numpy(self._dataset[4].x), ivy.to_numpy(self._x[4]))
         assert np.allclose(ivy.to_numpy(self._dataset[8].x), ivy.to_numpy(self._x[8]))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -66,8 +66,8 @@ class TestQueries:
         assert np.allclose(ivy.to_numpy(self._dataset[-1].x), ivy.to_numpy(self._x[-1]))
         assert np.allclose(ivy.to_numpy(self._dataset[-2].x), ivy.to_numpy(self._x[-2]))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -92,8 +92,8 @@ class TestQueries:
         assert np.allclose(ivy.to_numpy(self._dataset[3:6].x[1]), ivy.to_numpy(self._x[4]))
         assert np.allclose(ivy.to_numpy(self._dataset[6:9].x[2]), ivy.to_numpy(self._x[8]))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -121,8 +121,8 @@ class TestQueries:
         assert np.allclose(ivy.to_numpy(self._dataset[9:11].x[0]), ivy.to_numpy(self._x[0]))
         assert np.allclose(ivy.to_numpy(self._dataset[9:11].x[1]), ivy.to_numpy(self._x[1]))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
 
@@ -153,8 +153,8 @@ class TestBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[1/3].x), np.array([[1], [2], [3]]).reshape([3] + array_shape))
         assert np.allclose(ivy.to_numpy(self._dataset[2/3].x), np.array([[2], [3], [4]]).reshape([3] + array_shape))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -175,8 +175,8 @@ class TestBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[-1/3].x), np.array([[9], [0], [1]]).reshape([3] + array_shape))
         assert np.allclose(ivy.to_numpy(self._dataset[-2/3].x), np.array([[8], [9], [0]]).reshape([3] + array_shape))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -198,8 +198,8 @@ class TestBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[2/3:5/3].x[0]),
                            np.array([[2], [3], [4]]).reshape([3] + array_shape))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -224,8 +224,8 @@ class TestBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[8/3:11/3].x[0]),
                            np.array([[8], [9], [0]]).reshape([3] + array_shape))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
 
@@ -254,8 +254,8 @@ class TestUnbatch:
         assert np.allclose(ivy.to_numpy(self._dataset[2].x), ivy.to_numpy(self._x[0][2]))
         assert np.allclose(ivy.to_numpy(self._dataset[8].x), ivy.to_numpy(self._x[2][2]))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -273,8 +273,8 @@ class TestUnbatch:
         assert np.allclose(ivy.to_numpy(self._dataset[-1].x), ivy.to_numpy(self._x[2][2]))
         assert np.allclose(ivy.to_numpy(self._dataset[-2].x), ivy.to_numpy(self._x[2][1]))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -293,8 +293,8 @@ class TestUnbatch:
         assert np.allclose(ivy.to_numpy(self._dataset[6:8].x[0]), ivy.to_numpy(self._x[2][0]))
         assert np.allclose(ivy.to_numpy(self._dataset[6:8].x[1]), ivy.to_numpy(self._x[2][1]))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -313,8 +313,8 @@ class TestUnbatch:
         assert np.allclose(ivy.to_numpy(self._dataset[8:10].x[0]), ivy.to_numpy(self._x[2][2]))
         assert np.allclose(ivy.to_numpy(self._dataset[8:10].x[1]), ivy.to_numpy(self._x[0][0]))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
 
@@ -342,8 +342,8 @@ class TestUnbatchAndBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[2].x), ivy.to_numpy(ivy.array([6, 7, 8])))
         assert np.allclose(ivy.to_numpy(self._dataset[3].x), ivy.to_numpy(ivy.array([9, 0, 1])))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -369,8 +369,8 @@ class TestUnbatchAndBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[-4].x), ivy.to_numpy(ivy.array([8, 9, 0])))
         assert np.allclose(ivy.to_numpy(self._dataset[-5].x), ivy.to_numpy(ivy.array([5, 6, 7])))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -386,8 +386,8 @@ class TestUnbatchAndBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[0:2].x[1]), ivy.to_numpy(ivy.array([3, 4, 5])))
         assert np.allclose(ivy.to_numpy(self._dataset[2:3].x[0]), ivy.to_numpy(ivy.array([6, 7, 8])))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -404,8 +404,8 @@ class TestUnbatchAndBatch:
         assert np.allclose(ivy.to_numpy(self._dataset[2:4].x[0]), ivy.to_numpy(ivy.array([6, 7, 8])))
         assert np.allclose(ivy.to_numpy(self._dataset[2:4].x[1]), ivy.to_numpy(ivy.array([9, 0, 1])))
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
 
@@ -449,8 +449,8 @@ class TestShuffle:
 
         assert check0 or check1 or check2 or check3 or check4 or check5 or check6 or check7 or check8
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -478,8 +478,8 @@ class TestShuffle:
 
         assert check0 or check1 or check2 or check3
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -509,8 +509,8 @@ class TestShuffle:
 
         assert check0 or check1 or check2 or check3
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
     @pytest.mark.parametrize(
@@ -542,8 +542,8 @@ class TestShuffle:
 
         assert check0 or check1 or check2 or check3
 
-        # delete
-        self._dataset.__del__()
+        # close
+        self._dataset.close()
         del self._dataset
 
 

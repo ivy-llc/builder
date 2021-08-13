@@ -27,11 +27,11 @@ class DataLoader(abc.ABC):
         """
         raise NotImplementedError
 
-    # Private #
-    # --------#
-
-    def set_base(self, base):
-        self._base = base
+    def close(self):
+        """
+        Close this dataset, and destroy all child objects or processes which may not be garbage collected.
+        """
+        pass
 
     # Getters #
     # --------#

@@ -224,6 +224,7 @@ def main():
     trainer.setup()
     print("Finished complete example!")
     trainer.train()
+    trainer.close()
 
 
 if __name__ == '__main__':

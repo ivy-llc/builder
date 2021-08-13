@@ -118,9 +118,9 @@ class Dataset:
                 continue
             if slice_obj is None:
                 # ToDo: work out why this command below works, but del dataset hangs, despite only calling
-                #  _end_multiprocessing(), perhaps processes have trouble explicitly deleting arguments passed in?
+                #  close(), perhaps processes have trouble explicitly deleting arguments passed in?
                 # noinspection PyProtectedMember
-                dataset._end_multiprocessing()
+                dataset.close()
                 return
             if numpy_loading:
                 ivy.set_framework('numpy')
@@ -245,34 +245,8 @@ class Dataset:
             for i in np.arange(so.start, so.stop-1e-3, 1.):
                 self._cache[i] = Dataset._slice_dataset(i-so.start, item)
 
-    def _end_multiprocessing(self):
-        if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
-            # noinspection PyProtectedMember
-            self._base_dataset._end_multiprocessing()
-        if self._has_workers:
-            try:
-                for i, w in enumerate(self._workers):
-                    self._slice_queues[i].put(None)
-                    w.join(timeout=0.1)
-                for q in self._slice_queues:
-                    q.cancel_join_thread()
-                    q.close()
-                for q in self._output_queues:
-                    q.cancel_join_thread()
-                    q.close()
-            finally:
-                for w in self._workers:
-                    if w.is_alive():
-                        w.terminate()
-                del self._workers
-                del self._slice_queues
-                del self._output_queues
-        # This line below is only needed because _end_multiprocessing() is called explicitly from inside the worker_fn.
-        #  If the dataset can be deleted directly from inside worker_fn, then this subsequent delete will not be called.
-        self._has_workers = False
-
     def __del__(self):
-        self._end_multiprocessing()
+        self.close()
 
     def _get_item_after_cache_n_wrap(self, slice_obj):
         base_slice_obj = self._wrap_base_slice_obj(slice_obj)
@@ -506,6 +480,32 @@ class Dataset:
                        cache_size=self._cache_size,
                        num_processes=num_processes,
                        numpy_loading=False)
+
+    def close(self):
+        if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
+            # noinspection PyProtectedMember
+            self._base_dataset.close()
+        if self._has_workers:
+            try:
+                for i, w in enumerate(self._workers):
+                    self._slice_queues[i].put(None)
+                    w.join(timeout=0.1)
+                for q in self._slice_queues:
+                    q.cancel_join_thread()
+                    q.close()
+                for q in self._output_queues:
+                    q.cancel_join_thread()
+                    q.close()
+            finally:
+                for w in self._workers:
+                    if w.is_alive():
+                        w.terminate()
+                del self._workers
+                del self._slice_queues
+                del self._output_queues
+        # This line below is only needed because close() is called explicitly from inside the worker_fn.
+        #  If the dataset can be deleted directly from inside worker_fn, then this subsequent delete will not be called.
+        self._has_workers = False
 
     # Getters #
     # --------#

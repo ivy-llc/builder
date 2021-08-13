@@ -294,6 +294,12 @@ class Trainer:
         """
         self._train(True)
 
+    def close(self) -> None:
+        """
+        Close this trainer, and destroy all child objects or processes which may not be garbage collected.
+        """
+        self._spec.data_loader.close()
+
     # Getters #
     # --------#
 

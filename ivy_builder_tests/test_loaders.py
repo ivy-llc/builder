@@ -43,7 +43,7 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers, array_m
         assert train_batch.array.data.shape == (1, 1, 3)
 
     # delete
-    data_loader.__del__()
+    data_loader.close()
     del data_loader
 
 
@@ -103,7 +103,7 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode):
     assert valid_batch.array.data.shape == (3, 3, 3)
 
     # delete
-    data_loader.__del__()
+    data_loader.close()
     del data_loader
 
 
@@ -140,5 +140,5 @@ def test_json_loader_no_windowing(dev_str, f, call):
         assert valid_batch.array.data.shape == (4, 1, 3)
 
     # delete
-    data_loader.__del__()
+    data_loader.close()
     del data_loader

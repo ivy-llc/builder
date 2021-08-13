@@ -67,6 +67,7 @@ def main(seed=0):
                                             trainer_spec_args=trainer_spec_args)
     trainer.setup()
     trainer.train()
+    trainer.close()
 
 
 if __name__ == '__main__':

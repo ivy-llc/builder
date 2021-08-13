@@ -81,10 +81,7 @@ class JSONDataLoader(DataLoader):
     # ----------#
 
     def __del__(self):
-        del self._training_iterator
-        del self._training_dataset
-        del self._validation_iterator
-        del self._validation_dataset
+        self.close()
 
     # Dataset in RAM #
     # ---------------#
@@ -480,3 +477,12 @@ class JSONDataLoader(DataLoader):
         if self._dummy_batch is None:
             self._dummy_batch = self.get_next_training_batch()
         return self._dummy_batch.to_random()
+
+    def close(self):
+        self._training_dataset.close()
+        del self._training_iterator
+        del self._training_dataset
+        if ivy.exists(self._validation_dataset):
+            self._validation_dataset.close()
+            del self._validation_iterator
+            del self._validation_dataset
