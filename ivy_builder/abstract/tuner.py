@@ -233,6 +233,7 @@ class Tuner:
                 print('loaded checkpoint from {}'.format(checkpoint_path))
 
             def cleanup(self):
+                self._trainer.close()
                 ivy.unset_framework()
 
         # Run this trainable class #
@@ -270,3 +271,9 @@ class Tuner:
                  local_dir='/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]),
                  checkpoint_freq=self._spec.checkpoint_freq,
                  checkpoint_at_end=True)
+
+    def close(self) -> None:
+        """
+        Close this tuner, and destroy all child objects or processes which may not be garbage collected.
+        """
+        pass
