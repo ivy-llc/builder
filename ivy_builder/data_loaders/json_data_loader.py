@@ -7,7 +7,7 @@ import json
 import logging
 import numpy as np
 import multiprocessing
-from ivy_builder.dataset import Dataset
+from ivy_builder.dataset import MapDataset
 from ivy.core.container import Container
 from ivy_builder.abstract.data_loader import DataLoader
 from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderSpec
@@ -60,15 +60,12 @@ class JSONDataLoader(DataLoader):
         self._compute_num_workers()
 
         # train dataset
-        self._training_dataset = self._get_dataset(start_idx_train, end_idx_train)
-        self._training_iterator = iter(self._training_dataset)
+        self._training_iterator = self._get_iterator_dataset(start_idx_train, end_idx_train)
 
         # validation
         if self._spec.num_training_sequences < self._spec.num_sequences_to_use:
-            self._validation_dataset = self._get_dataset(start_idx_valid, end_idx_valid)
-            self._validation_iterator = iter(self._validation_dataset)
+            self._validation_iterator = self._get_iterator_dataset(start_idx_valid, end_idx_valid)
         else:
-            self._validation_dataset = None
             self._validation_iterator = None
 
         # dummy batch
@@ -352,7 +349,7 @@ class JSONDataLoader(DataLoader):
     # Dataset Creation #
     # -----------------#
 
-    def _get_dataset(self, starting_example, ending_example):
+    def _get_iterator_dataset(self, starting_example, ending_example):
 
         # container filepaths
         container_filepaths = self._load_container_filepaths_as_lists(self._container_data_dir, starting_example,
@@ -395,7 +392,7 @@ class JSONDataLoader(DataLoader):
             if 'unused_key_chains' in self._spec:
                 container_slices = self._prune_unused_key_chains(container_slices)
 
-            dataset = Dataset(
+            dataset = MapDataset(
                 ivy.Container.list_stack([c[0] for c in container_slices.unstack(0, container_slices.shape[0])], 0),
                 'base',
                 container_slices.shape[0],
@@ -403,11 +400,11 @@ class JSONDataLoader(DataLoader):
                 cache_size=self._base_cache_size)
         else:
             # load containers with filepath entries
-            dataset = Dataset(ivy.Container({'fpaths': container_filepaths}),
+            dataset = MapDataset(ivy.Container({'fpaths': container_filepaths}),
                               'base',
-                              len(container_filepaths),
-                              numpy_loading=True,
-                              cache_size=self._base_cache_size)
+                                 len(container_filepaths),
+                                 numpy_loading=True,
+                                 cache_size=self._base_cache_size)
             dataset = dataset.map('loaded_json',
                                   self._load_json_files,
                                   self._num_workers.loaded_json)
@@ -453,7 +450,7 @@ class JSONDataLoader(DataLoader):
         #  For example, swapping prefetch and to_gpu ops around would work if to_gpu could accept self._num_workers.
         if self._spec.prefetch_to_gpu:
             dataset = dataset.to_gpu('to_gpu')
-        return dataset
+        return dataset.to_iterator('to_iterator')
 
     # Public Methods #
     # ---------------#
@@ -479,6 +476,6 @@ class JSONDataLoader(DataLoader):
         return self._dummy_batch.to_random()
 
     def close(self):
-        self._training_dataset.close()
-        if ivy.exists(self._validation_dataset):
-            self._validation_dataset.close()
+        self._training_iterator.close()
+        if ivy.exists(self._validation_iterator):
+            self._validation_iterator.close()

@@ -1,4 +1,5 @@
 # global
+import abc
 import ivy
 import math
 import queue
@@ -34,13 +35,45 @@ class Cache:
         return key in self._dict
 
 
-class Dataset:
+class Dataset(abc.ABC):
+
+    def __init__(self, base_dataset, name, size, with_caching=True, cache_size=1, num_processes=1):
+        self._name = name
+        self._size = size
+        self._with_caching = with_caching
+        self._cache_size = cache_size
+        self._cache = Cache(cache_size)
+        self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
+        self._base_dataset = base_dataset
+
+
+class IteratorDataset(Dataset):
+
+    def __init__(self, base_dataset, name, size, with_caching=True, cache_size=1, num_processes=1):
+
+        # ToDo: implement this fully, with iterator prefetching etc.
+
+        # iterator
+        self._base_dataset_iterator = iter(base_dataset)
+
+        # initialize parent class
+        Dataset.__init__(self, base_dataset, name, size, with_caching, cache_size, num_processes)
+
+    def __next__(self):
+        return next(self._base_dataset_iterator)
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        self._base_dataset.close()
+
+
+class MapDataset(Dataset):
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
                  elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
                  blocking_retreival=True, is_subprocess=False):
-        self._name = name
-        self._size = size
         self._base_slice_fn = base_slice_fn
         if base_slice_fn is None:
             self._slice_base_dataset = self._default_base_slice_fn
@@ -53,10 +86,6 @@ class Dataset:
         else:
             self._slice_dataset = slice_fn
         self._elementwise_query_fn = elementwise_query_fn
-        self._with_caching = with_caching
-        self._cache_size = cache_size
-        self._cache = Cache(cache_size)
-        self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
         self._blocking_retreival = blocking_retreival
         self._is_subprocess = is_subprocess
@@ -71,16 +100,18 @@ class Dataset:
                     return x
 
             base_dataset = base_dataset.map(to_numpy)
-        self._base_dataset = base_dataset
         self._workers_initialized = False
         self._has_workers = False
+
+        # initialize parent class
+        Dataset.__init__(self, base_dataset, name, size, with_caching, cache_size, num_processes)
 
     # Private #
     # --------#
 
     def _deep_copy(self, num_processes=None):
         # noinspection PyProtectedMember
-        return Dataset(
+        return MapDataset(
             base_dataset=self._base_dataset if isinstance(self._base_dataset, ivy.Container)
             else self._base_dataset._deep_copy(), name=self._name, size=self._size,
             base_slice_fn=self._base_slice_fn, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
@@ -144,14 +175,14 @@ class Dataset:
     def _slice_dataset(slice_obj, dataset):
         if isinstance(dataset, ivy.Container):
             if isinstance(slice_obj, numbers.Number):
-                slice_obj = Dataset._ensure_number_is_int(slice_obj)
+                slice_obj = MapDataset._ensure_number_is_int(slice_obj)
             else:
-                so_start = Dataset._ensure_number_is_int(slice_obj.start)
-                so_stop = Dataset._ensure_number_is_int(slice_obj.stop)
+                so_start = MapDataset._ensure_number_is_int(slice_obj.start)
+                so_stop = MapDataset._ensure_number_is_int(slice_obj.stop)
                 if slice_obj.step is None:
                     so_step = 1
                 else:
-                    so_step = Dataset._ensure_number_is_int(slice_obj.step)
+                    so_step = MapDataset._ensure_number_is_int(slice_obj.step)
                 slice_obj = slice(so_start, so_stop, so_step)
             return dataset[slice_obj]
         else:
@@ -161,7 +192,7 @@ class Dataset:
     def _default_base_slice_fn(slice_obj, dataset):
         if isinstance(slice_obj, numbers.Number):
             slice_obj = slice(slice_obj, slice_obj+1, 1)
-        return Dataset._slice_dataset(slice_obj, dataset)
+        return MapDataset._slice_dataset(slice_obj, dataset)
 
     @staticmethod
     def _default_slice_fn(slice_obj, sliced_dataset, dataset_size):
@@ -173,7 +204,7 @@ class Dataset:
             else:
                 slice_size = slice_obj.stop + dataset_size - slice_obj.start
             slice_obj = slice(0, slice_size, slice_obj.step)
-        return Dataset._slice_dataset(slice_obj, sliced_dataset)
+        return MapDataset._slice_dataset(slice_obj, sliced_dataset)
 
     def _get_base_item(self, slice_obj):
         base_dataset = self._slice_base_dataset(slice_obj, self._base_dataset)
@@ -243,7 +274,7 @@ class Dataset:
             self._cache[so] = item
         else:
             for i in np.arange(so.start, so.stop-1e-3, 1.):
-                self._cache[i] = Dataset._slice_dataset(i-so.start, item)
+                self._cache[i] = MapDataset._slice_dataset(i - so.start, item)
 
     def __del__(self):
         self.close()
@@ -300,7 +331,7 @@ class Dataset:
         num_sub_slices = min(slice_size, self._num_processes)
         slice_points = np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices+1)
         slice_sizes = (slice_points[1:] - slice_points[:-1]).astype(np.int32)
-        if Dataset._is_int(slice_obj.start) and Dataset._is_int(slice_obj.stop):
+        if MapDataset._is_int(slice_obj.start) and MapDataset._is_int(slice_obj.stop):
             slice_points = np.round(slice_points)
         sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
         offset = np.random.randint(0, self._num_processes)
@@ -318,15 +349,15 @@ class Dataset:
         return ivy.Container(queues=queues, queue_load_sizes=slice_sizes)
 
     def map(self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None):
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=self._size,
-                       base_slice_fn=base_slice_fn,
-                       trans_fn=map_func,
-                       with_caching=self._with_caching,
-                       cache_size=self._cache_size,
-                       num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+        return MapDataset(base_dataset=self,
+                          name=name,
+                          size=self._size,
+                          base_slice_fn=base_slice_fn,
+                          trans_fn=map_func,
+                          with_caching=self._with_caching,
+                          cache_size=self._cache_size,
+                          num_processes=num_processes,
+                          numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
     def batch(self, name, batch_size, num_processes=1, numpy_loading=None):
         def batch_array(x, _):
@@ -344,18 +375,18 @@ class Dataset:
                 so_start = int(round(batch_size * slc_obj.start))
                 so_stop = int(round(batch_size * slc_obj.stop))
                 base_slice_obj = slice(so_start, so_stop, 1)
-            return Dataset._slice_dataset(base_slice_obj, dataset)
+            return MapDataset._slice_dataset(base_slice_obj, dataset)
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=float(self._size / batch_size),
-                       base_slice_fn=base_slice_fn,
-                       trans_fn=batch_cont,
-                       elementwise_query_fn=False,
-                       with_caching=self._with_caching,
-                       cache_size=int(math.ceil(self._cache_size / batch_size)),
-                       num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+        return MapDataset(base_dataset=self,
+                          name=name,
+                          size=float(self._size / batch_size),
+                          base_slice_fn=base_slice_fn,
+                          trans_fn=batch_cont,
+                          elementwise_query_fn=False,
+                          with_caching=self._with_caching,
+                          cache_size=int(math.ceil(self._cache_size / batch_size)),
+                          num_processes=num_processes,
+                          numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
     def unbatch(self, name, num_processes=1, numpy_loading=None, cache_size=None, batch_sizes=None):
 
@@ -386,14 +417,14 @@ class Dataset:
             so_stop = unbatch_slice_dict[slice_obj.stop - 1] + 1
             so_stop = so_stop + 1 if so_stop == so_start else so_stop
             so = slice(so_start, so_stop, 1)
-            return Dataset._slice_dataset(so, dataset)
+            return MapDataset._slice_dataset(so, dataset)
 
         def unbatch_fn(cont):
             return cont.map(lambda x, kc: [c for o in [ivy.unstack(item, 0) for item in x] for c in o])
 
         def slice_fn(slice_obj, sliced_dataset, dataset_size):
             if isinstance(slice_obj, numbers.Number):
-                return Dataset._slice_dataset(slice_dict[slice_obj], sliced_dataset)
+                return MapDataset._slice_dataset(slice_dict[slice_obj], sliced_dataset)
             else:
                 if slice_obj.stop > slice_obj.start:
                     slice_size = slice_obj.stop - slice_obj.start
@@ -402,20 +433,20 @@ class Dataset:
                 so_start = slice_dict[slice_obj.start]
                 so_stop = so_start + slice_size
                 so = slice(so_start, so_stop, 1)
-                return Dataset._slice_dataset(so, sliced_dataset)
+                return MapDataset._slice_dataset(so, sliced_dataset)
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=unrolled_size,
-                       base_slice_fn=base_slice_fn,
-                       trans_fn=unbatch_fn,
-                       slice_fn=slice_fn,
-                       elementwise_query_fn=False,
-                       with_caching=self._with_caching,
-                       cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size))
+        return MapDataset(base_dataset=self,
+                          name=name,
+                          size=unrolled_size,
+                          base_slice_fn=base_slice_fn,
+                          trans_fn=unbatch_fn,
+                          slice_fn=slice_fn,
+                          elementwise_query_fn=False,
+                          with_caching=self._with_caching,
+                          cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size))
                        if cache_size is None else cache_size,
-                       num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+                          num_processes=num_processes,
+                          numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
     def shuffle(self, name, shuffle_buffer_size, num_processes=1, numpy_loading=None):
         if shuffle_buffer_size == 0:
@@ -424,14 +455,14 @@ class Dataset:
                                   shuffle_buffer_size,
                                   num_processes=num_processes,
                                   numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
-        shuffled = Dataset(base_dataset=pre_shuffled,
-                           name=name,
-                           size=pre_shuffled.size,
-                           trans_fn=lambda cont: cont.shuffle(),
-                           with_caching=self._with_caching,
-                           cache_size=self._cache_size,
-                           num_processes=num_processes,
-                           numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+        shuffled = MapDataset(base_dataset=pre_shuffled,
+                              name=name,
+                              size=pre_shuffled.size,
+                              trans_fn=lambda cont: cont.shuffle(),
+                              with_caching=self._with_caching,
+                              cache_size=self._cache_size,
+                              num_processes=num_processes,
+                              numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
         post_shuffled = shuffled.unbatch('post_' + name,
                                          num_processes=num_processes,
                                          numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
@@ -450,19 +481,19 @@ class Dataset:
                 so_start = slc_obj.start
                 so_stop = slc_obj.stop + buffer_size
             base_slice_obj = slice(so_start, so_stop, 1)
-            return Dataset._slice_dataset(base_slice_obj, dataset)
+            return MapDataset._slice_dataset(base_slice_obj, dataset)
 
         self._blocking_retreival = False
         self._num_processes = num_processes
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=self._size,
-                       base_slice_fn=base_slice_fn,
-                       with_caching=self._with_caching,
-                       cache_size=self._cache_size,
-                       num_processes=1,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+        return MapDataset(base_dataset=self,
+                          name=name,
+                          size=self._size,
+                          base_slice_fn=base_slice_fn,
+                          with_caching=self._with_caching,
+                          cache_size=self._cache_size,
+                          num_processes=1,
+                          numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
 
     def to_gpu(self, name, num_processes=1, gpu_idx=0):
 
@@ -472,14 +503,22 @@ class Dataset:
         def cont_to_gpu(cont):
             return cont.map(item_to_gpu)
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=self._size,
-                       trans_fn=cont_to_gpu,
-                       with_caching=self._with_caching,
-                       cache_size=self._cache_size,
-                       num_processes=num_processes,
-                       numpy_loading=False)
+        return MapDataset(base_dataset=self,
+                          name=name,
+                          size=self._size,
+                          trans_fn=cont_to_gpu,
+                          with_caching=self._with_caching,
+                          cache_size=self._cache_size,
+                          num_processes=num_processes,
+                          numpy_loading=False)
+
+    def to_iterator(self, name, num_processes=1):
+        return IteratorDataset(base_dataset=self,
+                               name=name,
+                               size=self._size,
+                               with_caching=self._with_caching,
+                               cache_size=self._cache_size,
+                               num_processes=num_processes)
 
     def close(self):
         if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
