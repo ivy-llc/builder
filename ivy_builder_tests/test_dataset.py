@@ -555,7 +555,7 @@ class TestPrefetch:
         dataset_container = ivy.Container({'x': self._x})
         dataset = MapDataset(dataset_container, 'base', dataset_container.shape[0], with_caching=False, cache_size=0)
 
-        def sleep_fn(cont):
+        def sleep_fn(cont, ivyh=None):
             time.sleep(0.05)
             return cont
 

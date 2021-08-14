@@ -2,13 +2,11 @@
 import os
 import cv2
 import ivy
-import math
 import json
 import logging
 import numpy as np
 import multiprocessing
 from ivy_builder.dataset import MapDataset
-from ivy.core.container import Container
 from ivy_builder.abstract.data_loader import DataLoader
 from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderSpec
 
@@ -84,11 +82,12 @@ class JSONDataLoader(DataLoader):
     # ---------------#
 
     @staticmethod
-    def _to_tensor(x, key_chain=''):
+    def _to_tensor(x, ivyh=None):
+        ivyh = ivy.default(ivyh, ivy)
         if type(x) == str:
             x = [[list(x.encode())]]
-            return ivy.array(x, dtype_str='uint8')
-        return ivy.array(x, dtype_str='float32')
+            return ivyh.array(x, dtype_str='uint8')
+        return ivyh.array(x, dtype_str='float32')
 
     @staticmethod
     def _load_container_filepaths_as_lists(cont_dir, starting_example, ending_example):
@@ -137,12 +136,12 @@ class JSONDataLoader(DataLoader):
                     break
                 with open(filepath) as fp:
                     container_dict = json.load(fp)
-                container = Container(container_dict).map(self._to_tensor)
+                container = ivy.Container(container_dict).map(lambda x, kc: self._to_tensor(x))
                 window_containers.append(container)
             window_containers += [container] * (max_seq_len - seq_len - 1)  # padding for shorter sequences
-            joined_window_containers = Container.concat(window_containers, 1)
+            joined_window_containers = ivy.Container.concat(window_containers, 1)
             all_containers.append(joined_window_containers)
-        return Container.concat(all_containers, 0)
+        return ivy.Container.concat(all_containers, 0)
 
     # Multiprocessing Sizes #
     # ----------------------#
@@ -191,48 +190,51 @@ class JSONDataLoader(DataLoader):
     # Dynamic Windowing #
     # ------------------#
 
-    def _group_tensor_into_windowed_tensor_simple(self, x, seq_info):
+    def _group_tensor_into_windowed_tensor_simple(self, x, seq_info, ivyh):
         if self._fixed_sequence_length:
-            return ivy.reshape(ivy.gather_nd(x, ivy.array(self._gather_idxs)),
-                               (self._windows_per_seq, self._window_size) + x.shape[1:])
+            return ivyh.reshape(ivyh.gather_nd(x, ivyh.array(self._gather_idxs)),
+                                (self._windows_per_seq, self._window_size) + x.shape[1:])
         else:
-            num_windows_in_seq = int(ivy.to_numpy(ivy.maximum(seq_info.length[0] - self._window_size + 1, 1)))
-            window_idxs_in_seq = ivy.arange(num_windows_in_seq, 0, 1)
-            gather_idxs = ivy.tile(ivy.reshape(ivy.arange(self._window_size, 0, 1), (1, self._window_size)),
-                                   (num_windows_in_seq, 1)) + ivy.expand_dims(window_idxs_in_seq, -1)
-            gather_idxs_flat = ivy.reshape(gather_idxs, (self._window_size * num_windows_in_seq, 1))
-            return ivy.reshape(ivy.gather_nd(x, gather_idxs_flat),
+            num_windows_in_seq = int(ivyh.to_numpy(ivyh.maximum(seq_info.length[0] - self._window_size + 1, 1)))
+            window_idxs_in_seq = ivyh.arange(num_windows_in_seq, 0, 1)
+            gather_idxs = ivyh.tile(ivyh.reshape(ivyh.arange(self._window_size, 0, 1), (1, self._window_size)),
+                                   (num_windows_in_seq, 1)) + ivyh.expand_dims(window_idxs_in_seq, -1)
+            gather_idxs_flat = ivyh.reshape(gather_idxs, (self._window_size * num_windows_in_seq, 1))
+            return ivyh.reshape(ivyh.gather_nd(x, gather_idxs_flat),
                                (num_windows_in_seq, self._window_size) + x.shape[1:])
 
-    def _group_tensor_into_windowed_tensor(self, x, valid_first_frame):
+    def _group_tensor_into_windowed_tensor(self, x, valid_first_frame, ivyh):
         if self._window_size == 1:
-            valid_first_frame_pruned = ivy.cast(valid_first_frame[:, 0], 'bool')
+            valid_first_frame_pruned = ivyh.cast(valid_first_frame[:, 0], 'bool')
         else:
-            valid_first_frame_pruned = ivy.cast(valid_first_frame[:1-self._window_size, 0], 'bool')
-        if ivy.reduce_sum(ivy.cast(valid_first_frame_pruned, 'int32'))[0] == 0:
+            valid_first_frame_pruned = ivyh.cast(valid_first_frame[:1-self._window_size, 0], 'bool')
+        if ivyh.reduce_sum(ivyh.cast(valid_first_frame_pruned, 'int32'))[0] == 0:
             valid_first_frame_pruned =\
-                ivy.cast(ivy.one_hot(0, self._sequence_lengths[0] - self._window_size + 1), 'bool')
-        window_idxs_single = ivy.indices_where(valid_first_frame_pruned)
+                ivyh.cast(ivyh.one_hot(0, self._sequence_lengths[0] - self._window_size + 1), 'bool')
+        window_idxs_single = ivyh.indices_where(valid_first_frame_pruned)
 
         gather_idxs_list = list()
         for w_idx in window_idxs_single:
-            gather_idxs_list.append(ivy.expand_dims(ivy.arange(w_idx[0] + self._window_size, w_idx[0], 1), 0))
-        gather_idxs = ivy.concatenate(gather_idxs_list, 0)
-        gather_idxs = ivy.reshape(gather_idxs, (-1, 1))
-        num_valid_windows_for_seq = ivy.shape(window_idxs_single)[0:1]
-        return ivy.reshape(ivy.gather_nd(x, gather_idxs),
-                           ivy.concatenate((num_valid_windows_for_seq,
-                                            ivy.array([self._window_size]), ivy.shape(x)[1:]), 0))
+            gather_idxs_list.append(ivyh.expand_dims(ivyh.arange(w_idx[0] + self._window_size, w_idx[0], 1), 0))
+        gather_idxs = ivyh.concatenate(gather_idxs_list, 0)
+        gather_idxs = ivyh.reshape(gather_idxs, (-1, 1))
+        num_valid_windows_for_seq = ivyh.shape(window_idxs_single)[0:1]
+        return ivyh.reshape(ivyh.gather_nd(x, gather_idxs),
+                           ivyh.concatenate((num_valid_windows_for_seq,
+                                            ivyh.array([self._window_size]), ivyh.shape(x)[1:]), 0))
 
-    def _group_container_into_windowed_container(self, container):
+    def _group_container_into_windowed_container(self, container, ivyh):
+        ivyh = ivy.default(ivyh, ivy)
         if self._first_frame_validity_fn is not None:
-            return container.map(lambda x, _: self._group_tensor_into_windowed_tensor(x, container.valid_first_frame))
+            return container.map(
+                lambda x, _: self._group_tensor_into_windowed_tensor(x, container.valid_first_frame, ivyh))
         else:
             if 'seq_info' in container:
                 seq_info = container.seq_info
             else:
                 seq_info = None
-            return container.map(lambda x, _: self._group_tensor_into_windowed_tensor_simple(x, seq_info))
+            return container.map(
+                lambda x, _: self._group_tensor_into_windowed_tensor_simple(x, seq_info, ivyh))
 
     # Dynamic File Reading #
     # ---------------------#
@@ -240,7 +242,8 @@ class JSONDataLoader(DataLoader):
     # json to container
 
     @staticmethod
-    def _load_json_files(containers):
+    def _load_json_files(containers, ivyh):
+        ivyh = ivy.default(ivyh, ivy)
         read_files = list()
         for j_fpath in containers.fpaths:
             if j_fpath != '':
@@ -249,98 +252,109 @@ class JSONDataLoader(DataLoader):
             else:
                 read_str = ''
             read_files.append(read_str)
-        return ivy.Container({'json_str': read_files})
+        return ivy.Container({'json_str': read_files}, ivyh=ivyh)
 
-    def _parse_json_strings(self, containers):
+    def _parse_json_strings(self, containers, ivyh):
+        ivyh = ivy.default(ivyh, ivy)
         json_strings_stack = containers.json_str
         highest_idx_entry = len([item for item in containers.json_str if item != '']) - 1
-        json_container_stack = [Container(json.loads(json_str)).map(self._to_tensor)[0]
-                                if json_str != '' else
-                                Container(json.loads(json_strings_stack[highest_idx_entry])).map(
-                                    self._to_tensor)[0] for json_str in json_strings_stack]
-        return Container.concat(json_container_stack, 0)
+        json_container_stack = [ivy.Container(json.loads(json_str), ivyh=ivyh).map(
+            lambda x, kc: self._to_tensor(x, ivyh))[0] if json_str != '' else
+                                ivy.Container(json.loads(json_strings_stack[highest_idx_entry]), ivyh=ivyh).map(
+                                    lambda x, kc: self._to_tensor(x, ivyh))[0] for json_str in json_strings_stack]
+        return ivy.Container.concat(json_container_stack, 0, ivyh=ivyh)
 
     # container pruning
 
-    def _prune_unused_key_chains(self, container):
+    def _prune_unused_key_chains(self, container, ivyh=None):
         for unused_key_chain in self._spec.unused_key_chains:
             container = container.prune_key_chain(unused_key_chain)
         return container
 
     # arrays
 
-    def _array_fn(self, filepaths_in_window):
+    def _array_fn(self, filepaths_in_window, ivyh):
         conts = list()
         # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
-            str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
+            str_path = bytearray(ivyh.to_numpy(filepath).tolist()).decode()
             full_path = os.path.abspath(os.path.join(self._container_data_dir, str_path))
             if self._spec.array_mode == 'hdf5':
-                cont = ivy.Container.from_disk_as_hdf5(full_path + '.hdf5')
+                cont = ivy.Container.from_disk_as_hdf5(full_path + '.hdf5', ivyh=ivyh)
             elif self._spec.array_mode == 'pickled':
-                cont = ivy.Container.from_disk_as_pickled(full_path + '.pickled')
+                cont = ivy.Container.from_disk_as_pickled(full_path + '.pickled', ivyh=ivyh)
             else:
                 raise Exception('array_mode must be one of [ hdf5 | pickled ],'
                                 'but found {}'.format(self._spec.array_mode))
             conts.append(cont)
-        return ivy.Container.concat(conts, 0)
+        return ivy.Container.concat(conts, 0, ivyh=ivyh)
 
     # images
 
-    def _uint8_fn(self, filepaths_in_window):
+    def _uint8_fn(self, filepaths_in_window, ivyh):
         imgs = list()
         # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
-            str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
+            str_path = bytearray(ivyh.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
             img_rgba = cv2.imread(full_path, -1)
-            img = ivy.array(np.expand_dims(img_rgba.astype(np.float32), 0))/255
+            img = ivyh.array(np.expand_dims(img_rgba.astype(np.float32), 0))/255
             imgs.append(img)
-        return ivy.concatenate(imgs, 0)
+        return ivyh.concatenate(imgs, 0)
 
-    def _float_fn(self, filepaths_in_window):
+    def _float_fn(self, filepaths_in_window, ivyh):
         imgs = list()
         # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
-            str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
+            str_path = bytearray(ivyh.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
             img_rgba = cv2.imread(full_path, -1)
-            img = ivy.array(np.frombuffer(img_rgba.tobytes(), np.float32).reshape((1,) + img_rgba.shape[:-1]))
+            img = ivyh.array(np.frombuffer(img_rgba.tobytes(), np.float32).reshape((1,) + img_rgba.shape[:-1]))
             imgs.append(img)
-        return ivy.concatenate(imgs, 0)
+        return ivyh.concatenate(imgs, 0)
 
-    def _custom_img_fn(self, filepaths_in_window, fn):
+    def _custom_img_fn(self, filepaths_in_window, fn, ivyh):
         imgs = list()
         for filepath in filepaths_in_window:
-            str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
+            str_path = bytearray(ivyh.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
             img_raw = cv2.imread(full_path, -1)
             img = fn(img_raw)
             imgs.append(img)
-        return ivy.concatenate(imgs, 0)
+        return ivyh.concatenate(imgs, 0)
 
-    def _str_fn(self, x, key_chain=''):
+    def _str_fn(self, x, key_chain, ivyh):
         for array_str in self._spec.array_strs:
             if array_str in key_chain:
-                return self._array_fn(x)
+                return self._array_fn(x, ivyh)
         for float_str in self._spec.float_strs:
             if float_str in key_chain:
-                return self._float_fn(x)
+                return self._float_fn(x, ivyh)
         for uint8_str in self._spec.uint8_strs:
             if uint8_str in key_chain:
-                return self._uint8_fn(x)
+                return self._uint8_fn(x, ivyh)
         for i, custom_img_strs in enumerate(self._spec.custom_img_strs):
             for custom_img_str in custom_img_strs:
                 if custom_img_str in key_chain:
-                    return self._custom_img_fn(x, self._spec.custom_img_fns[i])
+                    return self._custom_img_fn(x, self._spec.custom_img_fns[i], ivyh)
         for i, custom_strs in enumerate(self._spec.custom_strs):
             for custom_str in custom_strs:
                 if custom_str in key_chain:
-                    return self._spec.custom_fns[i](x, self._container_data_dir)
+                    return self._spec.custom_fns[i](x, self._container_data_dir, ivyh)
         return x
 
-    def _load_data_from_filepath_tensors(self, container):
-        return container.map(self._str_fn)
+    def _load_data_from_filepath_tensors(self, container, ivyh):
+        ivyh = ivy.default(ivyh, ivy)
+        return container.map(lambda x, kc: self._str_fn(x, kc, ivyh))
+
+    @staticmethod
+    def _to_numpy(x, kc):
+        if ivy.is_array(x):
+            return ivy.to_numpy(x)
+        elif isinstance(x, list):
+            return [ivy.to_numpy(v) if ivy.is_array(v) else v for v in x]
+        else:
+            return x
 
     # Dataset Creation #
     # -----------------#
@@ -388,19 +402,24 @@ class JSONDataLoader(DataLoader):
             if 'unused_key_chains' in self._spec:
                 container_slices = self._prune_unused_key_chains(container_slices)
 
+            base_cont =\
+                ivy.Container.list_stack([c[0] for c in container_slices.unstack(0, container_slices.shape[0])], 0)
             dataset = MapDataset(
-                ivy.Container.list_stack([c[0] for c in container_slices.unstack(0, container_slices.shape[0])], 0),
+                base_cont.map(self._to_numpy),
                 'base',
                 container_slices.shape[0],
-                numpy_loading=True,
+                ivyh=ivy.get_framework('numpy'),
                 cache_size=self._base_cache_size)
         else:
             # load containers with filepath entries
-            dataset = MapDataset(ivy.Container({'fpaths': container_filepaths}),
-                              'base',
+            base_cont = ivy.Container({'fpaths': container_filepaths})
+            dataset = MapDataset(base_cont.map(self._to_numpy),
+                                 'base',
                                  len(container_filepaths),
-                                 numpy_loading=True,
+                                 ivyh=ivy.get_framework('numpy'),
                                  cache_size=self._base_cache_size)
+            dataset = dataset.map('to_numpy',
+                                  lambda cont, ivyh: cont.map(lambda x_, kc: self._to_numpy(x_, ivyh)))
             dataset = dataset.map('loaded_json',
                                   self._load_json_files,
                                   self._num_workers.loaded_json)
@@ -432,16 +451,15 @@ class JSONDataLoader(DataLoader):
                                 self._batch_size,
                                 self._num_workers.batched)
         dataset = dataset.map('from_numpy',
-                              lambda cont: cont.map(lambda x_, kc: ivy.array(x_)),
-                              self._num_workers.from_numpy,
-                              numpy_loading=False)
+                              lambda cont, ivyh: cont.as_arrays(),
+                              self._num_workers.from_numpy)
         if ivy.exists(self._spec.post_proc_fn):
             dataset = dataset.map('post_processed',
                                   self._spec.post_proc_fn,
                                   self._num_workers.post_processed)
         if self._spec.prefetch_to_gpu:
             dataset = dataset.to_gpu('to_gpu')
-        return dataset.to_iterator('to_iterator')
+        return dataset.to_iterator('to_iterator', with_prefetching=False)
 
     # Public Methods #
     # ---------------#
