@@ -38,7 +38,7 @@ class Cache:
 
 class IteratorDataset:
 
-    def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=10.0,
+    def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=5.0,
                  parallel_method='thread'):
 
         # config
@@ -149,7 +149,7 @@ class IteratorDataset:
             if self._parallel_method == 'process':
                 try:
                     self._input_queue.put(False)
-                    self._worker.join(timeout=0.1)
+                    self._worker.join(timeout=1.0)
                     self._input_queue.cancel_join_thread()
                     self._input_queue.close()
                     self._output_queue.cancel_join_thread()
@@ -171,7 +171,7 @@ class MapDataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
                  elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
-                 blocking_retreival=True, is_subprocess=False):
+                 is_subprocess=False):
         self._name = name
         self._size = size
         self._base_slice_fn = base_slice_fn
@@ -191,7 +191,6 @@ class MapDataset:
         self._cache = Cache(cache_size)
         self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
-        self._blocking_retreival = blocking_retreival
         self._is_subprocess = is_subprocess
         if numpy_loading and isinstance(base_dataset, ivy.Container):
 
@@ -219,7 +218,7 @@ class MapDataset:
             base_slice_fn=self._base_slice_fn, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
             elementwise_query_fn=self._elementwise_query_fn, with_caching=self._with_caching,
             cache_size=self._cache_size, num_processes=ivy.default(num_processes, self._num_processes),
-            numpy_loading=self._numpy_loading, blocking_retreival=self._blocking_retreival, is_subprocess=True)
+            numpy_loading=self._numpy_loading, is_subprocess=True)
 
     def _initialize_all_workers(self):
         if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
@@ -438,16 +437,11 @@ class MapDataset:
         offset = np.random.randint(0, self._num_processes)
         [self._slice_queues[int((i + offset) % self._num_processes)].put(sub_slice)
          for i, sub_slice in enumerate(sub_slices)]
-        if self._blocking_retreival:
-            items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=1.0)
-                              for i in range(num_sub_slices)]
-            if self._numpy_loading:
-                ivy.unset_framework()
-            return ivy.Container.list_join(items_as_lists)
+        items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=1.0)
+                          for i in range(num_sub_slices)]
         if self._numpy_loading:
             ivy.unset_framework()
-        queues = [self._output_queues[int((i + offset) % self._num_processes)] for i in range(num_sub_slices)]
-        return ivy.Container(queues=queues, queue_load_sizes=slice_sizes)
+        return ivy.Container.list_join(items_as_lists)
 
     def map(self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None):
         return MapDataset(base_dataset=self,
@@ -571,31 +565,6 @@ class MapDataset:
                                          batch_sizes=shuffle_buffer_size)
         return post_shuffled
 
-    def prefetch(self, name, buffer_size, num_processes=1, numpy_loading=None):
-
-        # noinspection PyUnresolvedReferences
-        def base_slice_fn(slc_obj, dataset):
-            if isinstance(slc_obj, numbers.Number):
-                so_start = slc_obj
-                so_stop = slc_obj + 1 + buffer_size
-            else:
-                so_start = slc_obj.start
-                so_stop = slc_obj.stop + buffer_size
-            base_slice_obj = slice(so_start, so_stop, 1)
-            return MapDataset._slice_dataset(base_slice_obj, dataset)
-
-        self._blocking_retreival = False
-        self._num_processes = num_processes
-
-        return MapDataset(base_dataset=self,
-                          name=name,
-                          size=self._size,
-                          base_slice_fn=base_slice_fn,
-                          with_caching=self._with_caching,
-                          cache_size=self._cache_size,
-                          num_processes=1,
-                          numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
-
     def to_gpu(self, name, num_processes=1, gpu_idx=0):
 
         def item_to_gpu(x, _):
@@ -613,11 +582,13 @@ class MapDataset:
                           num_processes=num_processes,
                           numpy_loading=False)
 
-    def to_iterator(self, name, with_prefetching=True):
+    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=5.0, parallel_method='thread'):
         return IteratorDataset(base_dataset=self,
                                name=name,
                                size=self._size,
-                               with_prefetching=with_prefetching)
+                               with_prefetching=with_prefetching,
+                               prefetch_timeout=prefetch_timeout,
+                               parallel_method=parallel_method)
 
     def close(self):
         if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:

@@ -153,10 +153,6 @@ class JSONDataLoader(DataLoader):
         num_workers = self._total_num_workers
         self._num_workers = ivy.Container()
 
-        # prefetch
-        self._num_workers.prefetch = self._spec.num_to_prefetch
-        num_workers = math.ceil(num_workers/(self._num_workers.prefetch+1))
-
         # post processed
         self._num_workers.post_processed = 1
 
@@ -443,11 +439,6 @@ class JSONDataLoader(DataLoader):
             dataset = dataset.map('post_processed',
                                   self._spec.post_proc_fn,
                                   self._num_workers.post_processed)
-        dataset = dataset.prefetch('prefetch',
-                                   self._spec.num_to_prefetch,
-                                   self._num_workers.prefetch)
-        # ToDo: find way to make pre-fetching to GPU actually pre-fetch, ideally using multi-processing.
-        #  For example, swapping prefetch and to_gpu ops around would work if to_gpu could accept self._num_workers.
         if self._spec.prefetch_to_gpu:
             dataset = dataset.to_gpu('to_gpu')
         return dataset.to_iterator('to_iterator')
