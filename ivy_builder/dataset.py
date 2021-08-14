@@ -39,10 +39,20 @@ class Cache:
 class IteratorDataset:
 
     def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=5.0,
-                 parallel_method='process', ivyh=None):
+                 parallel_method='process', to_gpu=None, ivyh=None):
 
         # framework
         self._ivy = ivy.default(ivyh, ivy)
+
+        # gpu
+        self._to_gpu = False if to_gpu in [None, False] else to_gpu
+        if self._to_gpu:
+            if isinstance(self._to_gpu, int):
+                self._to_gpu = 'cuda:{}'.format(to_gpu)
+            elif isinstance(self._to_gpu, str):
+                self._to_gpu = to_gpu
+            else:
+                raise Exception('to_gpu must be an int, str, None or False, but found {}'.format(to_gpu))
 
         # warn about threading
         if parallel_method == 'thread':
@@ -128,11 +138,15 @@ class IteratorDataset:
         ret = self._next
         self._next = None
         self._lock_for_next.release()
+        if self._to_gpu:
+            ret = ret.to_dev(self._to_gpu)
         return ret
 
     def _get_from_process(self):
-        ret = ivy.Container(self._output_queue.get(timeout=self._prefetch_timeout), ivyh=self._ivy)
         self._input_queue.put(True)
+        ret = ivy.Container(self._output_queue.get(timeout=self._prefetch_timeout), ivyh=self._ivy)
+        if self._to_gpu:
+            ret = ret.to_dev(self._to_gpu)
         return ret
 
     def _start_prefetching(self):
