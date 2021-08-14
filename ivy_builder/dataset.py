@@ -4,6 +4,7 @@ import time
 import math
 import queue
 import numbers
+import warnings
 import threading
 import ivy.numpy
 import numpy as np
@@ -39,7 +40,14 @@ class Cache:
 class IteratorDataset:
 
     def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=5.0,
-                 parallel_method='thread'):
+                 parallel_method='process'):
+
+        # warn about threading
+        if parallel_method == 'thread':
+            warnings.warn('ivy framework setting and unsetting does not behave well with multi-threading.'
+                          'If your data loading pipeline uses multiple frameworks outside of sub-processes'
+                          '(i.e. numpy and cv2 image loading before tensor conversion), then consider using'
+                          '"process" mode for this IteratorDataset instance instead')
 
         # config
         self._name = name
@@ -582,7 +590,7 @@ class MapDataset:
                           num_processes=num_processes,
                           numpy_loading=False)
 
-    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=5.0, parallel_method='thread'):
+    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=5.0, parallel_method='process'):
         return IteratorDataset(base_dataset=self,
                                name=name,
                                size=self._size,

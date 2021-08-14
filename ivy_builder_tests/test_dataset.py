@@ -1,7 +1,6 @@
 # global
-import time
-
 import ivy
+import time
 import pytest
 import numpy as np
 import ivy_tests.helpers as helpers
