@@ -37,7 +37,7 @@ class Cache:
 
 class IteratorDataset:
 
-    def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=5.0,
+    def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=1.0,
                  parallel_method='thread', to_gpu=None, ivyh=None):
 
         # framework
@@ -579,7 +579,7 @@ class MapDataset:
                           num_processes=num_processes,
                           ivyh=self._ivy)
 
-    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=5.0, parallel_method='thread', to_gpu=False,
+    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=1.0, parallel_method='thread', to_gpu=False,
                     ivyh=None):
         return IteratorDataset(base_dataset=self,
                                name=name,
@@ -597,7 +597,7 @@ class MapDataset:
             try:
                 for i, w in enumerate(self._workers):
                     self._slice_queues[i].put(None)
-                    w.join(timeout=0.1)
+                    w.join(timeout=1.0)
                 for q in self._slice_queues:
                     q.cancel_join_thread()
                     q.close()
