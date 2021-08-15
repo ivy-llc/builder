@@ -167,7 +167,8 @@ class IteratorDataset:
             if self._parallel_method == 'process':
                 try:
                     self._input_queue.put(False)
-                    self._worker.join(timeout=1.0)
+                    if self._worker.is_alive():
+                        self._worker.join(timeout=1.0)
                     self._input_queue.cancel_join_thread()
                     self._input_queue.close()
                     self._output_queue.cancel_join_thread()
@@ -182,7 +183,8 @@ class IteratorDataset:
                 self._lock_for_spin.acquire()
                 self._keep_spinning = False
                 self._lock_for_spin.release()
-                self._thread.join()
+                if self._thread.is_alive():
+                    self._thread.join()
 
 
 class MapDataset:
@@ -597,7 +599,8 @@ class MapDataset:
             try:
                 for i, w in enumerate(self._workers):
                     self._slice_queues[i].put(None)
-                    w.join(timeout=1.0)
+                    if w.is_alive():
+                        w.join(timeout=1.0)
                 for q in self._slice_queues:
                     q.cancel_join_thread()
                     q.close()
