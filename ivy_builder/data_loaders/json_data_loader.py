@@ -451,15 +451,16 @@ class JSONDataLoader(DataLoader):
                                 self._batch_size,
                                 self._num_workers.batched)
         dataset = dataset.map('from_numpy',
-                              lambda cont, ivyh: cont.as_arrays(),
+                              lambda cont, ivyh: cont.arrays_as_lists().set_framework(ivy).as_arrays(),
                               self._num_workers.from_numpy)
         if ivy.exists(self._spec.post_proc_fn):
             dataset = dataset.map('post_processed',
                                   self._spec.post_proc_fn,
-                                  self._num_workers.post_processed)
-        if self._spec.prefetch_to_gpu:
-            dataset = dataset.to_gpu('to_gpu')
-        return dataset.to_iterator('to_iterator', with_prefetching=False)
+                                  self._num_workers.post_processed,
+                                  ivyh=ivy)
+        return dataset.to_iterator('to_iterator',
+                                   to_gpu=self._spec.prefetch_to_gpu,
+                                   ivyh=ivy)
 
     # Public Methods #
     # ---------------#

@@ -4,7 +4,6 @@ import time
 import math
 import queue
 import numbers
-import warnings
 import threading
 import numpy as np
 import torch.multiprocessing as multiprocessing
@@ -39,7 +38,7 @@ class Cache:
 class IteratorDataset:
 
     def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=5.0,
-                 parallel_method='process', to_gpu=None, ivyh=None):
+                 parallel_method='thread', to_gpu=None, ivyh=None):
 
         # framework
         self._ivy = ivy.default(ivyh, ivy)
@@ -47,19 +46,14 @@ class IteratorDataset:
         # gpu
         self._to_gpu = False if to_gpu in [None, False] else to_gpu
         if self._to_gpu:
-            if isinstance(self._to_gpu, int):
+            if self._to_gpu is True:
+                self._to_gpu = 'cuda:0'
+            elif isinstance(self._to_gpu, int):
                 self._to_gpu = 'cuda:{}'.format(to_gpu)
             elif isinstance(self._to_gpu, str):
                 self._to_gpu = to_gpu
             else:
-                raise Exception('to_gpu must be an int, str, None or False, but found {}'.format(to_gpu))
-
-        # warn about threading
-        if parallel_method == 'thread':
-            warnings.warn('ivy framework setting and unsetting does not behave well with multi-threading.'
-                          'If your data loading pipeline uses multiple frameworks outside of sub-processes'
-                          '(i.e. numpy and cv2 image loading before tensor conversion), then consider using'
-                          '"process" mode for this IteratorDataset instance instead')
+                raise Exception('to_gpu must be an int, str, None, True, or False, but found {}'.format(to_gpu))
 
         # config
         self._name = name
@@ -585,13 +579,15 @@ class MapDataset:
                           num_processes=num_processes,
                           ivyh=self._ivy)
 
-    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=5.0, parallel_method='process', ivyh=None):
+    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=5.0, parallel_method='thread', to_gpu=False,
+                    ivyh=None):
         return IteratorDataset(base_dataset=self,
                                name=name,
                                size=self._size,
                                with_prefetching=with_prefetching,
                                prefetch_timeout=prefetch_timeout,
                                parallel_method=parallel_method,
+                               to_gpu=to_gpu,
                                ivyh=ivy.default(ivyh, self._ivy))
 
     def close(self):
