@@ -108,7 +108,8 @@ class IteratorDataset:
             time.sleep(0.01)
             self._lock_for_next.acquire()
             if not ivy.exists(self._next):
-                self._next = next(self._base_dataset_iterator)
+                next_data = next(self._base_dataset_iterator)
+                self._next = next_data.to_dev(self._to_gpu) if self._to_gpu else next_data
             self._lock_for_next.release()
             self._lock_for_spin.acquire()
             if not self._keep_spinning:
@@ -132,8 +133,6 @@ class IteratorDataset:
         ret = self._next
         self._next = None
         self._lock_for_next.release()
-        if self._to_gpu:
-            ret = ret.to_dev(self._to_gpu)
         return ret
 
     def _get_from_process(self):
