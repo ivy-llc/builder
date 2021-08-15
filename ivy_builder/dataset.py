@@ -190,8 +190,8 @@ class IteratorDataset:
 class MapDataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
-                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, is_subprocess=False,
-                 ivyh=None):
+                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, queue_timeout=1.0,
+                 is_subprocess=False, ivyh=None):
         self._name = name
         self._size = size
         self._base_slice_fn = base_slice_fn
@@ -210,6 +210,7 @@ class MapDataset:
         self._cache_size = cache_size
         self._cache = Cache(cache_size)
         self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
+        self._queue_timeout = queue_timeout
         self._is_subprocess = is_subprocess
         self._ivy = ivy.default(ivyh, ivy)
         if isinstance(base_dataset, ivy.Container):
@@ -229,7 +230,7 @@ class MapDataset:
             base_slice_fn=self._base_slice_fn, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
             elementwise_query_fn=self._elementwise_query_fn, with_caching=self._with_caching,
             cache_size=self._cache_size, num_processes=ivy.default(num_processes, self._num_processes),
-            is_subprocess=True)
+            queue_timeout=self._queue_timeout, is_subprocess=True)
 
     def _initialize_all_workers(self):
         if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
@@ -437,11 +438,11 @@ class MapDataset:
         offset = np.random.randint(0, self._num_processes)
         [self._slice_queues[int((i + offset) % self._num_processes)].put(sub_slice)
          for i, sub_slice in enumerate(sub_slices)]
-        items_as_lists = [ivy.Container(self._output_queues[int((i + offset) % self._num_processes)].get(timeout=1.0),
-                                        ivyh=self._ivy) for i in range(num_sub_slices)]
+        items_as_lists = [ivy.Container(self._output_queues[int((i + offset) % self._num_processes)].get(
+            timeout=self._queue_timeout), ivyh=self._ivy) for i in range(num_sub_slices)]
         return ivy.Container.list_join(items_as_lists)
 
-    def map(self, name, map_func, num_processes=1, base_slice_fn=None, ivyh=None):
+    def map(self, name, map_func, num_processes=1, queue_timeout=None, base_slice_fn=None, ivyh=None):
         return MapDataset(base_dataset=self,
                           name=name,
                           size=self._size,
@@ -450,9 +451,10 @@ class MapDataset:
                           with_caching=self._with_caching,
                           cache_size=self._cache_size,
                           num_processes=num_processes,
+                          queue_timeout=ivy.default(queue_timeout, self._queue_timeout),
                           ivyh=ivy.default(ivyh, self._ivy))
 
-    def batch(self, name, batch_size, num_processes=1, ivyh=None):
+    def batch(self, name, batch_size, num_processes=1, queue_timeout=None, ivyh=None):
         def batch_array(x, ivyh_):
             return [ivyh_.concatenate(
                 [ivyh_.expand_dims(item, 0) for item in x[i*batch_size:i*batch_size+batch_size]], 0)
@@ -480,9 +482,10 @@ class MapDataset:
                           with_caching=self._with_caching,
                           cache_size=int(math.ceil(self._cache_size / batch_size)),
                           num_processes=num_processes,
+                          queue_timeout=ivy.default(queue_timeout, self._queue_timeout),
                           ivyh=ivy.default(ivyh, self._ivy))
 
-    def unbatch(self, name, num_processes=1, ivyh=None, cache_size=None, batch_sizes=None):
+    def unbatch(self, name, num_processes=1, queue_timeout=None, ivyh=None, cache_size=None, batch_sizes=None):
 
         unbatch_slice_dict = dict()
         slice_dict = dict()
@@ -538,16 +541,18 @@ class MapDataset:
                           elementwise_query_fn=False,
                           with_caching=self._with_caching,
                           cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size))
-                       if cache_size is None else cache_size,
+                                if cache_size is None else cache_size,
                           num_processes=num_processes,
+                          queue_timeout=ivy.default(queue_timeout, self._queue_timeout),
                           ivyh=ivy.default(ivyh, self._ivy))
 
-    def shuffle(self, name, shuffle_buffer_size, num_processes=1, ivyh=None):
+    def shuffle(self, name, shuffle_buffer_size, num_processes=1, queue_timeout=None, ivyh=None):
         if shuffle_buffer_size == 0:
             return self
         pre_shuffled = self.batch('pre_' + name,
                                   shuffle_buffer_size,
                                   num_processes=num_processes,
+                                  queue_timeout=ivy.default(queue_timeout, self._queue_timeout),
                                   ivyh=ivy.default(ivyh, self._ivy))
         shuffled = MapDataset(base_dataset=pre_shuffled,
                               name=name,
@@ -556,15 +561,17 @@ class MapDataset:
                               with_caching=self._with_caching,
                               cache_size=self._cache_size,
                               num_processes=num_processes,
+                              queue_timeout=ivy.default(queue_timeout, self._queue_timeout),
                               ivyh=ivy.default(ivyh, self._ivy))
         post_shuffled = shuffled.unbatch('post_' + name,
                                          num_processes=num_processes,
+                                         queue_timeout=ivy.default(queue_timeout, self._queue_timeout),
                                          ivyh=ivy.default(ivyh, self._ivy),
                                          cache_size=self._cache_size,
                                          batch_sizes=shuffle_buffer_size)
         return post_shuffled
 
-    def to_gpu(self, name, num_processes=1, gpu_idx=0):
+    def to_gpu(self, name, num_processes=1, queue_timeout=None, gpu_idx=0):
 
         def item_to_gpu(x, ivyh_):
             return ivyh_.array(x, dev_str='gpu:' + str(gpu_idx))
@@ -579,15 +586,16 @@ class MapDataset:
                           with_caching=self._with_caching,
                           cache_size=self._cache_size,
                           num_processes=num_processes,
+                          queue_timeout=ivy.default(queue_timeout, self._queue_timeout),
                           ivyh=self._ivy)
 
-    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=1.0, parallel_method='thread', to_gpu=False,
+    def to_iterator(self, name, with_prefetching=True, prefetch_timeout=None, parallel_method='thread', to_gpu=False,
                     ivyh=None):
         return IteratorDataset(base_dataset=self,
                                name=name,
                                size=self._size,
                                with_prefetching=with_prefetching,
-                               prefetch_timeout=prefetch_timeout,
+                               prefetch_timeout=ivy.default(prefetch_timeout, self._queue_timeout),
                                parallel_method=parallel_method,
                                to_gpu=to_gpu,
                                ivyh=ivy.default(ivyh, self._ivy))
