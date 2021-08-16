@@ -37,7 +37,7 @@ class Cache:
 
 class IteratorDataset:
 
-    def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=1.0,
+    def __init__(self, base_dataset, name, size, with_prefetching=True, prefetch_timeout=None,
                  parallel_method='thread', to_gpu=None, ivyh=None):
 
         # framework
@@ -127,7 +127,7 @@ class IteratorDataset:
             self._lock_for_next.release()
             time.sleep(0.01)
             time_taken += 0.01
-            if time_taken > self._prefetch_timeout:
+            if ivy.exists(self._prefetch_timeout) and time_taken > self._prefetch_timeout:
                 raise Exception('Prefetch timed out')
         self._lock_for_next.acquire()
         ret = self._next
