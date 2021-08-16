@@ -189,7 +189,7 @@ class IteratorDataset:
 class MapDataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
-                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, queue_timeout=1.0,
+                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, queue_timeout=None,
                  is_subprocess=False, ivyh=None):
         self._name = name
         self._size = size
