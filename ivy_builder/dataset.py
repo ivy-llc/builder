@@ -137,10 +137,10 @@ class IteratorDataset:
 
     def _get_from_process(self):
         self._input_queue.put(True)
-        ret = ivy.Container(self._output_queue.get(timeout=self._prefetch_timeout), ivyh=self._ivy)
+        next_data = ivy.Container(self._output_queue.get(timeout=self._prefetch_timeout), ivyh=self._ivy)
         if self._to_gpu:
-            ret = ret.to_dev(self._to_gpu)
-        return ret
+            next_data = next_data.to_dev(self._to_gpu)
+        return next_data
 
     def _start_prefetching(self):
         if self._parallel_method == 'process':
@@ -151,7 +151,10 @@ class IteratorDataset:
 
     def __next__(self):
         if not self._with_prefetching:
-            return next(self._base_dataset_iterator)
+            next_data = next(self._base_dataset_iterator)
+            if self._to_gpu:
+                next_data = next_data.to_dev(self._to_gpu)
+            return next_data
         if not self._prefetch_running:
             self._start_prefetching()
             self._prefetch_running = True
