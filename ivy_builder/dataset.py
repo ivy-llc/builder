@@ -108,10 +108,7 @@ class IteratorDataset:
             time.sleep(0.01)
             self._lock_for_next.acquire()
             if not ivy.exists(self._next):
-                try:
-                    next_data = next(self._base_dataset_iterator)
-                except ConnectionResetError:
-                    break
+                next_data = next(self._base_dataset_iterator)
                 self._next = next_data.to_dev(self._to_gpu) if self._to_gpu else next_data
             self._lock_for_next.release()
             self._lock_for_spin.acquire()
@@ -167,7 +164,6 @@ class IteratorDataset:
         self.close()
 
     def close(self):
-        self._base_dataset.close()
         if self._with_prefetching:
             if self._parallel_method == 'process':
                 try:
@@ -190,6 +186,7 @@ class IteratorDataset:
                 self._lock_for_spin.release()
                 if self._thread.is_alive():
                     self._thread.join()
+        self._base_dataset.close()
 
 
 class MapDataset:
