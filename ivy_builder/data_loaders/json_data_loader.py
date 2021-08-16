@@ -159,12 +159,12 @@ class JSONDataLoader(DataLoader):
         self._num_workers.from_numpy = 1
 
         # batched
-        self._num_workers.batched = min(num_workers, self._batch_size)
-
-        # ToDo: add multi-processing support for these lower level datasets
+        self._num_workers.batched = 1
 
         # loaded data
-        self._num_workers.loaded_data = 1
+        self._num_workers.loaded_data = min(num_workers, self._batch_size)
+
+        # ToDo: add multi-processing support for these lower level datasets
 
         # shuffled
         self._num_workers.shuffled = 1
