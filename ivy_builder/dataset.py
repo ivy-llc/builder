@@ -97,7 +97,7 @@ class IteratorDataset:
         keep_going = True
         while keep_going:
             try:
-                keep_going = input_queue.get(timeout=1.0)
+                keep_going = input_queue.get(timeout=5.0)
             except queue.Empty:
                 continue
             output_queue.put(next(base_dataset).to_dict())
@@ -169,7 +169,7 @@ class IteratorDataset:
                 try:
                     self._input_queue.put(False)
                     if self._worker.is_alive():
-                        self._worker.join(timeout=1.0)
+                        self._worker.join(timeout=5.0)
                     self._input_queue.cancel_join_thread()
                     self._input_queue.close()
                     self._output_queue.cancel_join_thread()
@@ -259,7 +259,7 @@ class MapDataset:
     def _worker_fn(index_queue, output_queue, dataset):
         while True:
             try:
-                slice_obj = index_queue.get(timeout=1.0)
+                slice_obj = index_queue.get(timeout=5.0)
             except queue.Empty:
                 continue
             if slice_obj is None:
@@ -610,7 +610,7 @@ class MapDataset:
                 for i, w in enumerate(self._workers):
                     self._slice_queues[i].put(None)
                     if w.is_alive():
-                        w.join(timeout=1.0)
+                        w.join(timeout=5.0)
                 for q in self._slice_queues:
                     q.cancel_join_thread()
                     q.close()
