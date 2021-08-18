@@ -127,7 +127,15 @@ class Dataset:
             item = dataset[slice_obj]
             if numpy_loading:
                 ivy.unset_framework()
-            output_queue.put(item)
+            output_queue.put(item.to_dict())
+
+    @staticmethod
+    def _empty_queue(queue_in):
+        while True:
+            try:
+                queue_in.get_nowait()
+            except queue.Empty:
+                break
 
     @staticmethod
     def _is_int(val):
@@ -303,12 +311,14 @@ class Dataset:
         if Dataset._is_int(slice_obj.start) and Dataset._is_int(slice_obj.stop):
             slice_points = np.round(slice_points)
         sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
-        offset = np.random.randint(0, self._num_processes)
+        offset = slice_obj.start % self._num_processes
+        [self._empty_queue(q) for q in self._output_queues]
         [self._slice_queues[int((i + offset) % self._num_processes)].put(sub_slice)
          for i, sub_slice in enumerate(sub_slices)]
         if self._blocking_retreival:
-            items_as_lists = [self._output_queues[int((i + offset) % self._num_processes)].get(timeout=1.0)
-                              for i in range(num_sub_slices)]
+            items_as_lists =\
+                [ivy.Container(self._output_queues[int((i + offset) % self._num_processes)].get(timeout=1.0))
+                 for i in range(num_sub_slices)]
             if self._numpy_loading:
                 ivy.unset_framework()
             return ivy.Container.list_join(items_as_lists)

@@ -1,4 +1,5 @@
 # global
+import copy
 import time
 
 import ivy
@@ -553,16 +554,23 @@ class TestPrefetch:
         x = [ivy.array(0), ivy.array(1), ivy.array(2), ivy.array(3), ivy.array(4),
              ivy.array(5), ivy.array(6), ivy.array(7), ivy.array(8), ivy.array(9)]
         self._x = [ivy.reshape(item, array_shape) for item in x]
-        dataset_container = ivy.Container({'x': self._x})
-        dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], with_caching=True, cache_size=0,
-                          num_processes=num_processes)
 
         def sleep_fn(cont):
-            time.sleep(0.01)
+            time.sleep(0.02)
             return cont
 
-        self._dataset_wo_prefetch = dataset.map('sleep', sleep_fn)
-        self._dataset_w_prefetch = dataset.prefetch('prefetch', 1)
+        dataset_container = ivy.Container({'x': self._x})
+
+        # without pre-fetch
+        dataset_wo_prefetch = Dataset(copy.deepcopy(dataset_container), 'base', dataset_container.shape[0],
+                                      with_caching=False, cache_size=0, num_processes=num_processes)
+        self._dataset_wo_prefetch = dataset_wo_prefetch.map('sleep', sleep_fn)
+
+        # with pre-fetch
+        dataset_w_prefetch = Dataset(copy.deepcopy(dataset_container), 'base', dataset_container.shape[0],
+                                     with_caching=False, cache_size=0, num_processes=num_processes)
+        dataset_w_prefetch = dataset_w_prefetch.map('sleep', sleep_fn)
+        self._dataset_w_prefetch = dataset_w_prefetch.prefetch('prefetch', 1)
 
     # noinspection PyStatementEffect
     @pytest.mark.parametrize(
@@ -579,17 +587,19 @@ class TestPrefetch:
         for i in range(10):
             start_time = time.perf_counter()
             self._dataset_wo_prefetch[i]
-            assert time.perf_counter() - start_time > 0.01
+            time_taken = time.perf_counter() - start_time
+            assert time_taken > 0.02
 
         for i in range(10):
             start_time = time.perf_counter()
             self._dataset_w_prefetch[i]
+            time_taken = time.perf_counter() - start_time
             if i > 0:
-                assert time.perf_counter() - start_time < 0.01
-            time.sleep(0.01)
+                assert time_taken < 0.02
+            time.sleep(0.025)
 
         # delete
-        self._dataset_wo_prefetch.__del__()
+        self._dataset_wo_prefetch.close()
         del self._dataset_wo_prefetch
-        self._dataset_w_prefetch.__del__()
+        self._dataset_w_prefetch.close()
         del self._dataset_w_prefetch

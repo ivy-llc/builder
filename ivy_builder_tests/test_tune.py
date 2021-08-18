@@ -22,7 +22,7 @@ def test_tune_integration(dev_str, call):
     builder_helpers.remove_dirs()
     # network_spec_args = {'device': 'cpu:0'}
     trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'log_freq': 1, 'log_dir': 'log'}
-    tuner_spec_args = {'framework': ivy.get_framework_str(),
+    tuner_spec_args = {'framework': ivy.current_framework_str(),
                        'train_steps_per_tune_step': 2,
                        'ts_initial_learning_rate':
                            {'min': 10 ** -6, 'max': 10 ** -3, 'uniform': True, 'exponential': True, 'as_int': False},
