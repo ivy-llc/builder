@@ -479,9 +479,5 @@ class JSONDataLoader(DataLoader):
 
     def close(self):
         self._training_dataset.close()
-        del self._training_iterator
-        del self._training_dataset
         if ivy.exists(self._validation_dataset):
             self._validation_dataset.close()
-            del self._validation_iterator
-            del self._validation_dataset

@@ -429,6 +429,10 @@ class Dataset:
     def shuffle(self, name, shuffle_buffer_size, num_processes=1, numpy_loading=None):
         if shuffle_buffer_size == 0:
             return self
+
+        def cont_shuffle_fn(cont):
+            return cont.shuffle()
+
         pre_shuffled = self.batch('pre_' + name,
                                   shuffle_buffer_size,
                                   num_processes=num_processes,
@@ -436,7 +440,7 @@ class Dataset:
         shuffled = Dataset(base_dataset=pre_shuffled,
                            name=name,
                            size=pre_shuffled.size,
-                           trans_fn=lambda cont: cont.shuffle(),
+                           trans_fn=cont_shuffle_fn,
                            with_caching=self._with_caching,
                            cache_size=self._cache_size,
                            num_processes=num_processes,
