@@ -6,7 +6,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
 
     def __init__(self, dataset_spec, batch_size, window_size, num_training_sequences, num_sequences_to_use,
                  num_workers=1, cache_size=1, unused_key_chains=None, preload_containers=False, shuffle_data=True,
-                 shuffle_buffer_size=None, num_to_prefetch=1, post_proc_fn=None, prefetch_to_gpu=False,
+                 shuffle_buffer_size=None, with_prefetching=True, post_proc_fn=None, prefetch_to_gpu=False,
                  single_pass=False, array_strs=None, float_strs=None, uint8_strs=None, custom_img_strs=None,
                  custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled', **kwargs):
 
@@ -26,12 +26,12 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  num_training_sequences=num_training_sequences,
                                                  num_sequences_to_use=num_sequences_to_use,
                                                  num_workers=num_workers,
-                                                 cache_size=max(cache_size, num_to_prefetch),
+                                                 cache_size=cache_size,
                                                  unused_key_chains=unused_key_chains,
                                                  preload_containers=preload_containers,
                                                  shuffle_data=shuffle_data,
                                                  shuffle_buffer_size=shuffle_buffer_size,
-                                                 num_to_prefetch=num_to_prefetch,
+                                                 with_prefetching=with_prefetching,
                                                  post_proc_fn=post_proc_fn,
                                                  prefetch_to_gpu=prefetch_to_gpu,
                                                  single_pass=single_pass,

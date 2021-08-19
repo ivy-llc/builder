@@ -38,7 +38,7 @@ class Dataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
                  elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
-                 blocking_retreival=True, is_subprocess=False):
+                 prefetching=False, is_subprocess=False):
         self._name = name
         self._size = size
         self._base_slice_fn = base_slice_fn
@@ -58,8 +58,9 @@ class Dataset:
         self._cache = Cache(cache_size)
         self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
-        self._blocking_retreival = blocking_retreival
+        self._prefetching = prefetching
         self._is_subprocess = is_subprocess
+        self._first_pass = True
         if numpy_loading and isinstance(base_dataset, ivy.Container):
 
             def to_numpy(x, kc):
@@ -86,7 +87,7 @@ class Dataset:
             base_slice_fn=self._base_slice_fn, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
             elementwise_query_fn=self._elementwise_query_fn, with_caching=self._with_caching,
             cache_size=self._cache_size, num_processes=ivy.default(num_processes, self._num_processes),
-            numpy_loading=self._numpy_loading, blocking_retreival=self._blocking_retreival, is_subprocess=True)
+            numpy_loading=self._numpy_loading, prefetching=self._prefetching, is_subprocess=True)
 
     def _initialize_all_workers(self):
         if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
@@ -298,11 +299,13 @@ class Dataset:
             ret = self._get_item(slice_obj)
             if self._numpy_loading:
                 ivy.unset_framework()
+            self._first_pass = False
             return ret
         if isinstance(slice_obj, numbers.Number):
             ret = self._get_item(slice_obj)
             if self._numpy_loading:
                 ivy.unset_framework()
+            self._first_pass = False
             return ret
         slice_size = int(round(slice_obj.stop - slice_obj.start))
         num_sub_slices = min(slice_size, self._num_processes)
@@ -312,20 +315,25 @@ class Dataset:
             slice_points = np.round(slice_points)
         sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
         offset = slice_obj.start % self._num_processes
-        [self._empty_queue(q) for q in self._output_queues]
-        [self._slice_queues[int((i + offset) % self._num_processes)].put(sub_slice)
-         for i, sub_slice in enumerate(sub_slices)]
-        if self._blocking_retreival:
-            items_as_lists =\
-                [ivy.Container(self._output_queues[int((i + offset) % self._num_processes)].get(timeout=1.0))
-                 for i in range(num_sub_slices)]
+        q_idxs = [int((i + offset) % self._num_processes) for i in range(len(sub_slices))]
+        slice_queues = [self._slice_queues[qi] for qi in q_idxs]
+        output_queues = [self._output_queues[qi] for qi in q_idxs]
+        if self._prefetching:
+            if self._first_pass:
+                [slice_queue.put(sub_slice) for slice_queue, sub_slice in zip(slice_queues, sub_slices)]
+            else:
+                slice_queues[-1].put(sub_slices[-1])
             if self._numpy_loading:
                 ivy.unset_framework()
+            self._first_pass = False
+            return ivy.Container(queues=output_queues, queue_load_sizes=slice_sizes)
+        else:
+            [slice_queue.put(sub_slice) for slice_queue, sub_slice in zip(slice_queues, sub_slices)]
+            items_as_lists = [ivy.Container(output_queue.get(timeout=1.0)) for output_queue in output_queues]
+            if self._numpy_loading:
+                ivy.unset_framework()
+            self._first_pass = False
             return ivy.Container.list_join(items_as_lists)
-        if self._numpy_loading:
-            ivy.unset_framework()
-        queues = [self._output_queues[int((i + offset) % self._num_processes)] for i in range(num_sub_slices)]
-        return ivy.Container(queues=queues, queue_load_sizes=slice_sizes)
 
     def map(self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None):
         return Dataset(base_dataset=self,
@@ -449,21 +457,21 @@ class Dataset:
                                          batch_sizes=shuffle_buffer_size)
         return post_shuffled
 
-    def prefetch(self, name, buffer_size, num_processes=1, numpy_loading=None):
+    def prefetch(self, name, numpy_loading=None):
 
         # noinspection PyUnresolvedReferences
         def base_slice_fn(slc_obj, dataset):
             if isinstance(slc_obj, numbers.Number):
                 so_start = slc_obj
-                so_stop = slc_obj + 1 + buffer_size
+                so_stop = slc_obj + 2
             else:
                 so_start = slc_obj.start
-                so_stop = slc_obj.stop + buffer_size
+                so_stop = slc_obj.stop + 1
             base_slice_obj = slice(so_start, so_stop, 1)
             return Dataset._slice_dataset(base_slice_obj, dataset)
 
-        self._blocking_retreival = False
-        self._num_processes = num_processes
+        self._prefetching = True
+        self._num_processes = 2
 
         return Dataset(base_dataset=self,
                        name=name,
