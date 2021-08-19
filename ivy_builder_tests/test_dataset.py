@@ -29,7 +29,7 @@ class TestQueries:
         "num_processes", [1, 2])
     def test_single(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -52,7 +52,7 @@ class TestQueries:
         "num_processes", [1, 2])
     def test_single_wrapped(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -77,7 +77,7 @@ class TestQueries:
         "num_processes", [1, 2])
     def test_slice(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -103,7 +103,7 @@ class TestQueries:
         "num_processes", [1, 2])
     def test_slice_wrapped(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -143,7 +143,7 @@ class TestBatch:
         "num_processes", [1, 2])
     def test_single(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -164,7 +164,7 @@ class TestBatch:
         "num_processes", [1, 2])
     def test_single_wrapped(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -186,7 +186,7 @@ class TestBatch:
         "num_processes", [1, 2])
     def test_slice(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -209,7 +209,7 @@ class TestBatch:
         "num_processes", [1, 2])
     def test_slice_wrapped(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -245,7 +245,7 @@ class TestUnbatch:
         "num_processes", [1, 2])
     def test_single(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -265,7 +265,7 @@ class TestUnbatch:
         "num_processes", [1, 2])
     def test_single_wrapped(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -284,7 +284,7 @@ class TestUnbatch:
         "num_processes", [1, 2])
     def test_slice(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -304,7 +304,7 @@ class TestUnbatch:
         "num_processes", [1, 2])
     def test_slice_wrapped(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(array_shape, num_processes)
@@ -333,7 +333,7 @@ class TestUnbatchAndBatch:
         "num_processes", [1, 2])
     def test_single(self, dev_str, f, call, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(num_processes)
@@ -351,7 +351,7 @@ class TestUnbatchAndBatch:
         "num_processes", [1, 2])
     def test_single_wrapped(self, dev_str, f, call, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(num_processes)
@@ -378,7 +378,7 @@ class TestUnbatchAndBatch:
         "num_processes", [1, 2])
     def test_slice(self, dev_str, f, call, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(num_processes)
@@ -395,7 +395,7 @@ class TestUnbatchAndBatch:
         "num_processes", [1, 2])
     def test_slice_wrapped(self, dev_str, f, call, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         self._init(num_processes)
@@ -427,7 +427,7 @@ class TestShuffle:
         "num_processes", [1, 2])
     def test_single(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         ivy.seed(0)
@@ -460,7 +460,7 @@ class TestShuffle:
         "num_processes", [1, 2])
     def test_single_wrapped(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         ivy.seed(0)
@@ -489,7 +489,7 @@ class TestShuffle:
         "num_processes", [1, 2])
     def test_slice(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         ivy.seed(0)
@@ -520,7 +520,7 @@ class TestShuffle:
         "num_processes", [1, 2])
     def test_slice_wrapped(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
         ivy.seed(0)
@@ -548,7 +548,6 @@ class TestShuffle:
         del self._dataset
 
 
-'''
 class TestPrefetch:
 
     def _init(self, array_shape, num_processes):
@@ -557,8 +556,10 @@ class TestPrefetch:
         self._x = [ivy.reshape(item, array_shape) for item in x]
 
         def sleep_fn(cont):
-            time.sleep(0.02)
-            return cont
+            start_time = time.perf_counter()
+            while True:
+                if time.perf_counter() - start_time > 0.011:
+                    return cont
 
         dataset_container = ivy.Container({'x': self._x})
 
@@ -580,28 +581,27 @@ class TestPrefetch:
         "num_processes", [1, 2])
     def test_single(self, dev_str, f, call, array_shape, num_processes):
 
-        if call in [helpers.jnp_call, helpers.mx_call] and num_processes == 2:
+        if call is helpers.mx_call:
             pytest.skip()
 
         self._init(array_shape, num_processes)
 
         for i in range(10):
-            start_time = time.perf_counter()
+            start_time = time.process_time()
             self._dataset_wo_prefetch[i]
-            time_taken = time.perf_counter() - start_time
-            assert time_taken > 0.02
+            time_taken = time.process_time() - start_time
+            assert time_taken > 0.01
 
         for i in range(10):
-            start_time = time.perf_counter()
+            start_time = time.process_time()
             self._dataset_w_prefetch[i]
-            time_taken = time.perf_counter() - start_time
+            time_taken = time.process_time() - start_time
             if i > 0:
-                assert time_taken < 0.02
-            time.sleep(0.025)
+                assert time_taken < 0.01
+            time.sleep(0.015)
 
         # delete
         self._dataset_wo_prefetch.close()
         del self._dataset_wo_prefetch
         self._dataset_w_prefetch.close()
         del self._dataset_w_prefetch
-'''
