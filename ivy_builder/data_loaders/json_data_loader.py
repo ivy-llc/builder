@@ -362,7 +362,7 @@ class JSONDataLoader(DataLoader):
             container_filepaths = container_filepaths[0:self._spec.num_sequences_to_use]
 
         # shuffle sequences
-        if self._spec.shuffle_data:
+        if self._spec.preshuffle_data:
             np.random.shuffle(container_filepaths)
 
         # extract sequence lengths
@@ -428,7 +428,7 @@ class JSONDataLoader(DataLoader):
         dataset = dataset.unbatch('unbatched',
                                   self._num_workers.unbatched,
                                   batch_sizes=[max(item - self._window_size + 1, 1) for item in self._sequence_lengths])
-        if self._spec.shuffle_data:
+        if self._spec.shuffle_buffer_size > 0:
             dataset = dataset.shuffle('shuffled',
                                       self._spec.shuffle_buffer_size,
                                       self._num_workers.shuffled)
