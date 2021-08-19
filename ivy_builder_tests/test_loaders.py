@@ -77,12 +77,6 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers, array_m
     "shuffle_buffer_size", [0, 2])
 def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_prefetching, shuffle_buffer_size):
 
-    # DEBUG
-    if not (call is helpers.np_call and preload_containers and array_mode == 'hdf5' and with_prefetching and
-            shuffle_buffer_size == 0):
-        pytest.skip()
-    valid_batches = list()
-
     # seed
     f.seed(0)
     np.random.seed(0)
@@ -124,7 +118,6 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
     # testing
     for i in range(5):
 
-        '''
         # get training batch
         train_batch = data_loader.get_next_batch('training')
 
@@ -149,11 +142,9 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
                                np.concatenate((np.array(in_seq_win_idxs).reshape(-1, 1),
                                                np.array(in_seq_win_idxs).reshape(-1, 1) +
                                                np.array(unpadded_mask).reshape(-1, 1)), -1))
-        '''
 
         # get validation batch
         valid_batch = data_loader.get_next_batch('validation')
-        valid_batches.append(valid_batch)
 
         # test cardinality
         assert valid_batch.actions.shape == (3, 2, 6)
@@ -169,11 +160,8 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
         in_seq_win_idxs = [(wi - cum_seq_wind_sizes_valid[si-1])
                            if si != 0 else wi for si, wi in zip(seq_idxs, window_idxs)]
         if shuffle_buffer_size == 0:
-            try:
-                assert np.allclose(ivy.to_numpy(valid_batch.seq_info.length),
-                                   np.tile(np.array(padded_seq_lens).reshape(-1, 1), (1, 2)))
-            except:
-                d = 0
+            assert np.allclose(ivy.to_numpy(valid_batch.seq_info.length),
+                               np.tile(np.array(padded_seq_lens).reshape(-1, 1), (1, 2)))
             assert np.allclose(ivy.to_numpy(valid_batch.seq_info.idx),
                                np.concatenate((np.array(in_seq_win_idxs).reshape(-1, 1),
                                                np.array(in_seq_win_idxs).reshape(-1, 1) +

@@ -61,6 +61,7 @@ class Dataset:
         self._prefetching = prefetching
         self._is_subprocess = is_subprocess
         self._first_pass = True
+        self._queue_offset = 1
         if numpy_loading and isinstance(base_dataset, ivy.Container):
 
             def to_numpy(x, kc):
@@ -301,13 +302,15 @@ class Dataset:
         slice_size = int(round(slice_obj.stop - slice_obj.start))
         num_sub_slices = min(slice_size, self._num_processes)
         slice_points = np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices+1)
-        slice_sizes = (slice_points[1:] - slice_points[:-1]).astype(np.int32)
+        slice_sizes = np.round(slice_points[1:] - slice_points[:-1]).astype(np.int32)
         if Dataset._is_int(slice_obj.start) and Dataset._is_int(slice_obj.stop):
             slice_points = np.round(slice_points)
         sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
-        offset = int(round(slice_obj.start)) % self._num_processes if self._is_int(slice_obj.start)\
-            else int(round(self._size + slice_obj.start)) % self._num_processes
-        q_idxs = [int((i + offset) % self._num_processes) for i in range(len(sub_slices))]
+        if self._prefetching:
+            self._queue_offset = int(not self._queue_offset)
+        else:
+            self._queue_offset = np.random.randint(0, self._num_processes)
+        q_idxs = [int((i + self._queue_offset) % self._num_processes) for i in range(len(sub_slices))]
         slice_queues = [self._slice_queues[qi] for qi in q_idxs]
         output_queues = [self._output_queues[qi] for qi in q_idxs]
         if self._prefetching:
