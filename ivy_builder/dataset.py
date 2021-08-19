@@ -118,9 +118,6 @@ class Dataset:
             except queue.Empty:
                 continue
             if slice_obj is None:
-                # ToDo: work out why this command below works, but del dataset hangs, despite only calling
-                #  close(), perhaps processes have trouble explicitly deleting arguments passed in?
-                # noinspection PyProtectedMember
                 dataset.close()
                 return
             if numpy_loading:
@@ -295,13 +292,7 @@ class Dataset:
             self._initialize_all_workers()
         if self._numpy_loading:
             ivy.set_framework('numpy')
-        if self._num_processes < 2:
-            ret = self._get_item(slice_obj)
-            if self._numpy_loading:
-                ivy.unset_framework()
-            self._first_pass = False
-            return ret
-        if isinstance(slice_obj, numbers.Number):
+        if self._num_processes < 2 or isinstance(slice_obj, numbers.Number):
             ret = self._get_item(slice_obj)
             if self._numpy_loading:
                 ivy.unset_framework()
@@ -500,8 +491,7 @@ class Dataset:
                        numpy_loading=False)
 
     def close(self):
-        if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
-            # noinspection PyProtectedMember
+        if not isinstance(self._base_dataset, ivy.Container):
             self._base_dataset.close()
         if self._has_workers:
             try:
@@ -518,11 +508,6 @@ class Dataset:
                 for w in self._workers:
                     if w.is_alive():
                         w.terminate()
-                del self._workers
-                del self._slice_queues
-                del self._output_queues
-        # This line below is only needed because close() is called explicitly from inside the worker_fn.
-        #  If the dataset can be deleted directly from inside worker_fn, then this subsequent delete will not be called.
         self._has_workers = False
 
     # Getters #
