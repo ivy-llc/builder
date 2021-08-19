@@ -305,7 +305,8 @@ class Dataset:
         if Dataset._is_int(slice_obj.start) and Dataset._is_int(slice_obj.stop):
             slice_points = np.round(slice_points)
         sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
-        offset = slice_obj.start % self._num_processes
+        offset = int(round(slice_obj.start)) % self._num_processes if self._is_int(slice_obj.start)\
+            else int(round(self._size + slice_obj.start)) % self._num_processes
         q_idxs = [int((i + offset) % self._num_processes) for i in range(len(sub_slices))]
         slice_queues = [self._slice_queues[qi] for qi in q_idxs]
         output_queues = [self._output_queues[qi] for qi in q_idxs]
