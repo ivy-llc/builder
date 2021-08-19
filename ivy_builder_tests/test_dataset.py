@@ -548,6 +548,7 @@ class TestShuffle:
         del self._dataset
 
 
+'''
 class TestPrefetch:
 
     def _init(self, array_shape, num_processes):
@@ -603,3 +604,4 @@ class TestPrefetch:
         del self._dataset_wo_prefetch
         self._dataset_w_prefetch.close()
         del self._dataset_w_prefetch
+'''

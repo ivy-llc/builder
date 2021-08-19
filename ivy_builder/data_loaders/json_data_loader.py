@@ -157,8 +157,8 @@ class JSONDataLoader(DataLoader):
         self._num_workers = ivy.Container()
 
         # prefetch
-        self._num_workers.prefetch = self._spec.num_to_prefetch
-        num_workers = math.ceil(num_workers/(self._num_workers.prefetch+1))
+        self._num_workers.prefetch = self._spec.num_to_prefetch + 1
+        num_workers = math.ceil(num_workers/self._num_workers.prefetch)
 
         # post processed
         self._num_workers.post_processed = 1
