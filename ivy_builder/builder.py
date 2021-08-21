@@ -23,6 +23,18 @@ def _import_arg_specified_class_if_present(args_or_spec, class_str):
     return
 
 
+def json_spec_from_fpath(json_spec_path, json_fname):
+    base_dir = json_spec_path
+    json_spec = dict()
+    while True:
+        fpath = os.path.join(base_dir, json_fname)
+        if os.path.isfile(fpath):
+            json_spec = {**parse_json_to_dict(fpath), **json_spec}
+        else:
+            return json_spec
+        base_dir = os.path.abspath(os.path.join(base_dir, '..'))
+
+
 def parse_json_to_dict(json_filepath):
     """
     return the data from json file in the form of a python dict
@@ -96,8 +108,7 @@ def build_dataset_dirs(dataset_dirs_args=None,
 
     # load json file
     if isinstance(json_spec_path, str):
-        fpath = os.path.join(json_spec_path, 'dataset_dirs_args.json')
-        json_spec = parse_json_to_dict(fpath)
+        json_spec = json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json')
     else:
         json_spec = dict()
 
@@ -140,8 +151,7 @@ def build_dataset_spec(dataset_dirs_args=None,
 
     # load json file
     if isinstance(json_spec_path, str):
-        fpath = os.path.join(json_spec_path, 'dataset_args.json')
-        json_spec = parse_json_to_dict(fpath)
+        json_spec = json_spec_from_fpath(json_spec_path, 'dataset_args.json')
     else:
         json_spec = dict()
 
@@ -175,8 +185,7 @@ def build_network_specification(network_spec_args=None,
 
     # load json file
     if isinstance(json_spec_path, str):
-        fpath = os.path.join(json_spec_path, 'network_args.json')
-        json_spec = parse_json_to_dict(fpath)
+        json_spec = json_spec_from_fpath(json_spec_path, 'network_args.json')
     else:
         json_spec = dict()
 
@@ -261,8 +270,7 @@ def build_data_loader_spec(network_class=None,
 
     # load json file
     if isinstance(json_spec_path, str):
-        fpath = os.path.join(json_spec_path, 'data_loader_args.json')
-        json_spec = parse_json_to_dict(fpath)
+        json_spec = json_spec_from_fpath(json_spec_path, 'data_loader_args.json')
     else:
         json_spec = dict()
 
@@ -363,8 +371,7 @@ def build_trainer_spec(data_loader_class=None,
 
     # load json file
     if isinstance(json_spec_path, str):
-        fpath = os.path.join(json_spec_path, 'trainer_args.json')
-        json_spec = parse_json_to_dict(fpath)
+        json_spec = json_spec_from_fpath(json_spec_path, 'trainer_args.json')
     else:
         json_spec = dict()
 
@@ -473,8 +480,7 @@ def build_tuner_spec(data_loader_class=None,
 
     # load json file
     if isinstance(json_spec_path, str):
-        fpath = os.path.join(json_spec_path, 'tuner_args.json')
-        json_spec = parse_json_to_dict(fpath)
+        json_spec = json_spec_from_fpath(json_spec_path, 'tuner_args.json')
     else:
         json_spec = dict()
 
