@@ -294,7 +294,7 @@ class JSONDataLoader(DataLoader):
 
     # images
 
-    def _uint8_fn(self, filepaths_in_window):
+    def _uint8_img_fn(self, filepaths_in_window):
         imgs = list()
         # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
@@ -305,7 +305,7 @@ class JSONDataLoader(DataLoader):
             imgs.append(img)
         return ivy.concatenate(imgs, 0)
 
-    def _float_fn(self, filepaths_in_window):
+    def _float_img_fn(self, filepaths_in_window):
         imgs = list()
         # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
@@ -332,10 +332,10 @@ class JSONDataLoader(DataLoader):
                 return self._array_fn(x)
         for float_str in self._spec.float_strs:
             if float_str in key_chain:
-                return self._float_fn(x)
+                return self._float_img_fn(x)
         for uint8_str in self._spec.uint8_strs:
             if uint8_str in key_chain:
-                return self._uint8_fn(x)
+                return self._uint8_img_fn(x)
         for i, custom_img_strs in enumerate(self._spec.custom_img_strs):
             for custom_img_str in custom_img_strs:
                 if custom_img_str in key_chain:
