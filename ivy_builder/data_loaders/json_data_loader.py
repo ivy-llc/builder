@@ -52,7 +52,7 @@ class JSONDataLoader(DataLoader):
 
         # train and validation idxs
         start_idx = self._spec.starting_idx
-        end_idx = start_idx + self._spec.num_sequences_to_use - 1
+        end_idx = start_idx + self._spec.num_sequences - 1
 
         # compute num workers for each component
         self._compute_num_workers()
@@ -348,8 +348,8 @@ class JSONDataLoader(DataLoader):
         container_filepaths = self._load_container_filepaths_as_lists(self._container_data_dir, starting_example,
                                                                       ending_example)
         max_seq_len = max(max([len(item) for item in container_filepaths]), self._window_size)
-        if self._spec.num_sequences_to_use != -1:
-            container_filepaths = container_filepaths[0:self._spec.num_sequences_to_use]
+        if self._spec.num_sequences != -1:
+            container_filepaths = container_filepaths[0:self._spec.num_sequences]
 
         # shuffle sequences
         if self._spec.preshuffle_data:

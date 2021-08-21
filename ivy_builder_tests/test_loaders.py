@@ -33,7 +33,7 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers, array_m
 
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=2)
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=1, window_size=1, starting_idx=0,
-                                          num_sequences_to_use=1, preload_containers=preload_containers,
+                                          num_sequences=1, preload_containers=preload_containers,
                                           array_mode=array_mode, array_strs=['array'], float_strs=['depth'],
                                           uint8_strs=['rgb'], with_prefetching=with_prefetching,
                                           shuffle_buffer_size=shuffle_buffer_size, preshuffle_data=False)
@@ -105,13 +105,13 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
     # data loader specifications
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 1])
     train_data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=batch_size, window_size=window_size,
-                                                starting_idx=0, num_sequences_to_use=3,
+                                                starting_idx=0, num_sequences=3,
                                                 preload_containers=preload_containers, array_mode=array_mode,
                                                 array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
                                                 with_prefetching=with_prefetching,
                                                 shuffle_buffer_size=shuffle_buffer_size, preshuffle_data=False)
     valid_data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=batch_size, window_size=window_size,
-                                                starting_idx=3, num_sequences_to_use=3,
+                                                starting_idx=3, num_sequences=3,
                                                 preload_containers=preload_containers, array_mode=array_mode,
                                                 array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
                                                 with_prefetching=with_prefetching,
@@ -183,7 +183,7 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
 
     # test keychain pruning, no container pre-loading
     data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=2, starting_idx=0,
-                                          num_sequences_to_use=3, preload_containers=preload_containers,
+                                          num_sequences=3, preload_containers=preload_containers,
                                           array_mode=array_mode, shuffle_buffer_size=shuffle_buffer_size,
                                           unused_key_chains=['observations/image/ego/ego_cam_px/depth'],
                                           array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
