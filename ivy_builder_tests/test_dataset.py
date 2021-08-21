@@ -587,9 +587,9 @@ class TestPrefetch:
         self._init(array_shape, num_processes)
 
         for i in range(10):
-            start_time = time.process_time()
+            start_time = time.perf_counter()
             self._dataset_wo_prefetch[i]
-            time_taken = time.process_time() - start_time
+            time_taken = time.perf_counter() - start_time
             assert time_taken > 0.01
 
         for i in range(10):
