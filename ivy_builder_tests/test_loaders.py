@@ -3,7 +3,6 @@ import os
 import ivy
 import pytest
 import numpy as np
-from ivy_tests import helpers
 
 # local
 from ivy_builder.specs.dataset_dirs import DatasetDirs
@@ -33,8 +32,8 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers, array_m
     dataset_dirs = DatasetDirs(dataset_dir=ds_dir, containers_dir=os.path.join(ds_dir, 'containers'))
 
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=2)
-    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=1, window_size=1, num_sequences_to_use=1,
-                                          num_training_sequences=1, preload_containers=preload_containers,
+    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=1, window_size=1, starting_idx=0,
+                                          num_sequences_to_use=1, preload_containers=preload_containers,
                                           array_mode=array_mode, array_strs=['array'], float_strs=['depth'],
                                           uint8_strs=['rgb'], with_prefetching=with_prefetching,
                                           shuffle_buffer_size=shuffle_buffer_size, preshuffle_data=False)
@@ -46,20 +45,20 @@ def test_json_loader_fixed_seq_len(dev_str, f, call, preload_containers, array_m
     for i in range(5):
 
         # get training batch
-        train_batch = data_loader.get_next_batch('training')
+        batch = data_loader.get_next_batch()
 
         # test cardinality
-        assert train_batch.actions.shape == (1, 1, 6)
-        assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
-        assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
-        assert train_batch.array.data.shape == (1, 1, 3)
+        assert batch.actions.shape == (1, 1, 6)
+        assert batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
+        assert batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
+        assert batch.array.data.shape == (1, 1, 3)
 
         # test values
-        assert train_batch.seq_info.length[0, 0] == 2
+        assert batch.seq_info.length[0, 0] == 2
         if shuffle_buffer_size == 0:
-            assert train_batch.seq_info.idx[0, 0] == i % 2
+            assert batch.seq_info.idx[0, 0] == i % 2
         else:
-            idx = train_batch.seq_info.idx[0, 0]
+            idx = batch.seq_info.idx[0, 0]
             assert idx in [0, 1]
 
     # delete
@@ -103,23 +102,32 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
     ds_dir = os.path.join(current_dir, 'dataset')
     dataset_dirs = DatasetDirs(dataset_dir=ds_dir, containers_dir=os.path.join(ds_dir, 'containers'))
 
-    # note the trailing sequence size of 1 and window size of 2 means window padding is used
+    # data loader specifications
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 1])
-    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=batch_size, window_size=window_size,
-                                          num_sequences_to_use=6, num_training_sequences=3,
-                                          preload_containers=preload_containers, array_mode=array_mode,
-                                          array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
-                                          with_prefetching=with_prefetching, shuffle_buffer_size=shuffle_buffer_size,
-                                          preshuffle_data=False)
+    train_data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=batch_size, window_size=window_size,
+                                                starting_idx=0, num_sequences_to_use=3,
+                                                preload_containers=preload_containers, array_mode=array_mode,
+                                                array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
+                                                with_prefetching=with_prefetching,
+                                                shuffle_buffer_size=shuffle_buffer_size, preshuffle_data=False)
+    valid_data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=batch_size, window_size=window_size,
+                                                starting_idx=3, num_sequences_to_use=3,
+                                                preload_containers=preload_containers, array_mode=array_mode,
+                                                array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
+                                                with_prefetching=with_prefetching,
+                                                shuffle_buffer_size=shuffle_buffer_size, preshuffle_data=False)
 
-    # data loader
-    data_loader = JSONDataLoader(data_loader_spec)
+    # training data loader
+    train_data_loader = JSONDataLoader(train_data_loader_spec)
+
+    # validation data loader
+    valid_data_loader = JSONDataLoader(valid_data_loader_spec)
 
     # testing
     for i in range(5):
 
         # get training batch
-        train_batch = data_loader.get_next_batch('training')
+        train_batch = train_data_loader.get_next_batch()
 
         # test cardinality
         assert train_batch.actions.shape == (3, 2, 6)
@@ -144,7 +152,7 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
                                                np.array(unpadded_mask).reshape(-1, 1)), -1))
 
         # get validation batch
-        valid_batch = data_loader.get_next_batch('validation')
+        valid_batch = valid_data_loader.get_next_batch()
 
         # test cardinality
         assert valid_batch.actions.shape == (3, 2, 6)
@@ -168,12 +176,14 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
                                                np.array(unpadded_mask).reshape(-1, 1)), -1))
 
     # delete
-    data_loader.close()
-    del data_loader
+    train_data_loader.close()
+    del train_data_loader
+    valid_data_loader.close()
+    del valid_data_loader
 
     # test keychain pruning, no container pre-loading
-    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=2, num_sequences_to_use=6,
-                                          num_training_sequences=3, preload_containers=preload_containers,
+    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=3, window_size=2, starting_idx=0,
+                                          num_sequences_to_use=3, preload_containers=preload_containers,
                                           array_mode=array_mode, shuffle_buffer_size=shuffle_buffer_size,
                                           unused_key_chains=['observations/image/ego/ego_cam_px/depth'],
                                           array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
@@ -181,27 +191,16 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
     data_loader = JSONDataLoader(data_loader_spec)
 
     # get training batch
-    train_batch = data_loader.get_next_batch('training')
+    batch = data_loader.get_next_batch()
 
     # test cardinality
-    assert train_batch.actions.shape == (3, 2, 6)
-    assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
-    assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
-    assert train_batch.array.data.shape == (3, 2, 3)
+    assert batch.actions.shape == (3, 2, 6)
+    assert batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
+    assert batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
+    assert batch.array.data.shape == (3, 2, 3)
 
     # test removed key chain
-    assert 'depth' not in train_batch.observations.image.ego.ego_cam_px
-
-    # get validation batch
-    valid_batch = data_loader.get_next_batch('validation')
-
-    # test cardinality
-    assert valid_batch.actions.shape == (3, 2, 6)
-    assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
-    assert valid_batch.array.data.shape == (3, 2, 3)
-
-    # test removed key chain
-    assert 'depth' not in valid_batch.observations.image.ego.ego_cam_px
+    assert 'depth' not in batch.observations.image.ego.ego_cam_px
 
     # delete
     data_loader.close()

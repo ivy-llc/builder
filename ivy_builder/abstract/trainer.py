@@ -9,6 +9,7 @@ import logging
 import datetime
 import numpy as np
 from datetime import datetime
+from torch.profiler import profile, record_function, ProfilerActivity
 
 # local
 from ivy_builder.abstract.network import Network
@@ -286,7 +287,10 @@ class Trainer:
         """
         run the trainer, returning the iteration step reached
         """
-        return self._train(False, starting_iteration, total_iterations)
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], with_stack=True) as prof:
+            ret = self._train(False, starting_iteration, total_iterations)
+        prof.export_chrome_trace("trace.json")
+        return ret
 
     def visualize(self) -> None:
         """

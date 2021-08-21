@@ -51,25 +51,15 @@ class JSONDataLoader(DataLoader):
         self._batch_size = self._spec.batch_size
 
         # train and validation idxs
-        start_idx_train = 0
-        end_idx_train = self._spec.num_training_sequences - 1
-        start_idx_valid = self._spec.num_training_sequences
-        end_idx_valid = self._spec.num_sequences_to_use - 1
+        start_idx = self._spec.starting_idx
+        end_idx = start_idx + self._spec.num_sequences_to_use - 1
 
         # compute num workers for each component
         self._compute_num_workers()
 
-        # train dataset
-        self._training_dataset = self._get_dataset(start_idx_train, end_idx_train)
-        self._training_iterator = iter(self._training_dataset)
-
-        # validation
-        if self._spec.num_training_sequences < self._spec.num_sequences_to_use:
-            self._validation_dataset = self._get_dataset(start_idx_valid, end_idx_valid)
-            self._validation_iterator = iter(self._validation_dataset)
-        else:
-            self._validation_dataset = None
-            self._validation_iterator = None
+        # dataset
+        self._dataset = self._get_dataset(start_idx, end_idx)
+        self._iterator = iter(self._dataset)
 
         # dummy batch
         self._dummy_batch = None
@@ -457,20 +447,8 @@ class JSONDataLoader(DataLoader):
     # Public Methods #
     # ---------------#
 
-    def get_next_batch(self, dataset_key):
-        # ToDo: explore compiling the load data method
-        if dataset_key == 'training':
-            return next(self._training_iterator)
-        elif dataset_key == 'validation':
-            return next(self._validation_iterator)
-        else:
-            raise Exception('invalid key')
-
-    def get_next_training_batch(self):
-        return self.get_next_batch('training')
-
-    def get_next_validation_batch(self):
-        return self.get_next_batch('validation')
+    def get_next_batch(self, dataset_key=None):
+        return next(self._iterator)
 
     def get_dummy_batch(self):
         if self._dummy_batch is None:
@@ -478,6 +456,4 @@ class JSONDataLoader(DataLoader):
         return self._dummy_batch.to_random()
 
     def close(self):
-        self._training_dataset.close()
-        if ivy.exists(self._validation_dataset):
-            self._validation_dataset.close()
+        self._dataset.close()
