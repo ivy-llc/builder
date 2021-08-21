@@ -186,7 +186,7 @@ class Trainer:
     # ---------#
 
     def _train_step(self, with_output=False):
-        training_batch = self._spec.data_loader.get_next_training_batch()
+        training_batch = self._spec.data_loader.get_next_batch()
         cost, grads = ivy.execute_with_gradients(
             lambda v: self._compute_cost(training_batch, v=v), self._spec.network.v)
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
@@ -197,7 +197,7 @@ class Trainer:
 
     def _data_load_and_train_step(self, vis_mode, log_scalars_on_this_it, log_viz_on_this_it):
         if vis_mode:
-            self._training_batch = self._spec.data_loader.get_next_training_batch()
+            self._training_batch = self._spec.data_loader.get_next_batch()
         else:
             if log_scalars_on_this_it or log_viz_on_this_it:
                 self._training_batch, self._total_cost = \
