@@ -26,10 +26,7 @@ class ExampleDataLoader(DataLoader):
     def __init__(self, data_loader_spec):
         super().__init__(data_loader_spec)
 
-    def get_next_batch(self, dataset_key):
-        return ivy.array([[1.]])
-
-    def get_next_training_batch(self):
+    def get_next_batch(self, dataset_key=None):
         return ivy.array([[1.]])
 
 

@@ -126,16 +126,13 @@ class ExampleDataLoader(DataLoader):
         self._validation_data = {'targets': self._targets, 'input': self._input}
         self._data = {'training': self._training_data, 'validation': self._validation_data}
 
-    def get_next_batch(self, dataset_key):
+    def get_next_batch(self, dataset_key='training'):
         data = self._data[dataset_key]
         if self._spec.shuffle:
             self._i = np.random.randint(0, self._num_examples)
         else:
             self._i = (self._i + 1) % self._num_examples
         return data['input'][self._i], data['targets'][self._i]
-
-    def get_next_training_batch(self):
-        return self.get_next_batch('training')
 
 
 # Custom Network #
