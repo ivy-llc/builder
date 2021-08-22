@@ -314,7 +314,14 @@ class JSONDataLoader(DataLoader):
             img_raw = cv2.imread(full_path, -1)
             img = fn(img_raw)
             imgs.append(img)
-        return ivy.concatenate(imgs, 0)
+        img0 = imgs[0]
+        if isinstance(img0, ivy.Container):
+            return ivy.Container.concat(imgs, 0)
+        elif ivy.is_array(img0):
+            return ivy.concatenate(imgs, 0)
+        else:
+            raise Exception('custom image functions should either return an array or an ivy.Container instance,'
+                            'but found {} or type {}'.format(img0, type(img0)))
 
     def _str_fn(self, x, key_chain=''):
         for array_str in self._spec.array_strs:

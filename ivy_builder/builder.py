@@ -27,11 +27,10 @@ def json_spec_from_fpath(json_spec_path, json_fname):
     base_dir = json_spec_path
     json_spec = dict()
     while True:
-        json_defaults = [item for item in os.listdir(base_dir) if '.json.defaults' in item]
         fpath = os.path.join(base_dir, json_fname)
         if os.path.isfile(fpath):
             json_spec = {**parse_json_to_dict(fpath), **json_spec}
-        elif json_defaults:
+        elif os.path.isfile(os.path.join(base_dir, 'reset_to_defaults.sh')):
             pass
         else:
             return json_spec
