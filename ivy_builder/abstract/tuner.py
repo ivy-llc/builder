@@ -70,18 +70,18 @@ def _convert_tuner_spec(config):
                     sample_func = lambda spec, mi=min_val, ma=max_val: np.random.uniform(mi, ma)
             return_dict[key] = tune.sample_from(sample_func)
         elif grid:
-            num_samples = arg['num_samples']
+            num_grid_samples = arg['num_grid_samples']
             if exponential:
                 if as_int:
                     grid_vals = np.round(np.exp(np.linspace(
-                        np.log(min_val), np.log(max_val), num_samples))).astype(np.int32).tolist()
+                        np.log(min_val), np.log(max_val), num_grid_samples))).astype(np.int32).tolist()
                 else:
-                    grid_vals = np.round(np.exp(np.linspace(np.log(min_val), np.log(max_val), num_samples))).tolist()
+                    grid_vals = np.round(np.exp(np.linspace(np.log(min_val), np.log(max_val), num_grid_samples))).tolist()
             else:
                 if as_int:
-                    grid_vals = np.round(np.linspace(min_val, max_val, num_samples)).astype(np.uint32).tolist()
+                    grid_vals = np.round(np.linspace(min_val, max_val, num_grid_samples)).astype(np.uint32).tolist()
                 else:
-                    grid_vals = np.linspace(min_val, max_val, num_samples).tolist()
+                    grid_vals = np.linspace(min_val, max_val, num_grid_samples).tolist()
             return_dict[key] = tune.grid_search(grid_vals)
         else:
             raise Exception('invalid mode, one of [ gaussian | uniform | grid ] must be selected.')
