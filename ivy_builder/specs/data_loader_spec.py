@@ -1,6 +1,5 @@
 # local
 from ivy.core.container import Container
-from ivy_builder.abstract.network import Network
 from ivy_builder.specs.dataset_spec import DatasetSpec
 
 

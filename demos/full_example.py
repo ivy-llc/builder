@@ -70,8 +70,8 @@ class ExampleDatasetSpec(DatasetSpec):
 
 class ExampleDataLoaderSpec(DataLoaderSpec):
 
-    def __init__(self, dataset_spec, network, batch_size, shuffle):
-        super().__init__(dataset_spec, network=network, batch_size=batch_size)
+    def __init__(self, dataset_spec, batch_size, shuffle):
+        super().__init__(dataset_spec, batch_size=batch_size)
         self._shuffle = shuffle
 
     # Getters #
@@ -84,8 +84,8 @@ class ExampleDataLoaderSpec(DataLoaderSpec):
 
 class ExampleNetworkSpec(NetworkSpec):
 
-    def __init__(self, device, num_layers):
-        super().__init__(device)
+    def __init__(self, dataset_spec, device, num_layers):
+        super().__init__(dataset_spec, device)
         self._num_layers = num_layers
 
     # Getters #

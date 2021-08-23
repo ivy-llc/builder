@@ -172,7 +172,11 @@ def build_dataset_spec(dataset_dirs_args=None,
     return dataset_spec_class(**dataset_spec_args)
 
 
-def build_network_specification(network_spec_args=None,
+def build_network_specification(dataset_dirs_args=None,
+                                dataset_dirs_class=DatasetDirs,
+                                dataset_spec_args=None,
+                                dataset_spec_class=DatasetSpec,
+                                network_spec_args=None,
                                 network_spec_class=NetworkSpec,
                                 json_spec_path=None,
                                 spec_dict=None):
@@ -180,10 +184,18 @@ def build_network_specification(network_spec_args=None,
     build network specification
     """
 
+    # build dataset specification
+    dataset_spec = build_dataset_spec(dataset_dirs_args,
+                                      dataset_dirs_class,
+                                      dataset_spec_args,
+                                      dataset_spec_class,
+                                      json_spec_path,
+                                      spec_dict)
+
     # define network specification arguments
     if network_spec_args is None:
         network_spec_args = dict()
-    network_spec_args = {**network_spec_args}
+    network_spec_args = {**network_spec_args, **{'dataset_spec': dataset_spec}}
 
     # load json file
     if isinstance(json_spec_path, str):
@@ -208,6 +220,10 @@ def build_network_specification(network_spec_args=None,
 
 
 def build_network(network_class=None,
+                  dataset_dirs_args=None,
+                  dataset_dirs_class=DatasetDirs,
+                  dataset_spec_args=None,
+                  dataset_spec_class=DatasetSpec,
                   network_spec_args=None,
                   network_spec_class=NetworkSpec,
                   json_spec_path=None,
@@ -217,7 +233,11 @@ def build_network(network_class=None,
     """
 
     # build network specification
-    network_spec = build_network_specification(network_spec_args,
+    network_spec = build_network_specification(dataset_dirs_args,
+                                               dataset_dirs_class,
+                                               dataset_spec_args,
+                                               dataset_spec_class,
+                                               network_spec_args,
                                                network_spec_class,
                                                json_spec_path,
                                                spec_dict)
@@ -235,15 +255,12 @@ def build_network(network_class=None,
     return network_class(network_spec)
 
 
-def build_data_loader_spec(network_class=None,
-                           dataset_dirs_args=None,
+def build_data_loader_spec(dataset_dirs_args=None,
                            dataset_dirs_class=DatasetDirs,
                            dataset_spec_args=None,
                            dataset_spec_class=DatasetSpec,
                            data_loader_spec_args=None,
                            data_loader_spec_class=DataLoaderSpec,
-                           network_spec_args=None,
-                           network_spec_class=NetworkSpec,
                            json_spec_path=None,
                            spec_dict=None):
     """
@@ -258,17 +275,10 @@ def build_data_loader_spec(network_class=None,
                                       json_spec_path,
                                       spec_dict)
 
-    # build network
-    network = build_network(network_class,
-                            network_spec_args,
-                            network_spec_class,
-                            json_spec_path,
-                            spec_dict)
-
     # define data loader specification arguments
     if data_loader_spec_args is None:
         data_loader_spec_args = dict()
-    data_loader_spec_args = {**data_loader_spec_args, **{'dataset_spec': dataset_spec, 'network': network}}
+    data_loader_spec_args = {**data_loader_spec_args, **{'dataset_spec': dataset_spec}}
 
     # load json file
     if isinstance(json_spec_path, str):
@@ -292,15 +302,12 @@ def build_data_loader_spec(network_class=None,
 
 
 def build_data_loader(data_loader_class=None,
-                      network_class=None,
                       dataset_dirs_args=None,
                       dataset_dirs_class=DatasetDirs,
                       dataset_spec_args=None,
                       dataset_spec_class=DatasetSpec,
                       data_loader_spec_args=None,
                       data_loader_spec_class=DataLoaderSpec,
-                      network_spec_args=None,
-                      network_spec_class=NetworkSpec,
                       json_spec_path=None,
                       spec_dict=None):
     """
@@ -308,15 +315,12 @@ def build_data_loader(data_loader_class=None,
     """
 
     # build data loader specification
-    data_loader_spec = build_data_loader_spec(network_class,
-                                              dataset_dirs_args,
+    data_loader_spec = build_data_loader_spec(dataset_dirs_args,
                                               dataset_dirs_class,
                                               dataset_spec_args,
                                               dataset_spec_class,
                                               data_loader_spec_args,
                                               data_loader_spec_class,
-                                              network_spec_args,
-                                              network_spec_class,
                                               json_spec_path,
                                               spec_dict)
 
@@ -353,23 +357,31 @@ def build_trainer_spec(data_loader_class=None,
 
     # build data loader
     data_loader = build_data_loader(data_loader_class,
-                                    network_class,
                                     dataset_dirs_args,
                                     dataset_dirs_class,
                                     dataset_spec_args,
                                     dataset_spec_class,
                                     data_loader_spec_args,
                                     data_loader_spec_class,
-                                    network_spec_args,
-                                    network_spec_class,
                                     json_spec_path,
                                     spec_dict)
+
+    # build network
+    network = build_network(network_class,
+                            dataset_dirs_args,
+                            dataset_dirs_class,
+                            dataset_spec_args,
+                            dataset_spec_class,
+                            network_spec_args,
+                            network_spec_class,
+                            json_spec_path,
+                            spec_dict)
 
     # define trainer specification arguments
     if trainer_spec_args is None:
         trainer_spec_args = dict()
     trainer_spec_args = {**trainer_spec_args, **{'data_loader': data_loader,
-                                                 'network': data_loader.spec.network}}
+                                                 'network': network}}
 
     # load json file
     if isinstance(json_spec_path, str):
