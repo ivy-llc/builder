@@ -6,9 +6,10 @@ class JSONDataLoaderSpec(DataLoaderSpec):
 
     def __init__(self, dataset_spec, batch_size, window_size, starting_idx, num_sequences,
                  num_workers=1, cache_size=0, unused_key_chains=None, preload_containers=False, preshuffle_data=True,
-                 shuffle_buffer_size=0, with_prefetching=True, post_proc_fn=None, prefetch_to_gpu=False,
-                 single_pass=False, array_strs=None, float_strs=None, uint8_strs=None, custom_img_strs=None,
-                 custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled', **kwargs):
+                 shuffle_buffer_size=0, with_prefetching=True, queue_timeout=5.0, post_proc_fn=None,
+                 prefetch_to_gpu=False, single_pass=False, array_strs=None, float_strs=None, uint8_strs=None,
+                 custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled',
+                 **kwargs):
 
         unused_key_chains = [] if unused_key_chains is None else unused_key_chains
         array_strs = [] if array_strs is None else array_strs
@@ -31,6 +32,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  preshuffle_data=preshuffle_data,
                                                  shuffle_buffer_size=shuffle_buffer_size,
                                                  with_prefetching=with_prefetching,
+                                                 queue_timeout=queue_timeout,
                                                  post_proc_fn=post_proc_fn,
                                                  prefetch_to_gpu=prefetch_to_gpu,
                                                  single_pass=single_pass,

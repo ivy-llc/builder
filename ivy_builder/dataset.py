@@ -38,7 +38,7 @@ class Dataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
                  elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
-                 prefetching=False, is_subprocess=False):
+                 prefetching=False, queue_timeout=5.0, is_subprocess=False):
         self._name = name
         self._size = size
         self._base_slice_fn = base_slice_fn
@@ -59,6 +59,7 @@ class Dataset:
         self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
         self._prefetching = prefetching
+        self._queue_timeout = queue_timeout
         self._is_subprocess = is_subprocess
         self._first_pass = True
         self._queue_offset = 1
@@ -321,10 +322,11 @@ class Dataset:
             if self._numpy_loading:
                 ivy.unset_framework()
             self._first_pass = False
-            return ivy.Container(queues=output_queues, queue_load_sizes=slice_sizes)
+            return ivy.Container(queues=output_queues, queue_load_sizes=slice_sizes, queue_timeout=self._queue_timeout)
         else:
             [slice_queue.put(sub_slice) for slice_queue, sub_slice in zip(slice_queues, sub_slices)]
-            items_as_lists = [ivy.Container(output_queue.get(timeout=1.0)) for output_queue in output_queues]
+            items_as_lists = [ivy.Container(output_queue.get(timeout=self._queue_timeout))
+                              for output_queue in output_queues]
             if self._numpy_loading:
                 ivy.unset_framework()
             self._first_pass = False
@@ -505,7 +507,7 @@ class Dataset:
             try:
                 for i, w in enumerate(self._workers):
                     self._slice_queues[i].put(None)
-                    w.join(timeout=0.1)
+                    w.join(timeout=0.25)
                 for q in self._slice_queues:
                     q.cancel_join_thread()
                     q.close()

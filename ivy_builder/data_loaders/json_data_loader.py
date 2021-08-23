@@ -397,14 +397,16 @@ class JSONDataLoader(DataLoader):
                 'base',
                 container_slices.shape[0],
                 numpy_loading=True,
-                cache_size=self._base_cache_size)
+                cache_size=self._base_cache_size,
+                queue_timeout=self._spec.queue_timeout)
         else:
             # load containers with filepath entries
             dataset = Dataset(ivy.Container({'fpaths': container_filepaths}),
                               'base',
                               len(container_filepaths),
                               numpy_loading=True,
-                              cache_size=self._base_cache_size)
+                              cache_size=self._base_cache_size,
+                              queue_timeout=self._spec.queue_timeout)
             dataset = dataset.map('loaded_json',
                                   self._load_json_files,
                                   self._num_workers.loaded_json)
