@@ -160,7 +160,6 @@ class Trainer:
                                   sha + '\n'])
 
     def _initialize_model(self, checkpoint_path=None):
-        self._init()
         self._save_spec_to_disk()
         self._save_info_to_disk()
         starting_iteration = 0
@@ -177,6 +176,8 @@ class Trainer:
             return starting_iteration
         else:
             logging.info('#-------------#\n# MODEL BUILT #\n#-------------#')
+        self._global_step = self._spec.starting_iteration
+        self._init()
         if isinstance(self._spec.starting_iteration, int):
             return self._spec.starting_iteration
         return starting_iteration
