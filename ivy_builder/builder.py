@@ -472,21 +472,6 @@ def build_tuner_spec(data_loader_class=None,
     """
     build tuner specification
     """
-    trainer = build_trainer(data_loader_class,
-                            network_class,
-                            trainer_class,
-                            dataset_dirs_args,
-                            dataset_dirs_class,
-                            dataset_spec_args,
-                            dataset_spec_class,
-                            data_loader_spec_args,
-                            data_loader_spec_class,
-                            network_spec_args,
-                            network_spec_class,
-                            trainer_spec_args,
-                            trainer_spec_class,
-                            json_spec_path,
-                            spec_dict)
 
     # define dataset directories specification arguments
     if tuner_spec_args is None:
@@ -508,6 +493,26 @@ def build_tuner_spec(data_loader_class=None,
     # override tuner_spec_class if specified in tuner_spec_args
     tuner_spec_class = ivy.default(
         _import_arg_specified_class_if_present(tuner_spec_args, 'tuner_spec_class'), tuner_spec_class)
+
+    # set framework
+    ivy.set_framework(tuner_spec_class(None, **tuner_spec_args).framework)
+
+    # build trainer
+    trainer = build_trainer(data_loader_class,
+                            network_class,
+                            trainer_class,
+                            dataset_dirs_args,
+                            dataset_dirs_class,
+                            dataset_spec_args,
+                            dataset_spec_class,
+                            data_loader_spec_args,
+                            data_loader_spec_class,
+                            network_spec_args,
+                            network_spec_class,
+                            trainer_spec_args,
+                            trainer_spec_class,
+                            json_spec_path,
+                            spec_dict)
 
     # return tuner specification
     return tuner_spec_class(trainer,
@@ -536,9 +541,28 @@ def build_tuner(data_loader_class=None,
     build tuner
     """
 
+    # build tuner spec
+    tuner_spec = build_tuner_spec(data_loader_class,
+                                  network_class,
+                                  trainer_class,
+                                  dataset_dirs_args,
+                                  dataset_dirs_class,
+                                  dataset_spec_args,
+                                  dataset_spec_class,
+                                  data_loader_spec_args,
+                                  data_loader_spec_class,
+                                  network_spec_args,
+                                  network_spec_class,
+                                  trainer_spec_args,
+                                  trainer_spec_class,
+                                  tuner_spec_args,
+                                  tuner_spec_class,
+                                  json_spec_path,
+                                  spec_dict)
+
     # override tuner_class if specified in tuner_spec_args
     tuner_class = ivy.default(
-        _import_arg_specified_class_if_present(tuner_spec_args, 'tuner_class'), tuner_class)
+        _import_arg_specified_class_if_present(tuner_spec, 'tuner_class'), tuner_class)
 
     # return tuner
     return tuner_class(data_loader_class,

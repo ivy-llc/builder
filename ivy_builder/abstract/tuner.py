@@ -105,7 +105,7 @@ class Tuner:
                  trainer_spec_args: dict = None,
                  trainer_spec_class: TrainerSpec.__base__ = TrainerSpec,
                  tuner_spec_args: dict = None,
-                 tuner_spec_class: TrainerSpec.__base__ = TunerSpec,
+                 tuner_spec_class: TunerSpec.__base__ = TunerSpec,
                  json_spec_path: str = None,
                  spec_dict: dict = None):
         """
@@ -140,7 +140,6 @@ class Tuner:
         self._builder = builder_module
 
         # tuner spec
-        ivy.set_framework(self._tuner_spec_args['framework'])
         self._spec = self._builder.build_tuner_spec(
             self._data_loader_class, self._network_class, self._trainer_class, self._dataset_dirs_args,
             self._dataset_dirs_class, self._dataset_spec_args, self._dataset_spec_class, self._data_loader_spec_args,
