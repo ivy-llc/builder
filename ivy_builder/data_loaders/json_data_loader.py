@@ -352,8 +352,23 @@ class JSONDataLoader(DataLoader):
     def _get_dataset(self, starting_example, ending_example):
 
         # container filepaths
-        container_filepaths = self._load_container_filepaths_as_lists(self._container_data_dir, starting_example,
-                                                                      ending_example)
+        if self._fixed_sequence_length:
+            # ToDo: make this more efficient for very large datasets
+            cont_fname_0 = os.listdir(self._container_data_dir)[0]
+            seq_idx_digits = len(cont_fname_0.split('_')[0])
+            win_idx_digits = len(cont_fname_0.split('_')[1].split('.json')[0])
+            cont_fname_template = '{}_{}.json'
+            container_filepaths =\
+                [[(i, j) for j in range(self._spec.dataset_spec.sequence_lengths)]
+                 for i in range(starting_example, ending_example+1)]
+            # ToDo: remove this code below once dataset dir parsing is implemented
+            container_filepaths =\
+                [[os.path.join(self._container_data_dir,
+                               cont_fname_template.format(str(i).zfill(seq_idx_digits), str(j).zfill(win_idx_digits)))
+                  for i, j in ijs] for ijs in container_filepaths]
+        else:
+            container_filepaths = self._load_container_filepaths_as_lists(self._container_data_dir, starting_example,
+                                                                          ending_example)
         max_seq_len = max(max([len(item) for item in container_filepaths]), self._window_size)
         if self._spec.num_sequences != -1:
             container_filepaths = container_filepaths[0:self._spec.num_sequences]
@@ -378,7 +393,8 @@ class JSONDataLoader(DataLoader):
             self._sequence_lengths = [len(item) for item in container_filepaths]
 
         # padding to make rectangular
-        container_filepaths = [item + ['']*(max_seq_len - len(item)) for item in container_filepaths]
+        if not self._fixed_sequence_length:
+            container_filepaths = [item + ['']*(max_seq_len - len(item)) for item in container_filepaths]
 
         # maybe pre-load containers
         if self._spec.preload_containers:
