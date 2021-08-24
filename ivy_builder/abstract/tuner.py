@@ -76,7 +76,8 @@ def _convert_tuner_spec(config):
                     grid_vals = np.round(np.exp(np.linspace(
                         np.log(min_val), np.log(max_val), num_grid_samples))).astype(np.int32).tolist()
                 else:
-                    grid_vals = np.round(np.exp(np.linspace(np.log(min_val), np.log(max_val), num_grid_samples))).tolist()
+                    grid_vals = np.round(np.exp(np.linspace(np.log(min_val), np.log(max_val),
+                                                            num_grid_samples))).tolist()
             else:
                 if as_int:
                     grid_vals = np.round(np.linspace(min_val, max_val, num_grid_samples)).astype(np.uint32).tolist()
@@ -170,9 +171,11 @@ class Tuner:
         network_spec_class = self._network_spec_class
         trainer_spec_args = self._trainer_spec_args
         trainer_spec_class = self._trainer_spec_class
-        tuner_spec_args = self._tuner_spec_args
-        tuner_spec_class = self._tuner_spec_class
+        json_spec_path = self._json_spec_path
+        spec_dict = self._spec_dict
+        orig_log_dir = self._spec.trainer.spec.log_dir
 
+        # noinspection PyAttributeOutsideInit
         class TuneTrainable(tune.Trainable):
 
             def setup(self, _):
@@ -183,7 +186,7 @@ class Tuner:
                 self._config_str = '_'.join([str(key) + '_' + ("%.2f" % val if isinstance(val, float) else str(val))
                                              for key, val in self.config.items()
                                              if (isinstance(val, (float, int)) and key != 'train_steps_per_tune_step')])
-                trainer_spec_args['log_dir'] = os.path.join(trainer_spec_args['log_dir'], self._config_str)
+                trainer_spec_args['log_dir'] = os.path.join(orig_log_dir, self._config_str)
                 new_args = dict()
                 for class_key, args in zip(SPEC_KEYS, [dataset_dirs_args, dataset_spec_args, data_loader_spec_args,
                                                        network_spec_args, trainer_spec_args]):
@@ -207,8 +210,8 @@ class Tuner:
                                                       network_spec_class,
                                                       new_args['ts'],
                                                       trainer_spec_class,
-                                                      tuner_spec_args,
-                                                      tuner_spec_class)
+                                                      json_spec_path,
+                                                      spec_dict)
                 self._trainer.setup()
 
             def step(self):
