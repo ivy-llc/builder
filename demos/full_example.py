@@ -215,9 +215,11 @@ def main():
     # before then passing into the TrainingJob for specification class construction, which are all then read-only
 
     trainer = builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
-                                    dataset_dirs_args, ExampleDatasetDirs, dataset_spec_args,
-                                    ExampleDatasetSpec, data_loader_spec_args, ExampleDataLoaderSpec,
-                                    network_spec_args, ExampleNetworkSpec, trainer_spec_args)
+                                    dataset_dirs_args=dataset_dirs_args, dataset_dirs_class=ExampleDatasetDirs,
+                                    dataset_spec_args=dataset_spec_args, dataset_spec_class=ExampleDatasetSpec,
+                                    data_loader_spec_args=data_loader_spec_args,
+                                    data_loader_spec_class=ExampleDataLoaderSpec, network_spec_args=network_spec_args,
+                                    network_spec_class=ExampleNetworkSpec, trainer_spec_args=trainer_spec_args)
     trainer.setup()
     print("Finished complete example!")
     trainer.train()

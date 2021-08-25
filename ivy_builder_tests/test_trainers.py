@@ -116,9 +116,11 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     ivy.seed(0)
     trainer_spec_args = {'total_iterations': 1, 'ld_chkpt': False, 'save_freq': 1}
     trainer = builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
-                                    dataset_dirs_args, ExampleDatasetDirs, dataset_spec_args,
-                                    ExampleDatasetSpec, data_loader_spec_args, ExampleDataLoaderSpec,
-                                    network_spec_args, ExampleNetworkSpec, trainer_spec_args)
+                                    dataset_dirs_args=dataset_dirs_args, dataset_dirs_class=ExampleDatasetDirs,
+                                    dataset_spec_args=dataset_spec_args, dataset_spec_class=ExampleDatasetSpec,
+                                    data_loader_spec_args=data_loader_spec_args,
+                                    data_loader_spec_class=ExampleDataLoaderSpec, network_spec_args=network_spec_args,
+                                    network_spec_class=ExampleNetworkSpec, trainer_spec_args=trainer_spec_args)
     trainer.setup()
     trainer.train()
     initial_cost = trainer._total_cost
@@ -129,9 +131,11 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     steps_to_take_first = 10
     trainer_spec_args = {'total_iterations': steps_to_take_first, 'ld_chkpt': False, 'save_freq': 1}
     trainer = builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
-                                    dataset_dirs_args, ExampleDatasetDirs, dataset_spec_args,
-                                    ExampleDatasetSpec, data_loader_spec_args, ExampleDataLoaderSpec,
-                                    network_spec_args, ExampleNetworkSpec, trainer_spec_args)
+                                    dataset_dirs_args=dataset_dirs_args, dataset_dirs_class=ExampleDatasetDirs,
+                                    dataset_spec_args=dataset_spec_args, dataset_spec_class=ExampleDatasetSpec,
+                                    data_loader_spec_args=data_loader_spec_args,
+                                    data_loader_spec_class=ExampleDataLoaderSpec, network_spec_args=network_spec_args,
+                                    network_spec_class=ExampleNetworkSpec, trainer_spec_args=trainer_spec_args)
     trainer.setup()
     trainer.train()
     ten_step_cost = trainer._total_cost
@@ -142,9 +146,11 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     steps_to_take_second = 20
     trainer_spec_args = {'total_iterations': steps_to_take_second, 'ld_chkpt': True, 'save_freq': 1}
     trainer = builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
-                                    dataset_dirs_args, ExampleDatasetDirs, dataset_spec_args,
-                                    ExampleDatasetSpec, data_loader_spec_args, ExampleDataLoaderSpec,
-                                    network_spec_args, ExampleNetworkSpec, trainer_spec_args)
+                                    dataset_dirs_args=dataset_dirs_args, dataset_dirs_class=ExampleDatasetDirs,
+                                    dataset_spec_args=dataset_spec_args, dataset_spec_class=ExampleDatasetSpec,
+                                    data_loader_spec_args=data_loader_spec_args,
+                                    data_loader_spec_class=ExampleDataLoaderSpec, network_spec_args=network_spec_args,
+                                    network_spec_class=ExampleNetworkSpec, trainer_spec_args=trainer_spec_args)
     trainer.setup()
     trainer.train()
     twenty_step_cost = trainer._total_cost
