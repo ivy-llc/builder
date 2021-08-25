@@ -97,7 +97,7 @@ def command_line_str_to_spec_dict(spec_str):
 
 
 def build_dataset_dirs(dataset_dirs_args=None,
-                       dataset_dirs_class=DatasetDirs,
+                       dataset_dirs_class=None,
                        json_spec_path=None,
                        spec_dict=None):
     """
@@ -122,18 +122,20 @@ def build_dataset_dirs(dataset_dirs_args=None,
     dataset_dirs_args = {**json_spec, **this_spec_dict, **dataset_dirs_args}
 
     # override dataset_dirs_class if specified in dataset_dirs_args
-    dataset_dirs_class = ivy.default(
-        dataset_dirs_class, _import_arg_specified_class_if_present(dataset_dirs_args, 'dataset_dirs_class'))
+    dataset_dirs_class = ivy.default(ivy.default(
+        dataset_dirs_class,
+        _import_arg_specified_class_if_present(dataset_dirs_args, 'dataset_dirs_class')),
+        DatasetDirs)
 
     # return dataset directories specification
     return dataset_dirs_class(**dataset_dirs_args)
 
 
 def build_dataset_spec(dataset_dirs_args=None,
-                       dataset_dirs_class=DatasetDirs,
+                       dataset_dirs_class=None,
                        dataset_dirs=None,
                        dataset_spec_args=None,
-                       dataset_spec_class=DatasetSpec,
+                       dataset_spec_class=None,
                        json_spec_path=None,
                        spec_dict=None):
     """
@@ -168,21 +170,23 @@ def build_dataset_spec(dataset_dirs_args=None,
     dataset_spec_args = {**json_spec, **this_spec_dict, **dataset_spec_args}
 
     # override dataset_spec_class if specified in dataset_spec_args
-    dataset_spec_class = ivy.default(
-        dataset_spec_class, _import_arg_specified_class_if_present(dataset_spec_args, 'dataset_spec_class'))
+    dataset_spec_class = ivy.default(ivy.default(
+        dataset_spec_class,
+        _import_arg_specified_class_if_present(dataset_spec_args, 'dataset_spec_class')),
+        DatasetSpec)
 
     # return dataset specification
     return dataset_spec_class(**dataset_spec_args)
 
 
 def build_network_specification(dataset_dirs_args=None,
-                                dataset_dirs_class=DatasetDirs,
+                                dataset_dirs_class=None,
                                 dataset_dirs=None,
                                 dataset_spec_args=None,
-                                dataset_spec_class=DatasetSpec,
+                                dataset_spec_class=None,
                                 dataset_spec=None,
                                 network_spec_args=None,
-                                network_spec_class=NetworkSpec,
+                                network_spec_class=None,
                                 json_spec_path=None,
                                 spec_dict=None):
     """
@@ -220,8 +224,10 @@ def build_network_specification(dataset_dirs_args=None,
     network_spec_args = {**json_spec, **this_spec_dict, **network_spec_args}
 
     # override network_spec_class if specified in network_spec_args
-    network_spec_class = ivy.default(
-        network_spec_class, _import_arg_specified_class_if_present(network_spec_args, 'network_spec_class'))
+    network_spec_class = ivy.default(ivy.default(
+        network_spec_class,
+        _import_arg_specified_class_if_present(network_spec_args, 'network_spec_class')),
+        NetworkSpec)
 
     # return network
     return network_spec_class(**network_spec_args)
@@ -229,13 +235,13 @@ def build_network_specification(dataset_dirs_args=None,
 
 def build_network(network_class=None,
                   dataset_dirs_args=None,
-                  dataset_dirs_class=DatasetDirs,
+                  dataset_dirs_class=None,
                   dataset_dirs=None,
                   dataset_spec_args=None,
-                  dataset_spec_class=DatasetSpec,
+                  dataset_spec_class=None,
                   dataset_spec=None,
                   network_spec_args=None,
-                  network_spec_class=NetworkSpec,
+                  network_spec_class=None,
                   network_spec=None,
                   json_spec_path=None,
                   spec_dict=None):
@@ -259,8 +265,10 @@ def build_network(network_class=None,
             spec_dict=spec_dict))
 
     # override network_class if specified in network_spec
-    network_class = ivy.default(
-        network_class, _import_arg_specified_class_if_present(network_spec, 'network_class'))
+    network_class = ivy.default(ivy.default(
+        network_class,
+        _import_arg_specified_class_if_present(network_spec, 'network_class')),
+        None)
 
     # verify network_class exists
     if not ivy.exists(network_class):
@@ -272,13 +280,13 @@ def build_network(network_class=None,
 
 
 def build_data_loader_spec(dataset_dirs_args=None,
-                           dataset_dirs_class=DatasetDirs,
+                           dataset_dirs_class=None,
                            dataset_dirs=None,
                            dataset_spec_args=None,
-                           dataset_spec_class=DatasetSpec,
+                           dataset_spec_class=None,
                            dataset_spec=None,
                            data_loader_spec_args=None,
-                           data_loader_spec_class=DataLoaderSpec,
+                           data_loader_spec_class=None,
                            json_spec_path=None,
                            spec_dict=None):
     """
@@ -316,8 +324,10 @@ def build_data_loader_spec(dataset_dirs_args=None,
     data_loader_spec_args = {**json_spec, **this_spec_dict, **data_loader_spec_args}
 
     # override data_loader_spec_class if specified in data_loader_spec_args
-    data_loader_spec_class = ivy.default(
-        data_loader_spec_class, _import_arg_specified_class_if_present(data_loader_spec_args, 'data_loader_spec_class'))
+    data_loader_spec_class = ivy.default(ivy.default(
+        data_loader_spec_class,
+        _import_arg_specified_class_if_present(data_loader_spec_args, 'data_loader_spec_class')),
+        DataLoaderSpec)
 
     # return data loader
     return data_loader_spec_class(**data_loader_spec_args)
@@ -325,13 +335,13 @@ def build_data_loader_spec(dataset_dirs_args=None,
 
 def build_data_loader(data_loader_class=None,
                       dataset_dirs_args=None,
-                      dataset_dirs_class=DatasetDirs,
+                      dataset_dirs_class=None,
                       dataset_dirs=None,
                       dataset_spec_args=None,
-                      dataset_spec_class=DatasetSpec,
+                      dataset_spec_class=None,
                       dataset_spec=None,
                       data_loader_spec_args=None,
-                      data_loader_spec_class=DataLoaderSpec,
+                      data_loader_spec_class=None,
                       data_loader_spec=None,
                       json_spec_path=None,
                       spec_dict=None):
@@ -355,8 +365,10 @@ def build_data_loader(data_loader_class=None,
             spec_dict=spec_dict))
 
     # override data_loader_class if specified in data_loader_spec
-    data_loader_class = ivy.default(
-        data_loader_class, _import_arg_specified_class_if_present(data_loader_spec, 'data_loader_class'))
+    data_loader_class = ivy.default(ivy.default(
+        data_loader_class,
+        _import_arg_specified_class_if_present(data_loader_spec, 'data_loader_class')),
+        None)
 
     # verify data_loader_class exists
     if not ivy.exists(data_loader_class):
@@ -370,21 +382,21 @@ def build_data_loader(data_loader_class=None,
 def build_trainer_spec(data_loader_class=None,
                        network_class=None,
                        dataset_dirs_args=None,
-                       dataset_dirs_class=DatasetDirs,
+                       dataset_dirs_class=None,
                        dataset_dirs=None,
                        dataset_spec_args=None,
-                       dataset_spec_class=DatasetSpec,
+                       dataset_spec_class=None,
                        dataset_spec=None,
                        data_loader_spec_args=None,
-                       data_loader_spec_class=DataLoaderSpec,
+                       data_loader_spec_class=None,
                        data_loader_spec=None,
                        data_loader=None,
                        network_spec_args=None,
-                       network_spec_class=NetworkSpec,
+                       network_spec_class=None,
                        network_spec=None,
                        network=None,
                        trainer_spec_args=None,
-                       trainer_spec_class=TrainerSpec,
+                       trainer_spec_class=None,
                        json_spec_path=None,
                        spec_dict=None):
     """
@@ -443,8 +455,10 @@ def build_trainer_spec(data_loader_class=None,
     trainer_spec_args = {**json_spec, **this_spec_dict, **trainer_spec_args}
 
     # override trainer_spec_class if specified in trainer_spec_args
-    trainer_spec_class = ivy.default(
-        trainer_spec_class, _import_arg_specified_class_if_present(trainer_spec_args, 'trainer_spec_class'))
+    trainer_spec_class = ivy.default(ivy.default(
+        trainer_spec_class,
+        _import_arg_specified_class_if_present(trainer_spec_args, 'trainer_spec_class')),
+        TrainerSpec)
 
     # return trainer specification
     return trainer_spec_class(**trainer_spec_args)
@@ -454,21 +468,21 @@ def build_trainer(data_loader_class=None,
                   network_class=None,
                   trainer_class=None,
                   dataset_dirs_args=None,
-                  dataset_dirs_class=DatasetDirs,
+                  dataset_dirs_class=None,
                   dataset_dirs=None,
                   dataset_spec_args=None,
-                  dataset_spec_class=DatasetSpec,
+                  dataset_spec_class=None,
                   dataset_spec=None,
                   data_loader_spec_args=None,
-                  data_loader_spec_class=DataLoaderSpec,
+                  data_loader_spec_class=None,
                   data_loader_spec=None,
                   data_loader=None,
                   network_spec_args=None,
-                  network_spec_class=NetworkSpec,
+                  network_spec_class=None,
                   network_spec=None,
                   network=None,
                   trainer_spec_args=None,
-                  trainer_spec_class=TrainerSpec,
+                  trainer_spec_class=None,
                   trainer_spec=None,
                   json_spec_path=None,
                   spec_dict=None):
@@ -502,8 +516,10 @@ def build_trainer(data_loader_class=None,
             spec_dict=spec_dict))
 
     # override trainer_class if specified in trainer_spec
-    trainer_class = ivy.default(
-        trainer_class, _import_arg_specified_class_if_present(trainer_spec, 'trainer_class'))
+    trainer_class = ivy.default(ivy.default(
+        trainer_class,
+        _import_arg_specified_class_if_present(trainer_spec, 'trainer_class')),
+        None)
 
     # verify trainer_class exists
     if not ivy.exists(trainer_class):
@@ -518,25 +534,25 @@ def build_tuner_spec(data_loader_class=None,
                      network_class=None,
                      trainer_class=None,
                      dataset_dirs_args=None,
-                     dataset_dirs_class=DatasetDirs,
+                     dataset_dirs_class=None,
                      dataset_dirs=None,
                      dataset_spec_args=None,
-                     dataset_spec_class=DatasetSpec,
+                     dataset_spec_class=None,
                      dataset_spec=None,
                      data_loader_spec_args=None,
-                     data_loader_spec_class=DataLoaderSpec,
+                     data_loader_spec_class=None,
                      data_loader_spec=None,
                      data_loader=None,
                      network_spec_args=None,
-                     network_spec_class=NetworkSpec,
+                     network_spec_class=None,
                      network_spec=None,
                      network=None,
                      trainer_spec_args=None,
-                     trainer_spec_class=TrainerSpec,
+                     trainer_spec_class=None,
                      trainer_spec=None,
                      trainer=None,
                      tuner_spec_args=None,
-                     tuner_spec_class=TunerSpec,
+                     tuner_spec_class=None,
                      json_spec_path=None,
                      spec_dict=None):
     """
@@ -561,8 +577,10 @@ def build_tuner_spec(data_loader_class=None,
     tuner_spec_args = {**json_spec, **this_spec_dict, **tuner_spec_args}
 
     # override tuner_spec_class if specified in tuner_spec_args
-    tuner_spec_class = ivy.default(
-        tuner_spec_class, _import_arg_specified_class_if_present(tuner_spec_args, 'tuner_spec_class'))
+    tuner_spec_class = ivy.default(ivy.default(
+        tuner_spec_class,
+        _import_arg_specified_class_if_present(tuner_spec_args, 'tuner_spec_class')),
+        TunerSpec)
 
     # set framework
     ivy.set_framework(tuner_spec_class(None, **tuner_spec_args).framework)
@@ -603,27 +621,27 @@ def build_tuner(data_loader_class=None,
                 network_class=None,
                 trainer_class=None,
                 dataset_dirs_args=None,
-                dataset_dirs_class=DatasetDirs,
+                dataset_dirs_class=None,
                 dataset_dirs=None,
                 dataset_spec_args=None,
-                dataset_spec_class=DatasetSpec,
+                dataset_spec_class=None,
                 dataset_spec=None,
                 data_loader_spec_args=None,
-                data_loader_spec_class=DataLoaderSpec,
+                data_loader_spec_class=None,
                 data_loader_spec=None,
                 data_loader=None,
                 network_spec_args=None,
-                network_spec_class=NetworkSpec,
+                network_spec_class=None,
                 network_spec=None,
                 network=None,
                 trainer_spec_args=None,
-                trainer_spec_class=TrainerSpec,
+                trainer_spec_class=None,
                 trainer_spec=None,
                 trainer=None,
                 tuner_spec_args=None,
-                tuner_spec_class=TunerSpec,
+                tuner_spec_class=None,
                 tuner_spec=None,
-                tuner_class=Tuner,
+                tuner_class=None,
                 json_spec_path=None,
                 spec_dict=None):
     """
@@ -661,8 +679,9 @@ def build_tuner(data_loader_class=None,
             spec_dict=spec_dict))
 
     # override tuner_class if specified in tuner_spec_args
-    tuner_class = ivy.default(
-        tuner_class, _import_arg_specified_class_if_present(tuner_spec, 'tuner_class'))
+    tuner_class = ivy.default(ivy.default(
+        tuner_class, _import_arg_specified_class_if_present(tuner_spec, 'tuner_class')),
+        Tuner)
 
     # return tuner
     return tuner_class(
