@@ -289,8 +289,10 @@ class JSONDataLoader(DataLoader):
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
-            img_rgba = cv2.imread(full_path, -1)
-            img = ivy.array(np.expand_dims(img_rgba.astype(np.float32), 0))/255
+            img_rgb = cv2.imread(full_path, -1)
+            if len(img_rgb.shape) == 2:
+                img_rgb = np.tile(np.expand_dims(img_rgb, -1), (1, 1, 3))
+            img = ivy.array(np.expand_dims(img_rgb.astype(np.float32), 0))/255
             imgs.append(img)
         return ivy.concatenate(imgs, 0)
 
