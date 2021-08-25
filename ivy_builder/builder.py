@@ -123,7 +123,7 @@ def build_dataset_dirs(dataset_dirs_args=None,
 
     # override dataset_dirs_class if specified in dataset_dirs_args
     dataset_dirs_class = ivy.default(
-        _import_arg_specified_class_if_present(dataset_dirs_args, 'dataset_dirs_class'), dataset_dirs_class)
+        dataset_dirs_class, _import_arg_specified_class_if_present(dataset_dirs_args, 'dataset_dirs_class'))
 
     # return dataset directories specification
     return dataset_dirs_class(**dataset_dirs_args)
@@ -169,7 +169,7 @@ def build_dataset_spec(dataset_dirs_args=None,
 
     # override dataset_spec_class if specified in dataset_spec_args
     dataset_spec_class = ivy.default(
-        _import_arg_specified_class_if_present(dataset_spec_args, 'dataset_spec_class'), dataset_spec_class)
+        dataset_spec_class, _import_arg_specified_class_if_present(dataset_spec_args, 'dataset_spec_class'))
 
     # return dataset specification
     return dataset_spec_class(**dataset_spec_args)
@@ -221,7 +221,7 @@ def build_network_specification(dataset_dirs_args=None,
 
     # override network_spec_class if specified in network_spec_args
     network_spec_class = ivy.default(
-        _import_arg_specified_class_if_present(network_spec_args, 'network_spec_class'), network_spec_class)
+        network_spec_class, _import_arg_specified_class_if_present(network_spec_args, 'network_spec_class'))
 
     # return network
     return network_spec_class(**network_spec_args)
@@ -260,7 +260,7 @@ def build_network(network_class=None,
 
     # override network_class if specified in network_spec
     network_class = ivy.default(
-        _import_arg_specified_class_if_present(network_spec, 'network_class'), network_class)
+        network_class, _import_arg_specified_class_if_present(network_spec, 'network_class'))
 
     # verify network_class exists
     if not ivy.exists(network_class):
@@ -317,7 +317,7 @@ def build_data_loader_spec(dataset_dirs_args=None,
 
     # override data_loader_spec_class if specified in data_loader_spec_args
     data_loader_spec_class = ivy.default(
-        _import_arg_specified_class_if_present(data_loader_spec_args, 'data_loader_spec_class'), data_loader_spec_class)
+        data_loader_spec_class, _import_arg_specified_class_if_present(data_loader_spec_args, 'data_loader_spec_class'))
 
     # return data loader
     return data_loader_spec_class(**data_loader_spec_args)
@@ -356,7 +356,7 @@ def build_data_loader(data_loader_class=None,
 
     # override data_loader_class if specified in data_loader_spec
     data_loader_class = ivy.default(
-        _import_arg_specified_class_if_present(data_loader_spec, 'data_loader_class'), data_loader_class)
+        data_loader_class, _import_arg_specified_class_if_present(data_loader_spec, 'data_loader_class'))
 
     # verify data_loader_class exists
     if not ivy.exists(data_loader_class):
@@ -444,7 +444,7 @@ def build_trainer_spec(data_loader_class=None,
 
     # override trainer_spec_class if specified in trainer_spec_args
     trainer_spec_class = ivy.default(
-        _import_arg_specified_class_if_present(trainer_spec_args, 'trainer_spec_class'), trainer_spec_class)
+        trainer_spec_class, _import_arg_specified_class_if_present(trainer_spec_args, 'trainer_spec_class'))
 
     # return trainer specification
     return trainer_spec_class(**trainer_spec_args)
@@ -503,7 +503,7 @@ def build_trainer(data_loader_class=None,
 
     # override trainer_class if specified in trainer_spec
     trainer_class = ivy.default(
-        _import_arg_specified_class_if_present(trainer_spec, 'trainer_class'), trainer_class)
+        trainer_class, _import_arg_specified_class_if_present(trainer_spec, 'trainer_class'))
 
     # verify trainer_class exists
     if not ivy.exists(trainer_class):
@@ -562,7 +562,7 @@ def build_tuner_spec(data_loader_class=None,
 
     # override tuner_spec_class if specified in tuner_spec_args
     tuner_spec_class = ivy.default(
-        _import_arg_specified_class_if_present(tuner_spec_args, 'tuner_spec_class'), tuner_spec_class)
+        tuner_spec_class, _import_arg_specified_class_if_present(tuner_spec_args, 'tuner_spec_class'))
 
     # set framework
     ivy.set_framework(tuner_spec_class(None, **tuner_spec_args).framework)
@@ -662,7 +662,7 @@ def build_tuner(data_loader_class=None,
 
     # override tuner_class if specified in tuner_spec_args
     tuner_class = ivy.default(
-        _import_arg_specified_class_if_present(tuner_spec, 'tuner_class'), tuner_class)
+        tuner_class, _import_arg_specified_class_if_present(tuner_spec, 'tuner_class'))
 
     # return tuner
     return tuner_class(
