@@ -4,7 +4,7 @@ from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 
 class JSONDataLoaderSpec(DataLoaderSpec):
 
-    def __init__(self, dataset_spec, batch_size, window_size, starting_idx, num_sequences,
+    def __init__(self, dataset_spec, batch_size, window_size, starting_idx, num_sequences, cont_fname_template,
                  num_workers=1, cache_size=0, unused_key_chains=None, preload_containers=False, preshuffle_data=True,
                  shuffle_buffer_size=0, with_prefetching=True, queue_timeout=5.0, post_proc_fn=None,
                  prefetch_to_gpu=False, single_pass=False, array_strs=None, float_strs=None, uint8_strs=None,
@@ -25,6 +25,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  window_size=window_size,
                                                  starting_idx=starting_idx,
                                                  num_sequences=num_sequences,
+                                                 cont_fname_template=cont_fname_template,
                                                  num_workers=num_workers,
                                                  cache_size=cache_size,
                                                  unused_key_chains=unused_key_chains,

@@ -5,6 +5,7 @@ import ivy
 import math
 import json
 import logging
+import collections
 import numpy as np
 import multiprocessing
 from ivy_builder.dataset import Dataset
@@ -268,7 +269,6 @@ class JSONDataLoader(DataLoader):
 
     def _array_fn(self, filepaths_in_window):
         conts = list()
-        # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.abspath(os.path.join(self._container_data_dir, str_path))
@@ -286,7 +286,6 @@ class JSONDataLoader(DataLoader):
 
     def _uint8_img_fn(self, filepaths_in_window):
         imgs = list()
-        # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
@@ -297,7 +296,6 @@ class JSONDataLoader(DataLoader):
 
     def _float_img_fn(self, filepaths_in_window):
         imgs = list()
-        # ToDo: replace this with map_fn function once implemented
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
@@ -351,35 +349,78 @@ class JSONDataLoader(DataLoader):
 
     def _get_dataset(self, starting_example, ending_example):
 
+        class ContainerIdxMap:
+
+            def __init__(self, sizes, fpath_template, seq_idxs=None, start=None, end=None, max_seq_len=None):
+                if isinstance(sizes, (tuple, list)):
+                    self._sizes = dict(zip(range(start, end + 1), sizes[start:end+1]))
+                elif isinstance(sizes, (int, dict)):
+                    self._sizes = sizes
+                else:
+                    raise Exception('Invalid type for sizes, expected one of int, dict, tuple or list,'
+                                    'but found {} or type {}'.format(sizes, type(sizes)))
+                self._constant_size = isinstance(self._sizes, int)
+                if max_seq_len:
+                    self._max_seq_len = max_seq_len
+                else:
+                    self._max_seq_len = self._sizes if self._constant_size else max(self._sizes.values())
+                self._fpath_template = fpath_template
+                if seq_idxs:
+                    self._seq_idxs = seq_idxs
+                else:
+                    self._seq_idxs = dict(zip(range(0, end - start + 1), range(start, end + 1)))
+
+            def __getitem__(self, slice_obj):
+                if isinstance(slice_obj, slice):
+                    seq_idxs = collections.OrderedDict(
+                        [(i, self._seq_idxs[idx]) for i, idx in
+                         enumerate(range(slice_obj.start, slice_obj.stop, ivy.default(slice_obj.step, 1)))])
+                elif isinstance(slice_obj, int):
+                    seq_idxs = collections.OrderedDict({0: self._seq_idxs[slice_obj]})
+                else:
+                    raise Exception('Invalid type for slice_obj, expected either slice or int,'
+                                    'but found {} of type {}'.format(slice_obj, type(slice_obj)))
+                if self._constant_size:
+                    sizes = self._sizes
+                else:
+                    sizes = collections.OrderedDict([(seq_idx, self._sizes[seq_idx]) for seq_idx in seq_idxs.values()])
+                return ContainerIdxMap(sizes, self._fpath_template, seq_idxs, max_seq_len=self._max_seq_len)
+
+            def __len__(self):
+                return len(self._seq_idxs)
+
+            def shuffle(self):
+                mapped_idxs = list(self._seq_idxs.values())
+                np.random.shuffle(mapped_idxs)
+                self._seq_idxs = collections.OrderedDict(zip(self._seq_idxs.keys(), mapped_idxs))
+
+            def to_filepaths(self):
+                seq_idxs = self._seq_idxs.values()
+                sizes = [self._sizes if self._constant_size else self._sizes[seq_idx] for seq_idx in seq_idxs]
+                return [[self._fpath_template % (seq_idx, win_idx) for win_idx in
+                         range(size)] + [''] * (self._max_seq_len - size) for seq_idx, size in zip(seq_idxs, sizes)]
+
+            @property
+            def sizes(self):
+                return self._sizes
+
         # container filepaths
-        if self._fixed_sequence_length:
-            # ToDo: make this more efficient for very large datasets
-            cont_fname_0 = os.listdir(self._container_data_dir)[0]
-            seq_idx_digits = len(cont_fname_0.split('_')[0])
-            win_idx_digits = len(cont_fname_0.split('_')[1].split('.json')[0])
-            cont_fname_template = '{}_{}.json'
-            container_filepaths =\
-                [[(i, j) for j in range(self._spec.dataset_spec.sequence_lengths)]
-                 for i in range(starting_example, ending_example+1)]
-            # ToDo: remove this code below once dataset dir parsing is implemented
-            container_filepaths =\
-                [[os.path.join(self._container_data_dir,
-                               cont_fname_template.format(str(i).zfill(seq_idx_digits), str(j).zfill(win_idx_digits)))
-                  for i, j in ijs] for ijs in container_filepaths]
-        else:
-            container_filepaths = self._load_container_filepaths_as_lists(self._container_data_dir, starting_example,
-                                                                          ending_example)
-        max_seq_len = max(max([len(item) for item in container_filepaths]), self._window_size)
+        container_idx_map = ContainerIdxMap(self._spec.dataset_spec.sequence_lengths,
+                                            os.path.join(self._container_data_dir, self._spec.cont_fname_template),
+                                            start=starting_example, end=ending_example)
+
         if self._spec.num_sequences != -1:
-            container_filepaths = container_filepaths[0:self._spec.num_sequences]
+            container_idx_map = container_idx_map[0:self._spec.num_sequences]
 
         # shuffle sequences
         if self._spec.preshuffle_data:
-            np.random.shuffle(container_filepaths)
+            container_idx_map.shuffle()
 
         # extract sequence lengths
         if self._fixed_sequence_length:
-            self._sequence_lengths = [len(container_filepaths[0])] * len(container_filepaths)
+            self._sequence_lengths =\
+                collections.OrderedDict(zip(range(len(container_idx_map)),
+                                            [self._spec.dataset_spec.sequence_lengths] * len(container_idx_map)))
             self._windows_per_seq = self._sequence_lengths[0] - self._window_size + 1
             # windowing values
             window_idxs_per_seq = ivy.reshape(ivy.arange(self._windows_per_seq, 0, 1), (self._windows_per_seq, 1))
@@ -390,16 +431,13 @@ class JSONDataLoader(DataLoader):
             self._gather_idxs = \
                 ivy.to_numpy(ivy.reshape(gather_idxs, (self._windows_per_seq * self._window_size, 1))).tolist()
         else:
-            self._sequence_lengths = [len(item) for item in container_filepaths]
-
-        # padding to make rectangular
-        if not self._fixed_sequence_length:
-            container_filepaths = [item + ['']*(max_seq_len - len(item)) for item in container_filepaths]
+            self._sequence_lengths = container_idx_map.sizes
 
         # maybe pre-load containers
         if self._spec.preload_containers:
             # load containers with vector data and image filepath entries
-            container_slices = self._get_containers_w_filepath_img_entries_as_tensor_slices(container_filepaths)
+            container_slices = self._get_containers_w_filepath_img_entries_as_tensor_slices(
+                container_idx_map.to_filepaths())
             if self._first_frame_validity_fn is not None:
                 container_slices =\
                     self._first_frame_validity_fn(container_slices, [ending_example - starting_example + 1])
@@ -417,9 +455,11 @@ class JSONDataLoader(DataLoader):
                 queue_timeout=self._spec.queue_timeout)
         else:
             # load containers with filepath entries
-            dataset = Dataset(ivy.Container({'fpaths': container_filepaths}),
+            dataset = Dataset(ivy.Container({'fpaths': container_idx_map}),
                               'base',
-                              len(container_filepaths),
+                              len(container_idx_map),
+                              trans_fn=lambda cont: cont.map(lambda x_, kc: x_.to_filepaths()),
+                              elementwise_query_fn=False,
                               numpy_loading=True,
                               cache_size=self._base_cache_size,
                               queue_timeout=self._spec.queue_timeout)
@@ -442,7 +482,8 @@ class JSONDataLoader(DataLoader):
                               self._num_workers.windowed)
         dataset = dataset.unbatch('unbatched',
                                   self._num_workers.unbatched,
-                                  batch_sizes=[max(item - self._window_size + 1, 1) for item in self._sequence_lengths])
+                                  batch_sizes=[max(seq_len - self._window_size + 1, 1)
+                                               for seq_len in self._sequence_lengths.values()])
         if self._spec.shuffle_buffer_size > 0:
             dataset = dataset.shuffle('shuffled',
                                       self._spec.shuffle_buffer_size,
