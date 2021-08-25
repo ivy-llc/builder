@@ -97,16 +97,25 @@ class Tuner:
                  trainer_class,
                  dataset_dirs_args: dict = None,
                  dataset_dirs_class: DatasetDirs.__base__ = DatasetDirs,
+                 dataset_dirs: DatasetDirs = None,
                  dataset_spec_args: dict = None,
                  dataset_spec_class: DatasetSpec.__base__ = DatasetSpec,
+                 dataset_spec: DatasetSpec = None,
                  data_loader_spec_args: dict = None,
                  data_loader_spec_class: DataLoaderSpec.__base__ = DataLoaderSpec,
+                 data_loader_spec: DataLoaderSpec = None,
+                 data_loader=None,
                  network_spec_args: dict = None,
                  network_spec_class: NetworkSpec.__base__ = NetworkSpec,
+                 network_spec: NetworkSpec = None,
+                 network=None,
                  trainer_spec_args: dict = None,
                  trainer_spec_class: TrainerSpec.__base__ = TrainerSpec,
+                 trainer_spec: TrainerSpec = None,
+                 trainer=None,
                  tuner_spec_args: dict = None,
                  tuner_spec_class: TunerSpec.__base__ = TunerSpec,
+                 tuner_spec: TunerSpec = None,
                  json_spec_path: str = None,
                  spec_dict: dict = None):
         """
@@ -117,16 +126,25 @@ class Tuner:
         self._trainer_class = trainer_class
         self._dataset_dirs_args = dataset_dirs_args
         self._dataset_dirs_class = dataset_dirs_class
+        self._dataset_dirs = dataset_dirs
         self._dataset_spec_args = dataset_spec_args
         self._dataset_spec_class = dataset_spec_class
+        self._dataset_spec = dataset_spec
         self._data_loader_spec_args = data_loader_spec_args
         self._data_loader_spec_class = data_loader_spec_class
+        self._data_loader_spec = data_loader_spec
+        self._data_loader = data_loader
         self._network_spec_args = network_spec_args
         self._network_spec_class = network_spec_class
+        self._network_spec = network_spec
+        self._network = network
         self._trainer_spec_args = trainer_spec_args
         self._trainer_spec_class = trainer_spec_class
+        self._trainer_spec = trainer_spec
+        self._trainer = trainer
         self._tuner_spec_args = tuner_spec_args
         self._tuner_spec_class = tuner_spec_class
+        self._tuner_spec = tuner_spec
         self._json_spec_path = json_spec_path
         self._spec_dict = spec_dict
 
@@ -142,11 +160,31 @@ class Tuner:
 
         # tuner spec
         self._spec = self._builder.build_tuner_spec(
-            self._data_loader_class, self._network_class, self._trainer_class, self._dataset_dirs_args,
-            self._dataset_dirs_class, self._dataset_spec_args, self._dataset_spec_class, self._data_loader_spec_args,
-            self._data_loader_spec_class, self._network_spec_args, self._network_spec_class, self._trainer_spec_args,
-            self._trainer_spec_class, self._tuner_spec_args, self._tuner_spec_class, self._json_spec_path,
-            self._spec_dict)
+            data_loader_class=self._data_loader_class,
+            network_class=self._network_class,
+            trainer_class=self._trainer_class,
+            dataset_dirs_args=self._dataset_dirs_args,
+            dataset_dirs_class=self._dataset_dirs_class,
+            dataset_dirs=self._dataset_dirs,
+            dataset_spec_args=self._dataset_spec_args,
+            dataset_spec_class=self._dataset_spec_class,
+            dataset_spec=self._dataset_spec,
+            data_loader_spec_args=self._data_loader_spec_args,
+            data_loader_spec_class=self._data_loader_spec_class,
+            data_loader_spec=self._data_loader_spec,
+            data_loader=self._data_loader,
+            network_spec_args=self._network_spec_args,
+            network_spec_class=self._network_spec_class,
+            network_spec=self._network_spec,
+            network=self._network,
+            trainer_spec_args=self._trainer_spec_args,
+            trainer_spec_class=self._trainer_spec_class,
+            trainer_spec=self._trainer_spec,
+            trainer=self._trainer,
+            tuner_spec_args=self._tuner_spec_args,
+            tuner_spec_class=self._tuner_spec_class,
+            json_spec_path=self._json_spec_path,
+            spec_dict=self._spec_dict)
         self._spec = _convert_tuner_spec(self._spec)
 
     def tune(self):
@@ -163,14 +201,21 @@ class Tuner:
         trainer_class = self._trainer_class
         dataset_dirs_args = self._dataset_dirs_args
         dataset_dirs_class = self._dataset_dirs_class
+        dataset_dirs = self._dataset_dirs
         dataset_spec_args = self._dataset_spec_args
         dataset_spec_class = self._dataset_spec_class
+        dataset_spec = self._dataset_spec
         data_loader_spec_args = self._data_loader_spec_args
         data_loader_spec_class = self._data_loader_spec_class
+        data_loader_spec = self._data_loader_spec
+        data_loader = self._data_loader
         network_spec_args = self._network_spec_args
         network_spec_class = self._network_spec_class
+        network_spec = self._network_spec
+        network = self._network
         trainer_spec_args = self._trainer_spec_args
         trainer_spec_class = self._trainer_spec_class
+        trainer_spec = self._trainer_spec
         json_spec_path = self._json_spec_path
         spec_dict = self._spec_dict
         orig_log_dir = self._spec.trainer.spec.log_dir
@@ -197,21 +242,28 @@ class Tuner:
                     else:
                         new_args[class_key] = None
 
-                self._trainer = builder.build_trainer(data_loader_class,
-                                                      network_class,
-                                                      trainer_class,
-                                                      new_args['dd'],
-                                                      dataset_dirs_class,
-                                                      new_args['ds'],
-                                                      dataset_spec_class,
-                                                      new_args['dls'],
-                                                      data_loader_spec_class,
-                                                      new_args['ns'],
-                                                      network_spec_class,
-                                                      new_args['ts'],
-                                                      trainer_spec_class,
-                                                      json_spec_path,
-                                                      spec_dict)
+                self._trainer = builder.build_trainer(data_loader_class=data_loader_class,
+                                                      network_class=network_class,
+                                                      trainer_class=trainer_class,
+                                                      dataset_dirs_args=new_args['dd'],
+                                                      dataset_dirs_class=dataset_dirs_class,
+                                                      dataset_dirs=dataset_dirs,
+                                                      dataset_spec_args=new_args['ds'],
+                                                      dataset_spec_class=dataset_spec_class,
+                                                      dataset_spec=dataset_spec,
+                                                      data_loader_spec_args=new_args['dls'],
+                                                      data_loader_spec_class=data_loader_spec_class,
+                                                      data_loader_spec=data_loader_spec,
+                                                      data_loader=data_loader,
+                                                      network_spec_args=new_args['ns'],
+                                                      network_spec_class=network_spec_class,
+                                                      network_spec=network_spec,
+                                                      network=network,
+                                                      trainer_spec_args=new_args['ts'],
+                                                      trainer_spec_class=trainer_spec_class,
+                                                      trainer_spec=trainer_spec,
+                                                      json_spec_path=json_spec_path,
+                                                      spec_dict=spec_dict)
                 self._trainer.setup()
 
             def step(self):
