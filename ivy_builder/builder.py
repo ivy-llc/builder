@@ -24,6 +24,23 @@ def _import_arg_specified_class_if_present(args_or_spec, class_str):
     return
 
 
+def parse_json_to_dict(json_filepath):
+    """
+    return the data from json file in the form of a python dict
+    """
+    return_dict = dict()
+    with open(json_filepath) as json_data_file:
+        loaded_dict = json.load(json_data_file)
+    for k, v in loaded_dict.items():
+        if k == 'parents':
+            rel_fpaths = v
+            for rel_fpath in rel_fpaths:
+                rel_fpath = os.path.abspath(os.path.join(rel_fpath, json_filepath.split('/')[-1]))
+                fpath = os.path.abspath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
+                return_dict = {**return_dict, **parse_json_to_dict(fpath)}
+    return {**return_dict, **loaded_dict}
+
+
 def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
     base_dir = json_spec_path
     if not os.path.isdir(base_dir):
@@ -56,21 +73,41 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
         base_dir = os.path.abspath(os.path.join(base_dir, '..'))
 
 
-def get_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defaults=False, store_duplicates=False):
+def get_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defaults=False, store_duplicates=False,
+                  current_dir_only=False):
     if defaults:
         defaults = '.defaults'
     else:
         defaults = ''
-    dataset_dirs_args = json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json' + defaults, store_duplicates)
-    dataset_args = json_spec_from_fpath(json_spec_path, 'dataset_args.json' + defaults, store_duplicates)
-    data_loader_args = json_spec_from_fpath(json_spec_path, 'data_loader_args.json' + defaults, store_duplicates)
-    network_args = json_spec_from_fpath(json_spec_path, 'network_args.json' + defaults, store_duplicates)
-    trainer_args = json_spec_from_fpath(json_spec_path, 'trainer_args.json' + defaults, store_duplicates)
-    cont = ivy.Container(dataset_dirs_args=dataset_dirs_args,
-                         dataset_args=dataset_args,
-                         data_loader_args=data_loader_args,
-                         network_args=network_args,
-                         trainer_args=trainer_args)
+    cont_dict = dict()
+    if current_dir_only:
+        fpath = os.path.join(json_spec_path, 'dataset_dirs_args.json' + defaults)
+        if os.path.isfile(fpath):
+            cont_dict['dataset_dirs_args'] = parse_json_to_dict(fpath)
+        fpath = os.path.join(json_spec_path, 'dataset_args.json' + defaults)
+        if os.path.isfile(fpath):
+            cont_dict['dataset_args'] = parse_json_to_dict(fpath)
+        fpath = os.path.join(json_spec_path, 'data_loader_args.json' + defaults)
+        if os.path.isfile(fpath):
+            cont_dict['data_loader_args'] = parse_json_to_dict(fpath)
+        fpath = os.path.join(json_spec_path, 'network_args.json' + defaults)
+        if os.path.isfile(fpath):
+            cont_dict['network_args'] = parse_json_to_dict(fpath)
+        fpath = os.path.join(json_spec_path, 'trainer_args.json' + defaults)
+        if os.path.isfile(fpath):
+            cont_dict['trainer_args'] = parse_json_to_dict(fpath)
+    else:
+        cont_dict['dataset_dirs_args'] =\
+            json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json' + defaults, store_duplicates)
+        cont_dict['dataset_args'] =\
+            json_spec_from_fpath(json_spec_path, 'dataset_args.json' + defaults, store_duplicates)
+        cont_dict['data_loader_args'] =\
+            json_spec_from_fpath(json_spec_path, 'data_loader_args.json' + defaults, store_duplicates)
+        cont_dict['network_args'] =\
+            json_spec_from_fpath(json_spec_path, 'network_args.json' + defaults, store_duplicates)
+        cont_dict['trainer_args'] =\
+            json_spec_from_fpath(json_spec_path, 'trainer_args.json' + defaults, store_duplicates)
+    cont = ivy.Container(**cont_dict)
     for keychain_to_ignore in keychains_to_ignore:
         if keychain_to_ignore in cont:
             cont[keychain_to_ignore] = 'not_shown'
@@ -93,6 +130,9 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
     parser.add_argument('-d', '--show_defaults', action='store_true',
                         help='Whether to show the default json arguments.'
                              'If unset then the current arguments are shown, not the defaut values.')
+    parser.add_argument('-c', '--current_dir_only', action='store_true',
+                        help='Whether to only show the json arguments for the current directory,'
+                             'without searching through parent directories also.')
     parsed_args = parser.parse_args()
     if ivy.exists(parsed_args.sub_directory):
         sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.sub_directory))
@@ -103,7 +143,8 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
     else:
         keychains_to_ignore = list()
     these_json_args = get_json_args(
-        sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults, store_duplicates=True)
+        sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults, store_duplicates=True,
+        current_dir_only=parsed_args.current_dir_only)
     if ivy.exists(parsed_args.diff_directory):
         other_sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.diff_directory))
         if other_sub_dir == sub_dir:
@@ -111,7 +152,7 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
                 other_sub_dir, sub_dir))
         other_json_args = get_json_args(
             other_sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults,
-            store_duplicates=True)
+            store_duplicates=True, current_dir_only=parsed_args.current_dir_only)
         diff_keys = 'diff'
         for sub_folder, other_sub_folder in zip(sub_dir.split('/'), other_sub_dir.split('/')):
             if sub_folder != other_sub_folder:
@@ -126,23 +167,6 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
     else:
         print(ivy.Container(these_json_args, keyword_color_dict={'duplicated': 'magenta'}))
     ivy.unset_framework()
-
-
-def parse_json_to_dict(json_filepath):
-    """
-    return the data from json file in the form of a python dict
-    """
-    return_dict = dict()
-    with open(json_filepath) as json_data_file:
-        loaded_dict = json.load(json_data_file)
-    for k, v in loaded_dict.items():
-        if k == 'parents':
-            rel_fpaths = v
-            for rel_fpath in rel_fpaths:
-                rel_fpath = os.path.abspath(os.path.join(rel_fpath, json_filepath.split('/')[-1]))
-                fpath = os.path.abspath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
-                return_dict = {**return_dict, **parse_json_to_dict(fpath)}
-    return {**return_dict, **loaded_dict}
 
 
 def save_dict_as_json(dict_to_save, json_filepath):
