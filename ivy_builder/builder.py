@@ -37,7 +37,7 @@ def json_spec_from_fpath(json_spec_path, json_fname):
         base_dir = os.path.abspath(os.path.join(base_dir, '..'))
 
 
-def print_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defaults=False):
+def get_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defaults=False):
     if defaults:
         defaults = '.defaults'
     else:
@@ -57,7 +57,7 @@ def print_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defau
             cont[keychain_to_ignore] = 'not_shown'
     if ivy.exists(keychain_to_show):
         cont = cont[keychain_to_show]
-    print(cont)
+    return cont
 
 
 def parse_json_to_dict(json_filepath):
