@@ -30,9 +30,10 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
         fpath = os.path.join(base_dir, json_fname)
         if os.path.isfile(fpath):
             if store_duplicates:
-                json_spec = ivy.Container.diff(ivy.Container(parse_json_to_dict(fpath)),
-                                               ivy.Container(json_spec),
-                                               diff_key='duplicated', detect_key_diffs=False).to_dict()
+                json_spec_cont = ivy.Container(json_spec)
+                parsed_json_cont = ivy.Container(parse_json_to_dict(fpath))
+                json_spec = parsed_json_cont.map(lambda x, kc: ivy.Container(
+                    duplicated={'parent': json_spec_cont[kc], 'this': x}) if kc in json_spec_cont else x)
             else:
                 json_spec = {**parse_json_to_dict(fpath), **json_spec}
         elif os.path.isfile(os.path.join(base_dir, 'reset_to_defaults.sh')):
