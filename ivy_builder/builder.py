@@ -106,11 +106,20 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
         sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults, store_duplicates=True)
     if ivy.exists(parsed_args.diff_directory):
         other_sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.diff_directory))
+        if other_sub_dir == sub_dir:
+            raise Exception('Invalid diff_directory {} selected, it is the same as the sub_directory {}.'.format(
+                other_sub_dir, sub_dir))
         other_json_args = get_json_args(
             other_sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults,
             store_duplicates=True)
-        diff_json_args = ivy.Container.diff(these_json_args, other_json_args)
-        print(ivy.Container(diff_json_args, keyword_color_dict={'duplicated': 'magenta'}))
+        diff_keys = 'diff'
+        for sub_folder, other_sub_folder in zip(sub_dir.split('/'), other_sub_dir.split('/')):
+            if sub_folder != other_sub_folder:
+                diff_keys = [sub_folder, other_sub_folder]
+                break
+        diff_json_args = ivy.Container.diff(these_json_args, other_json_args, diff_keys=diff_keys)
+        diff_keys_dict = dict(zip(diff_keys, ['red']*2))
+        print(ivy.Container(diff_json_args, keyword_color_dict={'duplicated': 'magenta', **diff_keys_dict}))
     else:
         print(ivy.Container(these_json_args, keyword_color_dict={'duplicated': 'magenta'}))
     ivy.unset_framework()
