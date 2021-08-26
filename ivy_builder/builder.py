@@ -33,8 +33,18 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
             if store_duplicates:
                 json_spec_cont = ivy.Container(json_spec)
                 parsed_json_cont = ivy.Container(parse_json_to_dict(fpath))
-                json_spec = parsed_json_cont.map(lambda x, kc: ivy.Container(
-                    duplicated={'parent': json_spec_cont[kc], 'this': x}) if kc in json_spec_cont else x)
+                duplicate_key_chains = list()
+
+                def map_fn(x, kc):
+                    if kc in json_spec_cont:
+                        duplicate_key_chains.append(kc)
+                        return ivy.Container(duplicated={'parent': json_spec_cont[kc], 'this': x})
+                    else:
+                        return x
+
+                parsed_json_cont = parsed_json_cont.map(map_fn)
+                json_spec = {**parsed_json_cont.to_dict(),
+                             **json_spec_cont.prune_key_chains(duplicate_key_chains).to_dict()}
             else:
                 json_spec = {**parse_json_to_dict(fpath), **json_spec}
         elif os.path.isfile(os.path.join(base_dir, 'reset_to_defaults.sh')):
