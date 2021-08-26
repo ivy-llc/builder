@@ -26,9 +26,11 @@ def _import_arg_specified_class_if_present(args_or_spec, class_str):
 
 def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
     base_dir = json_spec_path
+    if not os.path.isdir(base_dir):
+        raise Exception('base_dir {} does not exist.'.format(base_dir))
     json_spec = dict()
     while True:
-        fpath = os.path.join(base_dir, json_fname)
+        fpath = os.path.abspath(os.path.join(base_dir, json_fname))
         if os.path.isfile(fpath):
             if store_duplicates:
                 json_spec_cont = ivy.Container(json_spec)
@@ -93,7 +95,7 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
                              'If unset then the current arguments are shown, not the defaut values.')
     parsed_args = parser.parse_args()
     if ivy.exists(parsed_args.sub_directory):
-        sub_dir = os.path.join(base_dir, parsed_args.sub_directory)
+        sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.sub_directory))
     else:
         sub_dir = base_dir
     if ivy.exists(parsed_args.keychains_to_ignore):
@@ -103,7 +105,7 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
     these_json_args = get_json_args(
         sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults, store_duplicates=True)
     if ivy.exists(parsed_args.diff_directory):
-        other_sub_dir = os.path.join(base_dir, parsed_args.diff_directory)
+        other_sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.diff_directory))
         other_json_args = get_json_args(
             other_sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults,
             store_duplicates=True)
@@ -125,7 +127,7 @@ def parse_json_to_dict(json_filepath):
         if k == 'parents':
             rel_fpaths = v
             for rel_fpath in rel_fpaths:
-                rel_fpath = os.path.join(rel_fpath, json_filepath.split('/')[-1])
+                rel_fpath = os.path.abspath(os.path.join(rel_fpath, json_filepath.split('/')[-1]))
                 fpath = os.path.abspath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
                 return_dict = {**return_dict, **parse_json_to_dict(fpath)}
     return {**return_dict, **loaded_dict}
