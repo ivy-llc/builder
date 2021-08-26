@@ -40,7 +40,7 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
                 def map_fn(x, kc):
                     if kc in json_spec_cont:
                         duplicate_key_chains.append(kc)
-                        return ivy.Container(duplicated={'parent': json_spec_cont[kc], 'this': x})
+                        return ivy.Container(duplicated={'parent_dir': json_spec_cont[kc], 'this_dir': x})
                     else:
                         return x
 
