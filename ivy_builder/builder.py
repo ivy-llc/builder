@@ -23,13 +23,18 @@ def _import_arg_specified_class_if_present(args_or_spec, class_str):
     return
 
 
-def json_spec_from_fpath(json_spec_path, json_fname):
+def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
     base_dir = json_spec_path
     json_spec = dict()
     while True:
         fpath = os.path.join(base_dir, json_fname)
         if os.path.isfile(fpath):
-            json_spec = {**parse_json_to_dict(fpath), **json_spec}
+            if store_duplicates:
+                json_spec = ivy.Container.diff(ivy.Container(parse_json_to_dict(fpath)),
+                                               ivy.Container(json_spec),
+                                               diff_key='duplicated', detect_key_diffs=False).to_dict()
+            else:
+                json_spec = {**parse_json_to_dict(fpath), **json_spec}
         elif os.path.isfile(os.path.join(base_dir, 'reset_to_defaults.sh')):
             pass
         else:
@@ -37,16 +42,16 @@ def json_spec_from_fpath(json_spec_path, json_fname):
         base_dir = os.path.abspath(os.path.join(base_dir, '..'))
 
 
-def get_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defaults=False):
+def get_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defaults=False, store_duplicates=False):
     if defaults:
         defaults = '.defaults'
     else:
         defaults = ''
-    dataset_dirs_args = json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json' + defaults)
-    dataset_args = json_spec_from_fpath(json_spec_path, 'dataset_args.json' + defaults)
-    data_loader_args = json_spec_from_fpath(json_spec_path, 'data_loader_args.json' + defaults)
-    network_args = json_spec_from_fpath(json_spec_path, 'network_args.json' + defaults)
-    trainer_args = json_spec_from_fpath(json_spec_path, 'trainer_args.json' + defaults)
+    dataset_dirs_args = json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json' + defaults, store_duplicates)
+    dataset_args = json_spec_from_fpath(json_spec_path, 'dataset_args.json' + defaults, store_duplicates)
+    data_loader_args = json_spec_from_fpath(json_spec_path, 'data_loader_args.json' + defaults, store_duplicates)
+    network_args = json_spec_from_fpath(json_spec_path, 'network_args.json' + defaults, store_duplicates)
+    trainer_args = json_spec_from_fpath(json_spec_path, 'trainer_args.json' + defaults, store_duplicates)
     cont = ivy.Container(dataset_dirs_args=dataset_dirs_args,
                          dataset_args=dataset_args,
                          data_loader_args=data_loader_args,
