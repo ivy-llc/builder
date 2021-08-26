@@ -37,12 +37,16 @@ def json_spec_from_fpath(json_spec_path, json_fname):
         base_dir = os.path.abspath(os.path.join(base_dir, '..'))
 
 
-def print_json_args(json_spec_path, keychains_to_ignore):
-    dataset_dirs_args = json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json')
-    dataset_args = json_spec_from_fpath(json_spec_path, 'dataset_args.json')
-    data_loader_args = json_spec_from_fpath(json_spec_path, 'data_loader_args.json')
-    network_args = json_spec_from_fpath(json_spec_path, 'network_args.json')
-    trainer_args = json_spec_from_fpath(json_spec_path, 'trainer_args.json')
+def print_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defaults=False):
+    if defaults:
+        defaults = '.defaults'
+    else:
+        defaults = ''
+    dataset_dirs_args = json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json' + defaults)
+    dataset_args = json_spec_from_fpath(json_spec_path, 'dataset_args.json' + defaults)
+    data_loader_args = json_spec_from_fpath(json_spec_path, 'data_loader_args.json' + defaults)
+    network_args = json_spec_from_fpath(json_spec_path, 'network_args.json' + defaults)
+    trainer_args = json_spec_from_fpath(json_spec_path, 'trainer_args.json' + defaults)
     cont = ivy.Container(dataset_dirs_args=dataset_dirs_args,
                          dataset_args=dataset_args,
                          data_loader_args=data_loader_args,
@@ -51,6 +55,8 @@ def print_json_args(json_spec_path, keychains_to_ignore):
     for keychain_to_ignore in keychains_to_ignore:
         if keychain_to_ignore in cont:
             cont[keychain_to_ignore] = 'not_shown'
+    if ivy.exists(keychain_to_show):
+        cont = cont[keychain_to_show]
     print(cont)
 
 
