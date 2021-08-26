@@ -1,6 +1,9 @@
 # global
 import os
-import cv2
+try:
+    import cv2
+except ModuleNotFoundError:
+    cv2 = None
 import ivy
 import math
 import json
@@ -289,6 +292,9 @@ class JSONDataLoader(DataLoader):
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
+            if not ivy.exists(cv2):
+                raise Exception('in order to use _uint8_img_fn, opencv for python must be installed.'
+                                'To install opencv, run pip install opencv-python.')
             img_rgb = cv2.imread(full_path, -1)
             if len(img_rgb.shape) == 2:
                 img_rgb = np.tile(np.expand_dims(img_rgb, -1), (1, 1, 3))
@@ -301,6 +307,9 @@ class JSONDataLoader(DataLoader):
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
+            if not ivy.exists(cv2):
+                raise Exception('in order to use _float_img_fn, opencv for python must be installed.'
+                                'To install opencv, run pip install opencv-python.')
             img_rgba = cv2.imread(full_path, -1)
             img = ivy.array(np.frombuffer(img_rgba.tobytes(), np.float32).reshape((1,) + img_rgba.shape[:-1]))
             imgs.append(img)
@@ -311,6 +320,9 @@ class JSONDataLoader(DataLoader):
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.join(self._container_data_dir, str_path)
+            if not ivy.exists(cv2):
+                raise Exception('in order to use _custom_img_fn, opencv for python must be installed.'
+                                'To install opencv, run pip install opencv-python.')
             img_raw = cv2.imread(full_path, -1)
             img = fn(img_raw)
             imgs.append(img)

@@ -18,4 +18,7 @@ WORKDIR /ivy_builder
 
 COPY requirements.txt /ivy_builder
 RUN cat requirements.txt | grep -v "ivy-" | pip3 install --no-cache-dir -r /dev/stdin && \
-    rm -rf requirements.txt
+    rm -rf requirements.txt \
+COPY optional.txt /ivy_builder
+RUN cat optional.txt | grep -v "ivy-" | pip3 install --no-cache-dir -r /dev/stdin && \
+    rm -rf optional.txt

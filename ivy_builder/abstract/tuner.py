@@ -4,10 +4,13 @@ import ivy
 import math
 import logging
 import numpy as np
-from ray import tune
 import multiprocessing
-from ray.tune import CLIReporter
-from ray.tune.schedulers.async_hyperband import AsyncHyperBandScheduler
+try:
+    from ray import tune
+    from ray.tune import CLIReporter
+    from ray.tune.schedulers.async_hyperband import AsyncHyperBandScheduler
+except ModuleNotFoundError:
+    tune = None
 
 # local
 from ivy.core.container import Container
@@ -121,6 +124,9 @@ class Tuner:
         """
         base class for any tune trainers
         """
+        if not ivy.exists(tune):
+            raise Exception('ray[tune] is needed in order to use the Tuner class, but it is not installed.'
+                            'Please install via pip install ray[tune]')
         self._data_loader_class = data_loader_class
         self._network_class = network_class
         self._trainer_class = trainer_class

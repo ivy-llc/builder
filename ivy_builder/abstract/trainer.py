@@ -1,7 +1,10 @@
 # global
 import os
 import ivy
-import git
+try:
+    import git
+except ModuleNotFoundError:
+    git = None
 import abc
 import shutil
 import pathlib
@@ -148,6 +151,10 @@ class Trainer:
         info_dir = os.path.join(self._spec.log_dir, 'info')
         os.makedirs(info_dir, exist_ok=True)
         info_filepath = _get_valid_filepath(info_dir, 'info', '.txt')
+        if not ivy.exists(git):
+            logging.warning('no gitpython installation found, not saving git commit hash to disk.'
+                            'To install gitpython, run pip install gitpython.')
+            return
         try:
             repo = git.Repo(search_parent_directories=True)
             sha = repo.head.object.hexsha

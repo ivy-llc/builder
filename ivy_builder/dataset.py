@@ -5,7 +5,10 @@ import queue
 import numbers
 import ivy.numpy
 import numpy as np
-import torch.multiprocessing as multiprocessing
+try:
+    import torch.multiprocessing as multiprocessing
+except ModuleNotFoundError:
+    import multiprocessing
 
 
 # noinspection PyMissingConstructor
