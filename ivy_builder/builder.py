@@ -2,6 +2,7 @@
 import os
 import ivy
 import json
+import argparse
 import importlib
 
 # local
@@ -64,6 +65,43 @@ def get_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, default
     if ivy.exists(keychain_to_show):
         cont = cont[keychain_to_show]
     return cont
+
+
+def print_json_args(base_dir, default_keychains_to_ignore=None):
+    ivy.set_framework('numpy')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-sd', '--sub_directory', type=str,
+                        help='A sub-directory to print the json args for, default is base_dir passed in.')
+    parser.add_argument('-dd', '--diff_directory', type=str,
+                        help='The directory from which to compare the difference in specifications.')
+    parser.add_argument('-kcti', '--keychains_to_ignore', type=str, default=default_keychains_to_ignore,
+                        help='A sub-directory to print the json args for, default is the current directory.')
+    parser.add_argument('-kcts', '--keychain_to_show', type=str,
+                        help='The key-chain to show. Default is None, in which case all key-chains are shown.')
+    parser.add_argument('-d', '--show_defaults', action='store_true',
+                        help='Whether to show the default json arguments.'
+                             'If unset then the current arguments are shown, not the defaut values.')
+    parsed_args = parser.parse_args()
+    if ivy.exists(parsed_args.sub_directory):
+        sub_dir = os.path.join(base_dir, parsed_args.sub_directory)
+    else:
+        sub_dir = base_dir
+    if ivy.exists(parsed_args.keychains_to_ignore):
+        keychains_to_ignore = [kc[1:-1] for kc in ''.join(parsed_args.keychains_to_ignore[1:-1]).split(',')]
+    else:
+        keychains_to_ignore = list()
+    these_json_args = get_json_args(
+        sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults, store_duplicates=True)
+    if ivy.exists(parsed_args.diff_directory):
+        other_sub_dir = os.path.join(base_dir, parsed_args.diff_directory)
+        other_json_args = get_json_args(
+            other_sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults,
+            store_duplicates=True)
+        diff_json_args = ivy.Container.diff(these_json_args, other_json_args)
+        print(ivy.Container(diff_json_args, keyword_color_dict={'duplicated': 'magenta'}))
+    else:
+        print(ivy.Container(these_json_args, keyword_color_dict={'duplicated': 'magenta'}))
+    ivy.unset_framework()
 
 
 def parse_json_to_dict(json_filepath):
