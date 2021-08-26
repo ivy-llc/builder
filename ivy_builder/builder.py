@@ -118,8 +118,11 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
                 diff_keys = [sub_folder, other_sub_folder]
                 break
         diff_json_args = ivy.Container.diff(these_json_args, other_json_args, diff_keys=diff_keys)
-        diff_keys_dict = dict(zip(diff_keys, ['red']*2))
-        print(ivy.Container(diff_json_args, keyword_color_dict={'duplicated': 'magenta', **diff_keys_dict}))
+        keyword_color_dict = {'duplicated': 'magenta'}
+        if isinstance(diff_keys, list):
+            diff_keys_dict = dict(zip(diff_keys, ['red'] * 2))
+            keyword_color_dict = {**keyword_color_dict, **diff_keys_dict}
+        print(ivy.Container(diff_json_args, keyword_color_dict=keyword_color_dict))
     else:
         print(ivy.Container(these_json_args, keyword_color_dict={'duplicated': 'magenta'}))
     ivy.unset_framework()
