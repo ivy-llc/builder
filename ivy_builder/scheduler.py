@@ -20,8 +20,9 @@ def _get_attr(path):
 
 class SequentialScheduler:
 
-    def __init__(self, schedule_filepath, num_attempts=1):
+    def __init__(self, schedule_filepath, num_attempts=1, set_experiment_name=False):
         self._num_attempts = num_attempts
+        self._set_experiment_name = set_experiment_name
         self._schedule_filepath = schedule_filepath
         self._completed_tasks = list()
         self._finished = False
@@ -58,7 +59,8 @@ class SequentialScheduler:
         if not task_name:
             return None, None
         task_main_str, cmd_line_args_str = tuple(schedule_dict[task_name])
-        cmd_line_args_str += ' -en ' + task_name
+        if self._set_experiment_name:
+            cmd_line_args_str += ' -en ' + task_name
         print('\n# ' + '-'*(len(task_name)+14) + '#\n'
               '# Running Task ' + task_name + ' #\n'
               '# ' + '-'*(len(task_name)+14) + '#\n')

@@ -1,10 +1,10 @@
 {
   "minimal": [
     "demos.simple_example.main",
-    {}
+    ""
   ],
   "complete": [
     "demos.full_example.main",
-    {}
+    ""
   ]
 }

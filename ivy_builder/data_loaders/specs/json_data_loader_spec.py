@@ -1,4 +1,6 @@
 # local
+import ivy
+
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 
 
@@ -19,6 +21,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
         custom_img_fns = [] if custom_img_fns is None else custom_img_fns
         custom_strs = [[]] if custom_strs is None else custom_strs
         custom_fns = [] if custom_fns is None else custom_fns
+        prefetch_to_gpu = prefetch_to_gpu if ivy.gpu_is_available() else False
 
         super(JSONDataLoaderSpec, self).__init__(dataset_spec,
                                                  batch_size=batch_size,
