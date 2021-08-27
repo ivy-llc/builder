@@ -55,6 +55,7 @@ class SequentialScheduler:
         if not task_name:
             return
         task_main_str, cmd_line_args_str = tuple(schedule_dict[task_name])
+        cmd_line_args_str += ' -en ' + task_name
         main = _get_attr(task_main_str)
         print('\n# ' + '-'*(len(task_name)+14) + '#\n'
               '# Running Task ' + task_name + ' #\n'
@@ -75,6 +76,7 @@ class SequentialScheduler:
                 else:
                     cmd_line_args_str += ' -jss ' + json.dumps(SHARED_JSS).replace(' ', '')
             cmd_line_args_str = cmd_line_args_str.replace('spec_dict(', '').replace(')', '')
+
             return lambda: main(cmd_line_args_str)
         else:
             return lambda: main()
