@@ -73,60 +73,50 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
         base_dir = os.path.abspath(os.path.join(base_dir, '..'))
 
 
-def get_json_args(json_spec_path, keychains_to_ignore, keychain_to_show, defaults=False, store_duplicates=False,
-                  current_dir_only=False):
+def get_json_args(json_spec_path, keys_to_ignore, keychains_to_ignore, keychain_to_show, defaults=False,
+                  store_duplicates=False, current_dir_only=False, spec_names=None):
+    spec_names = ivy.default(
+        spec_names, ('dataset_dirs_args', 'dataset_args', 'data_loader_args', 'network_args', 'trainer_args'))
     if defaults:
         defaults = '.defaults'
     else:
         defaults = ''
     cont_dict = dict()
     if current_dir_only:
-        fpath = os.path.join(json_spec_path, 'dataset_dirs_args.json' + defaults)
-        if os.path.isfile(fpath):
-            cont_dict['dataset_dirs_args'] = parse_json_to_dict(fpath)
-        fpath = os.path.join(json_spec_path, 'dataset_args.json' + defaults)
-        if os.path.isfile(fpath):
-            cont_dict['dataset_args'] = parse_json_to_dict(fpath)
-        fpath = os.path.join(json_spec_path, 'data_loader_args.json' + defaults)
-        if os.path.isfile(fpath):
-            cont_dict['data_loader_args'] = parse_json_to_dict(fpath)
-        fpath = os.path.join(json_spec_path, 'network_args.json' + defaults)
-        if os.path.isfile(fpath):
-            cont_dict['network_args'] = parse_json_to_dict(fpath)
-        fpath = os.path.join(json_spec_path, 'trainer_args.json' + defaults)
-        if os.path.isfile(fpath):
-            cont_dict['trainer_args'] = parse_json_to_dict(fpath)
+        for spec_name in spec_names:
+            fpath = os.path.join(json_spec_path, spec_name + '.json' + defaults)
+            if os.path.isfile(fpath):
+                cont_dict[spec_name] = parse_json_to_dict(fpath)
     else:
-        cont_dict['dataset_dirs_args'] =\
-            json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json' + defaults, store_duplicates)
-        cont_dict['dataset_args'] =\
-            json_spec_from_fpath(json_spec_path, 'dataset_args.json' + defaults, store_duplicates)
-        cont_dict['data_loader_args'] =\
-            json_spec_from_fpath(json_spec_path, 'data_loader_args.json' + defaults, store_duplicates)
-        cont_dict['network_args'] =\
-            json_spec_from_fpath(json_spec_path, 'network_args.json' + defaults, store_duplicates)
-        cont_dict['trainer_args'] =\
-            json_spec_from_fpath(json_spec_path, 'trainer_args.json' + defaults, store_duplicates)
+        for spec_name in spec_names:
+            cont_dict[spec_name] = \
+                json_spec_from_fpath(json_spec_path, spec_name + '.json' + defaults, store_duplicates)
     cont = ivy.Container(**cont_dict)
     for keychain_to_ignore in keychains_to_ignore:
         if keychain_to_ignore in cont:
             cont[keychain_to_ignore] = 'not_shown'
+    cont = cont.set_at_keys(dict(zip(keys_to_ignore, ['not_shown']*len(keys_to_ignore))))
     if ivy.exists(keychain_to_show):
         cont = cont[keychain_to_show]
     return cont
 
 
-def print_json_args(base_dir, default_keychains_to_ignore=None):
+def print_json_args(base_dir, keys_to_ignore=None, keychains_to_ignore=None):
     ivy.set_framework('numpy')
     parser = argparse.ArgumentParser()
     parser.add_argument('-sd', '--sub_directory', type=str,
                         help='A sub-directory to print the json args for, default is base_dir passed in.')
     parser.add_argument('-dd', '--diff_directory', type=str,
                         help='The directory from which to compare the difference in specifications.')
-    parser.add_argument('-kcti', '--keychains_to_ignore', type=str, default=default_keychains_to_ignore,
-                        help='A sub-directory to print the json args for, default is the current directory.')
+    parser.add_argument('-kti', '--keys_to_ignore', type=str, default=keys_to_ignore,
+                        help='Keys to ignore when printing the specification.')
+    parser.add_argument('-kcti', '--keychains_to_ignore', type=str, default=keychains_to_ignore,
+                        help='Key-chains to ignore when printing the specification.')
     parser.add_argument('-kcts', '--keychain_to_show', type=str,
                         help='The key-chain to show. Default is None, in which case all key-chains are shown.')
+    parser.add_argument('-sn', '--spec_names', type=str,
+                        help='The specification names for the json files. Default is ivy_builder defaults of'
+                             '[ dataset_dirs | dataset | data_loader| network | trainer |]')
     parser.add_argument('-d', '--show_defaults', action='store_true',
                         help='Whether to show the default json arguments.'
                              'If unset then the current arguments are shown, not the defaut values.')
@@ -134,25 +124,33 @@ def print_json_args(base_dir, default_keychains_to_ignore=None):
                         help='Whether to only show the json arguments for the current directory,'
                              'without searching through parent directories also.')
     parsed_args = parser.parse_args()
+    if ivy.exists(parsed_args.spec_names):
+        spec_names = list(map(str, parsed_args.spec_names.strip("[]").split(',')))
+    else:
+        spec_names = None
     if ivy.exists(parsed_args.sub_directory):
         sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.sub_directory))
     else:
         sub_dir = base_dir
+    if ivy.exists(parsed_args.keys_to_ignore):
+        keys_to_ignore = [kc[1:-1] for kc in ''.join(parsed_args.keys_to_ignore[1:-1]).split(',')]
+    else:
+        keys_to_ignore = list()
     if ivy.exists(parsed_args.keychains_to_ignore):
         keychains_to_ignore = [kc[1:-1] for kc in ''.join(parsed_args.keychains_to_ignore[1:-1]).split(',')]
     else:
         keychains_to_ignore = list()
     these_json_args = get_json_args(
-        sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults, store_duplicates=True,
-        current_dir_only=parsed_args.current_dir_only)
+        sub_dir, keys_to_ignore, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults,
+        store_duplicates=True, current_dir_only=parsed_args.current_dir_only, spec_names=spec_names)
     if ivy.exists(parsed_args.diff_directory):
         other_sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.diff_directory))
         if other_sub_dir == sub_dir:
             raise Exception('Invalid diff_directory {} selected, it is the same as the sub_directory {}.'.format(
                 other_sub_dir, sub_dir))
         other_json_args = get_json_args(
-            other_sub_dir, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults,
-            store_duplicates=True, current_dir_only=parsed_args.current_dir_only)
+            other_sub_dir, keys_to_ignore, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults,
+            store_duplicates=True, current_dir_only=parsed_args.current_dir_only, spec_names=spec_names)
         diff_keys = 'diff'
         for sub_folder, other_sub_folder in zip(sub_dir.split('/'), other_sub_dir.split('/')):
             if sub_folder != other_sub_folder:
