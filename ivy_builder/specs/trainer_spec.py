@@ -1,4 +1,5 @@
 # local
+import ivy
 from ivy.core.container import Container
 from ivy_builder.abstract.network import Network
 
@@ -11,7 +12,7 @@ class TrainerSpec(Container):
                  log_dir: str = 'log',
                  overwrite_log_dir: bool = False,
                  seed: int = 0,
-                 ld_chkpt: bool = True,
+                 ld_chkpt: bool = False,
                  save_freq: int = 1000,
                  log_freq: int = 100,
                  vis_freq: int = 500,
@@ -24,6 +25,7 @@ class TrainerSpec(Container):
                  custom_train_step: bool = False,
                  save_trace: bool = False,
                  auto_detect_weights: bool = True,
+                 device: str = None,
                  **kwargs) -> None:
         """
         parameters which define the training procedure
@@ -47,3 +49,4 @@ class TrainerSpec(Container):
         self['custom_train_step'] = custom_train_step
         self['save_trace'] = save_trace
         self['auto_detect_weights'] = auto_detect_weights
+        self['device'] = ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu')
