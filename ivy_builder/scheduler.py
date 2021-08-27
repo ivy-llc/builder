@@ -24,7 +24,16 @@ class SequentialScheduler:
 
     def _load_task(self):
         with open(self._schedule_filepath) as file:
-            schedule_dict = json.load(file)
+            file_str = file.read()
+            file_str_split = file_str.split('spec_dict(')
+            spec_dicts = [spec_dict.split(')')[0] for spec_dict in file_str_split[1:]]
+            spec_dicts_formatted = [spec_dict.replace('{', '__curley_open__').replace('}', '__curley_close))').replace(
+                '[', '__square_open__').replace(']', '__square_close__').replace(':', '__colon__').replace(
+                ',', '__comma__').replace('"', '\'').replace(' ', '') for spec_dict in spec_dicts]
+            file_str_formatted = file_str
+            for spec_dict, spec_dict_formatted in zip(spec_dicts, spec_dicts_formatted):
+                file_str_formatted = file_str_formatted.replace(spec_dict, spec_dict_formatted)
+            schedule_dict = json.loads(file_str_formatted)
         task_name = None
         for item in schedule_dict.keys():
             if item not in self._completed_tasks:
@@ -39,6 +48,9 @@ class SequentialScheduler:
               '# ' + '-'*(len(task_name)+14) + '#\n')
         self._completed_tasks.append(task_name)
         if cmd_line_args_str:
+            for spec_dict, spec_dict_formatted in zip(spec_dicts, spec_dicts_formatted):
+                cmd_line_args_str = cmd_line_args_str.replace(spec_dict_formatted, spec_dict.replace(' ', ''))
+            cmd_line_args_str = cmd_line_args_str.replace('spec_dict(', '').replace(')', '')
             return lambda: main(cmd_line_args_str)
         else:
             return lambda: main()
