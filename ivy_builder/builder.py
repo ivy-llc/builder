@@ -125,7 +125,7 @@ def print_json_args(base_dir, keys_to_ignore=None, keychains_to_ignore=None):
                              'without searching through parent directories also.')
     parsed_args = parser.parse_args()
     if ivy.exists(parsed_args.spec_names):
-        spec_names = list(map(str, parsed_args.spec_names.strip("[]").split(',')))
+        spec_names = [kc[1:-1] for kc in ''.join(parsed_args.spec_names[1:-1]).split(', ')]
     else:
         spec_names = None
     if ivy.exists(parsed_args.sub_directory):
@@ -133,7 +133,7 @@ def print_json_args(base_dir, keys_to_ignore=None, keychains_to_ignore=None):
     else:
         sub_dir = base_dir
     if ivy.exists(parsed_args.keys_to_ignore):
-        keys_to_ignore = [kc[1:-1] for kc in ''.join(parsed_args.keys_to_ignore[1:-1]).split(',')]
+        keys_to_ignore = [kc[1:-1] for kc in ''.join(parsed_args.keys_to_ignore[1:-1]).split(', ')]
     else:
         keys_to_ignore = list()
     if ivy.exists(parsed_args.keychains_to_ignore):
