@@ -1,9 +1,12 @@
 # global
+import os
+import sys
 import ivy
 import json
 import time
 import traceback
 import importlib
+import subprocess
 
 SHARED_JSS = dict()
 
@@ -53,10 +56,9 @@ class SequentialScheduler:
                 task_name = item
                 break
         if not task_name:
-            return
+            return None, None
         task_main_str, cmd_line_args_str = tuple(schedule_dict[task_name])
         cmd_line_args_str += ' -en ' + task_name
-        main = _get_attr(task_main_str)
         print('\n# ' + '-'*(len(task_name)+14) + '#\n'
               '# Running Task ' + task_name + ' #\n'
               '# ' + '-'*(len(task_name)+14) + '#\n')
@@ -74,34 +76,38 @@ class SequentialScheduler:
                     combined_spec_dict_str = json.dumps(combined_spec_dict)
                     cmd_line_args_str.replace(existing_spec_dict_str, combined_spec_dict_str)
                 else:
-                    cmd_line_args_str += ' -jss ' + json.dumps(SHARED_JSS).replace(' ', '')
-            cmd_line_args_str = cmd_line_args_str.replace('spec_dict(', '').replace(')', '')
-
-            return lambda: main(cmd_line_args_str)
-        else:
-            return lambda: main()
+                    cmd_line_args_str += ' -jss spec_dict(' + json.dumps(SHARED_JSS).replace(' ', '') + ')'
+        cmd_line_args_str = cmd_line_args_str.replace('spec_dict(', "\'").replace(')', "\'")
+        return task_main_str, cmd_line_args_str
 
     # Public Methods #
     # ---------------#
 
     def run(self):
         while not self._finished:
-            task_executable = self._load_task()
+            task_main_str, cmd_line_args_str = self._load_task()
             attempt_num = 1
             while True:
-                if task_executable:
+                if task_main_str:
                     # noinspection PyBroadException
                     try:
-                        task_executable()
+                        process = subprocess.Popen(
+                            'python3 -m ' + '.'.join(task_main_str.split('.')[:-1]) + ' ' + cmd_line_args_str,
+                            stdout=subprocess.PIPE, shell=True, cwd=os.getcwd())
+                        for c in iter(lambda: process.stdout.read(1), b''):
+                            try:
+                                sys.stdout.write(c)
+                            except TypeError:
+                                break
                         break
                     except Exception:
                         print('\nattempt {} of {}'.format(attempt_num, self._num_attempts) + '\n')
                         print('caught exception: \n {}'.format((traceback.format_exc())))
                         if attempt_num == self._num_attempts:
-                            print('Skipping {}'.format(task_executable))
+                            print('Skipping {}'.format(task_main_str))
                             break
                         else:
-                            print('Re-trying {}'.format(task_executable))
+                            print('Re-trying {}'.format(task_main_str))
                             attempt_num += 1
                             continue
                 else:
