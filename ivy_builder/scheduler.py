@@ -1,7 +1,11 @@
 # global
+import ivy
 import json
+import time
 import traceback
 import importlib
+
+SHARED_JSS = dict()
 
 
 def _get_attr(path):
@@ -23,6 +27,7 @@ class SequentialScheduler:
     # ----------------#
 
     def _load_task(self):
+        global SHARED_JSS
         with open(self._schedule_filepath) as file:
             file_str = file.read()
             file_str_split = file_str.split('spec_dict(')
@@ -35,6 +40,14 @@ class SequentialScheduler:
                 file_str_formatted = file_str_formatted.replace(spec_dict, spec_dict_formatted)
             schedule_dict = json.loads(file_str_formatted)
         task_name = None
+        if 'jss' in schedule_dict.keys():
+            if list(schedule_dict.keys())[0] != 'jss':
+                raise Exception('jss must be the first key at top of the schedule.json file')
+            del schedule_dict['jss']
+            spec_dicts_formatted.pop(0)
+            jss_spec_dict_str = spec_dicts.pop(0).replace('\\"', '"').replace(' ', '')
+            SHARED_JSS = json.loads(jss_spec_dict_str)
+
         for item in schedule_dict.keys():
             if item not in self._completed_tasks:
                 task_name = item
@@ -51,6 +64,16 @@ class SequentialScheduler:
             for spec_dict, spec_dict_formatted in zip(spec_dicts, spec_dicts_formatted):
                 cmd_line_args_str =\
                     cmd_line_args_str.replace(spec_dict_formatted, spec_dict.replace('\\"', '"').replace(' ', ''))
+            if SHARED_JSS:
+                if 'spec_dict' in cmd_line_args_str:
+                    existing_spec_dict_str = cmd_line_args_str.split('spec_dict(')[-1].split(')')[0]
+                    existing_spec_dict = json.loads(existing_spec_dict_str)
+                    combined_spec_dict = ivy.Container.combine(
+                        ivy.Container(existing_spec_dict), ivy.Container(SHARED_JSS)).to_dict()
+                    combined_spec_dict_str = json.dumps(combined_spec_dict)
+                    cmd_line_args_str.replace(existing_spec_dict_str, combined_spec_dict_str)
+                else:
+                    cmd_line_args_str += ' -jss ' + json.dumps(SHARED_JSS).replace(' ', '')
             cmd_line_args_str = cmd_line_args_str.replace('spec_dict(', '').replace(')', '')
             return lambda: main(cmd_line_args_str)
         else:
