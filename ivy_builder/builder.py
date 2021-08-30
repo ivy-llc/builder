@@ -66,9 +66,7 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
                              **json_spec_cont.prune_key_chains(duplicate_key_chains).to_dict()}
             else:
                 json_spec = {**parse_json_to_dict(fpath), **json_spec}
-        elif os.path.isfile(os.path.join(base_dir, 'reset_to_defaults.sh')):
-            pass
-        else:
+        elif base_dir.split('/')[-1] == 'json_args':
             return json_spec
         base_dir = os.path.abspath(os.path.join(base_dir, '..'))
 
