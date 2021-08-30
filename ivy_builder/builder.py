@@ -73,8 +73,8 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
 
 def get_json_args(json_spec_path, keys_to_ignore, keychains_to_ignore, keychain_to_show, defaults=False,
                   store_duplicates=False, current_dir_only=False, spec_names=None):
-    spec_names = ivy.default(
-        spec_names, ('dataset_dirs_args', 'dataset_args', 'data_loader_args', 'network_args', 'trainer_args'))
+    spec_names = ivy.default(spec_names,
+                             [item.split('.json')[0] for item in os.listdir(json_spec_path) if '.json' in item])
     if defaults:
         defaults = '.defaults'
     else:
