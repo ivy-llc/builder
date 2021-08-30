@@ -101,7 +101,9 @@ def get_json_args(json_spec_path, keys_to_ignore, keychains_to_ignore, keychain_
     return cont
 
 
-def print_json_args(base_dir, keys_to_ignore=None, keychains_to_ignore=None):
+def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None):
+    if not ivy.exists(base_dir):
+        base_dir = os.getcwd()
     ivy.set_framework('numpy')
     parser = argparse.ArgumentParser()
     parser.add_argument('-sd', '--sub_directory', type=str,

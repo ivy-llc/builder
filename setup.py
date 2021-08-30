@@ -24,7 +24,7 @@ setup(name='ivy-builder',
       author_email='ivydl.team@gmail.com',
       packages=setuptools.find_packages(),
       install_requires=['h5py', 'numpy', 'termcolor'],
-      scripts=['scripts/reset_to_defaults.sh'],
+      scripts=['scripts/print_json_args.py', 'scripts/reset_to_defaults.sh'],
       classifiers=['License :: OSI Approved :: Apache Software License'],
       license='Apache 2.0'
       )
