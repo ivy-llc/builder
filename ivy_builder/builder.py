@@ -123,7 +123,17 @@ def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None
     parser.add_argument('-c', '--current_dir_only', action='store_true',
                         help='Whether to only show the json arguments for the current directory,'
                              'without searching through parent directories also.')
+    parser.add_argument('-sdo', '--show_diff_only', action='store_true',
+                        help='Whether to only show the difference between the current directory'
+                             'and the diff directory.')
+    parser.add_argument('-sso', '--show_same_only', action='store_true',
+                        help='Whether to only show the same entries between the current directory'
+                             'and the diff directory.')
     parsed_args = parser.parse_args()
+    if (parsed_args.show_diff_only or parsed_args.show_same_only) and not parsed_args.diff_directory:
+        raise Exception('show_diff_only and show_same_only flags are only applicable if diff_directory is set.')
+    if parsed_args.show_diff_only and parsed_args.show_same_only:
+        raise Exception('show_diff_only and show_same_only cannot both be set, please choose one to set.')
     if ivy.exists(parsed_args.spec_names):
         spec_names = [kc[1:-1] for kc in ''.join(parsed_args.spec_names[1:-1]).split(', ')]
     else:
@@ -156,7 +166,13 @@ def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None
             if sub_folder != other_sub_folder:
                 diff_keys = [sub_folder, other_sub_folder]
                 break
-        diff_json_args = ivy.Container.diff(these_json_args, other_json_args, diff_keys=diff_keys)
+        if parsed_args.show_diff_only:
+            mode = 'diff_only'
+        elif parsed_args.show_same_only:
+            mode = 'same_only'
+        else:
+            mode = 'all'
+        diff_json_args = ivy.Container.diff(these_json_args, other_json_args, mode=mode, diff_keys=diff_keys)
         keyword_color_dict = {'duplicated': 'magenta'}
         if isinstance(diff_keys, list):
             diff_keys_dict = dict(zip(diff_keys, ['red'] * 2))
