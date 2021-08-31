@@ -419,9 +419,10 @@ class JSONDataLoader(DataLoader):
                 return self._sizes
 
         # container filepaths
-        container_idx_map = ContainerIdxMap(self._spec.dataset_spec.sequence_lengths,
-                                            os.path.join(self._container_data_dir, self._spec.cont_fname_template),
-                                            start=starting_example, end=ending_example)
+        container_idx_map = ContainerIdxMap(
+            self._spec.dataset_spec.sequence_lengths,
+            os.path.join(self._container_data_dir, self._spec.dataset_spec.cont_fname_template),
+            start=starting_example, end=ending_example)
 
         if self._spec.num_sequences != -1:
             container_idx_map = container_idx_map[0:self._spec.num_sequences]

@@ -35,8 +35,8 @@ def parse_json_to_dict(json_filepath):
         if k == 'parents':
             rel_fpaths = v
             for rel_fpath in rel_fpaths:
-                rel_fpath = os.path.abspath(os.path.join(rel_fpath, json_filepath.split('/')[-1]))
-                fpath = os.path.abspath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
+                rel_fpath = os.path.normpath(os.path.join(rel_fpath, json_filepath.split('/')[-1]))
+                fpath = os.path.normpath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
                 return_dict = {**return_dict, **parse_json_to_dict(fpath)}
     return {**return_dict, **loaded_dict}
 
@@ -47,7 +47,7 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
         raise Exception('base_dir {} does not exist.'.format(base_dir))
     json_spec = dict()
     while True:
-        fpath = os.path.abspath(os.path.join(base_dir, json_fname))
+        fpath = os.path.normpath(os.path.join(base_dir, json_fname))
         if os.path.isfile(fpath):
             if store_duplicates:
                 json_spec_cont = ivy.Container(json_spec)
@@ -68,7 +68,7 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
                 json_spec = {**parse_json_to_dict(fpath), **json_spec}
         elif base_dir.split('/')[-1] == 'json_args':
             return json_spec
-        base_dir = os.path.abspath(os.path.join(base_dir, '..'))
+        base_dir = os.path.normpath(os.path.join(base_dir, '..'))
 
 
 def get_json_args(json_spec_path, keys_to_ignore, keychains_to_ignore, keychain_to_show, defaults=False,
@@ -139,7 +139,7 @@ def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None
     else:
         spec_names = None
     if ivy.exists(parsed_args.sub_directory):
-        sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.sub_directory))
+        sub_dir = os.path.normpath(os.path.join(base_dir, parsed_args.sub_directory))
     else:
         sub_dir = base_dir
     if ivy.exists(parsed_args.keys_to_ignore):
@@ -154,7 +154,7 @@ def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None
         sub_dir, keys_to_ignore, keychains_to_ignore, parsed_args.keychain_to_show, parsed_args.show_defaults,
         store_duplicates=True, current_dir_only=parsed_args.current_dir_only, spec_names=spec_names)
     if ivy.exists(parsed_args.diff_directory):
-        other_sub_dir = os.path.abspath(os.path.join(base_dir, parsed_args.diff_directory))
+        other_sub_dir = os.path.normpath(os.path.join(base_dir, parsed_args.diff_directory))
         if other_sub_dir == sub_dir:
             raise Exception('Invalid diff_directory {} selected, it is the same as the sub_directory {}.'.format(
                 other_sub_dir, sub_dir))
