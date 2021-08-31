@@ -344,7 +344,8 @@ class Dataset:
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
                        num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
+                       queue_timeout=self._queue_timeout)
 
     def batch(self, name, batch_size, num_processes=1, numpy_loading=None):
         def batch_array(x, _):
@@ -373,7 +374,8 @@ class Dataset:
                        with_caching=self._with_caching,
                        cache_size=int(math.ceil(self._cache_size / batch_size)),
                        num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
+                       queue_timeout=self._queue_timeout)
 
     def unbatch(self, name, num_processes=1, numpy_loading=None, cache_size=None, batch_sizes=None):
 
@@ -433,7 +435,8 @@ class Dataset:
                        cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size))
                        if cache_size is None else cache_size,
                        num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
+                       queue_timeout=self._queue_timeout)
 
     def shuffle(self, name, shuffle_buffer_size, num_processes=1, numpy_loading=None):
         if shuffle_buffer_size == 0:
@@ -453,7 +456,8 @@ class Dataset:
                            with_caching=self._with_caching,
                            cache_size=self._cache_size,
                            num_processes=num_processes,
-                           numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+                           numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
+                           queue_timeout=self._queue_timeout)
         post_shuffled = shuffled.unbatch('post_' + name,
                                          num_processes=num_processes,
                                          numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
@@ -484,7 +488,8 @@ class Dataset:
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
                        num_processes=1,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
+                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
+                       queue_timeout=self._queue_timeout)
 
     def to_gpu(self, name, num_processes=1, gpu_idx=0):
 
@@ -501,7 +506,8 @@ class Dataset:
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
                        num_processes=num_processes,
-                       numpy_loading=False)
+                       numpy_loading=False,
+                       queue_timeout=self._queue_timeout)
 
     def close(self):
         if not isinstance(self._base_dataset, ivy.Container):
