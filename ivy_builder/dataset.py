@@ -41,7 +41,7 @@ class Dataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
                  elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
-                 prefetching=False, queue_timeout=5.0, is_subprocess=False):
+                 prefetching=False, queue_timeout=5.0, subprocess_depth=0):
         self._name = name
         self._size = size
         self._base_slice_fn = base_slice_fn
@@ -63,7 +63,8 @@ class Dataset:
         self._numpy_loading = numpy_loading
         self._prefetching = prefetching
         self._queue_timeout = queue_timeout
-        self._is_subprocess = is_subprocess
+        self._subprocess_depth = subprocess_depth
+        self._is_subprocess = bool(subprocess_depth)
         self._first_pass = True
         self._queue_offset = 1
         if numpy_loading and isinstance(base_dataset, ivy.Container):
@@ -92,7 +93,8 @@ class Dataset:
             base_slice_fn=self._base_slice_fn, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
             elementwise_query_fn=self._elementwise_query_fn, with_caching=self._with_caching,
             cache_size=self._cache_size, num_processes=ivy.default(num_processes, self._num_processes),
-            numpy_loading=self._numpy_loading, prefetching=self._prefetching, is_subprocess=True)
+            numpy_loading=self._numpy_loading, prefetching=self._prefetching, queue_timeout=self._queue_timeout,
+            subprocess_depth=self._subprocess_depth + 1)
 
     def _initialize_all_workers(self):
         if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
