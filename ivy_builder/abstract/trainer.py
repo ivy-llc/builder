@@ -152,7 +152,7 @@ class Trainer:
         os.makedirs(info_dir, exist_ok=True)
         info_filepath = _get_valid_filepath(info_dir, 'info', '.txt')
         if not ivy.exists(git):
-            logging.warning('no gitpython installation found, not saving git commit hash to disk.'
+            logging.warning('no gitpython installation found, not saving git commit hash to disk. '
                             'To install gitpython, run pip install gitpython.')
             return
         try:
