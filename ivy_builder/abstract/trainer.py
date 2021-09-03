@@ -167,6 +167,7 @@ class Trainer:
                                   sha + '\n'])
 
     def _initialize_model(self, checkpoint_path=None):
+        self._spec.network.build()
         self._save_spec_to_disk()
         self._save_info_to_disk()
         starting_iteration = 0

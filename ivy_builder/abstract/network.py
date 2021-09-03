@@ -1,5 +1,6 @@
 # global
 import ivy
+import abc
 
 # local
 from ivy_builder.specs.network_spec import NetworkSpec
@@ -15,6 +16,13 @@ class Network(ivy.Module):
         """
         super(Network, self).__init__(v=v, dev_str=network_spec.device)
         self._spec = network_spec
+
+    @abc.abstractmethod
+    def build(self) -> None:
+        """
+        compute learning rate, given global step
+        """
+        raise NotImplementedError
 
     # Getters #
     # --------#

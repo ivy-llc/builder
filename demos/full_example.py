@@ -138,16 +138,18 @@ class ExampleDataLoader(DataLoader):
 # Custom Network #
 # ---------------#
 
+# noinspection PyAttributeOutsideInit
 class ExampleNetwork(Network, ivy.Module):
 
     def __init__(self, network_spec):
-        num_layers = network_spec.num_layers
-        self._layers = list()
-        for i in range(num_layers):
-            self._layers.append(ivy.Linear(3, 1))
-        super().__init__(network_spec)
+        Network.__init__(self, network_spec)
 
-    # noinspection PyMethodOverriding
+    def build(self):
+        self._layers = list()
+        for i in range(self._spec.num_layers):
+            self._layers.append(ivy.Linear(3, 1))
+        ivy.Module.__init__(self)
+
     def _forward(self, x):
         for layer in self._layers:
             x = layer(x)

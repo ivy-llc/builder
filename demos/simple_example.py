@@ -11,11 +11,15 @@ from ivy_builder.abstract.trainer import Trainer
 from ivy_builder.abstract.data_loader import DataLoader
 
 
+# noinspection PyAttributeOutsideInit
 class ExampleNetwork(Network, ivy.Module):
 
     def __init__(self, network_spec):
+        Network.__init__(self, network_spec)
+
+    def build(self):
         self._l1 = ivy.Linear(1, 1)
-        super().__init__(network_spec)
+        ivy.Module.__init__(self)
 
     def _forward(self, x):
         return self._l1(x)
