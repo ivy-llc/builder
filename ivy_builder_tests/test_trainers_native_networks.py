@@ -22,15 +22,14 @@ class TorchMLP(torch.nn.Module):
 
 
 # noinspection PyAttributeOutsideInit
-class Network(BaseNetwork, ivy.Module):
+class Network(BaseNetwork):
 
     def __init__(self, spec):
-        BaseNetwork.__init__(self, spec)
+        super().__init__(spec)
 
-    def build(self):
+    def _build(self):
         self._mlp = TorchMLP(1)
         self._v = ivy.Container(dict([(str(i), p) for i, p in enumerate(self._mlp.parameters())]))
-        ivy.Module.__init__(self, v=ivy.Container())
 
     def _forward(self, x):
         return self._mlp(x)

@@ -142,13 +142,12 @@ class ExampleDataLoader(DataLoader):
 class ExampleNetwork(Network, ivy.Module):
 
     def __init__(self, network_spec):
-        Network.__init__(self, network_spec)
+        super().__init__(network_spec)
 
-    def build(self):
+    def _build(self):
         self._layers = list()
         for i in range(self._spec.num_layers):
             self._layers.append(ivy.Linear(3, 1))
-        ivy.Module.__init__(self)
 
     def _forward(self, x):
         for layer in self._layers:

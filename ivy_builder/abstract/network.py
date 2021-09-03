@@ -8,21 +8,26 @@ from ivy_builder.specs.network_spec import NetworkSpec
 
 class Network(ivy.Module):
 
+    # noinspection PyMissingConstructor
     def __init__(self,
                  network_spec: NetworkSpec,
                  v=None) -> None:
         """
         base class for any networks
         """
-        super(Network, self).__init__(v=v, dev_str=network_spec.device)
+        self._v_in = v
         self._spec = network_spec
 
     @abc.abstractmethod
-    def build(self) -> None:
+    def _build(self) -> None:
         """
         compute learning rate, given global step
         """
         raise NotImplementedError
+
+    def build(self):
+        self._build()
+        ivy.Module.__init__(self, v=self._v_in, dev_str=self._spec.device)
 
     # Getters #
     # --------#
