@@ -25,7 +25,7 @@ class TorchMLP(torch.nn.Module):
 class Network(BaseNetwork):
 
     def __init__(self, spec):
-        super().__init__(spec)
+        super().__init__(spec, v=ivy.Container())
 
     def _build(self):
         self._mlp = TorchMLP(1)
