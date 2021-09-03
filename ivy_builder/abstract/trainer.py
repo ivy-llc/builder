@@ -99,9 +99,15 @@ class Trainer:
         """
         raise NotImplementedError
 
-    def _init(self) -> None:
+    def _pre_init(self) -> None:
         """
-        Initialize the model
+        Initialize the trainer, called before checkpoints are loaded and the network is built. Optional function.
+        """
+        pass
+
+    def _post_init(self) -> None:
+        """
+        Initialize the trainer, called after checkpoints are loaded and the network is built. Optional function.
         """
         pass
 
@@ -167,6 +173,7 @@ class Trainer:
                                   sha + '\n'])
 
     def _initialize_model(self, checkpoint_path=None):
+        self._pre_init()
         self._spec.network.build()
         self._save_spec_to_disk()
         self._save_info_to_disk()
@@ -181,12 +188,12 @@ class Trainer:
             logging.info('loaded checkpoints from {}'.format(checkpoint_path))
             starting_iteration = int(checkpoint_path.split('-')[-1].split('.')[0])
             logging.info('#--------------#\n# MODEL LOADED #\n#--------------#')
-            self._init()
+            self._post_init()
             return starting_iteration
         else:
             logging.info('#-------------#\n# MODEL BUILT #\n#-------------#')
         self._global_step = self._spec.starting_iteration
-        self._init()
+        self._post_init()
         if isinstance(self._spec.starting_iteration, int):
             return self._spec.starting_iteration
         return starting_iteration
