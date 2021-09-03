@@ -21,12 +21,16 @@ class TorchMLP(torch.nn.Module):
         return self._dense0(x)
 
 
-class Network(BaseNetwork):
+# noinspection PyAttributeOutsideInit
+class Network(BaseNetwork, ivy.Module):
 
     def __init__(self, spec):
+        BaseNetwork.__init__(self, spec)
+
+    def build(self):
         self._mlp = TorchMLP(1)
         self._v = ivy.Container(dict([(str(i), p) for i, p in enumerate(self._mlp.parameters())]))
-        super(Network, self).__init__(spec, v=ivy.Container({}))
+        ivy.Module.__init__(self, v=ivy.Container())
 
     def _forward(self, x):
         return self._mlp(x)
@@ -54,6 +58,7 @@ def test_trainer_with_native_network(dev_str, call):
     # duplicate networks
     ivy.random.seed(0)
     torch_network = Network(ivy.Container({'device': 'cpu:0'}))
+    torch_network.build()
     ivy_network = copy.deepcopy(torch_network)
 
     # input
@@ -71,7 +76,6 @@ def test_trainer_with_native_network(dev_str, call):
 
         # ivy step
         print('\nivy\n')
-        ret = torch_network(x)
         ivy_var_before = ivy.to_numpy(ivy_network.v['0'][0, 0]).item()
         print('var before: {}'.format(ivy_var_before))
         total_loss, grads = ivy.execute_with_gradients(lambda v: torch.mean(ivy_network(x, v=v)), ivy_network.v)
