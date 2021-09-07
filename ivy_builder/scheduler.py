@@ -101,6 +101,7 @@ class SequentialScheduler:
                                 sys.stdout.write(c)
                             except TypeError:
                                 break
+                        process.wait()
                         break
                     except Exception:
                         print('\nattempt {} of {}'.format(attempt_num, self._num_attempts) + '\n')
