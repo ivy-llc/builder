@@ -25,6 +25,7 @@ from ivy_builder.specs.tuner_spec import TunerSpec
 SPEC_KEYS = ['dd', 'ds', 'dls', 'ns', 'ts']
 
 
+# noinspection PyUnboundLocalVariable
 def _convert_tuner_spec(config):
     return_dict = dict()
 
@@ -40,16 +41,23 @@ def _convert_tuner_spec(config):
         gaussian = 'gaussian' in arg and arg['gaussian']
         uniform = 'uniform' in arg and arg['uniform']
         grid = 'grid' in arg and arg['grid']
-        exponential = 'exponential' in arg and arg['exponential']
+        if 'exponent' in arg and arg['exponent']:
+            exponential = True
+            exponent = arg['exponent']
+            log_exponent = np.log(exponent)
+        else:
+            exponential = False
         as_int = 'as_int' in arg and arg['as_int']
         if gaussian:
             if exponential:
                 if as_int:
                     sample_func = lambda spec, m=mean_val, s=sd_val:\
-                        int(np.round(np.exp(np.random.normal(np.log(m), np.log(s)))))
+                        int(np.round(exponent ** (np.random.normal(np.log(m) / log_exponent,
+                                                                   np.log(s) / log_exponent))))
                 else:
                     sample_func = lambda spec, m=mean_val, s=sd_val:\
-                        np.exp(np.random.normal(np.log(m), np.log(s)))
+                        exponent ** (np.random.normal(np.log(m) / log_exponent,
+                                                      np.log(s) / log_exponent))
             else:
                 if as_int:
                     sample_func = lambda spec, m=mean_val, s=sd_val:\
@@ -62,10 +70,12 @@ def _convert_tuner_spec(config):
             if exponential:
                 if as_int:
                     sample_func = lambda spec, mi=min_val, ma=max_val:\
-                        int(np.round(np.exp(np.random.uniform(np.log(mi), np.log(ma)))))
+                        int(np.round(exponent ** (np.random.uniform(np.log(mi) / log_exponent,
+                                                                    np.log(ma) / log_exponent))))
                 else:
                     sample_func = lambda spec, mi=min_val, ma=max_val:\
-                        np.exp(np.random.uniform(np.log(mi), np.log(ma)))
+                        exponent ** (np.random.uniform(np.log(mi) / log_exponent,
+                                                       np.log(ma) / log_exponent))
             else:
                 if as_int:
                     sample_func = lambda spec, mi=min_val, ma=max_val: int(np.round(np.random.uniform(mi, ma)))
@@ -76,11 +86,14 @@ def _convert_tuner_spec(config):
             num_grid_samples = arg['num_grid_samples']
             if exponential:
                 if as_int:
-                    grid_vals = np.round(np.exp(np.linspace(
-                        np.log(min_val), np.log(max_val), num_grid_samples))).astype(np.int32).tolist()
+                    grid_vals = np.round(exponent ** (np.linspace(
+                        np.log(min_val) / log_exponent,
+                        np.log(max_val) / log_exponent,
+                        num_grid_samples))).astype(np.int32).tolist()
                 else:
-                    grid_vals = np.round(np.exp(np.linspace(np.log(min_val), np.log(max_val),
-                                                            num_grid_samples))).tolist()
+                    grid_vals = np.round(exponent ** (np.linspace(np.log(min_val) / log_exponent,
+                                                                  np.log(max_val) / log_exponent,
+                                                                  num_grid_samples))).tolist()
             else:
                 if as_int:
                     grid_vals = np.round(np.linspace(min_val, max_val, num_grid_samples)).astype(np.uint32).tolist()
