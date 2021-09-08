@@ -533,8 +533,8 @@ class JSONDataLoader(DataLoader):
 
     def get_dummy_batch(self):
         if self._dummy_batch is None:
-            self._dummy_batch = self.get_next_training_batch()
-        return self._dummy_batch.to_random()
+            self._dummy_batch = self.get_next_batch()
+        return self._dummy_batch.as_random_uniform()
 
     def close(self):
         self._dataset.close()

@@ -61,9 +61,6 @@ class Trainer:
         self._chkpt = None
         self._chkpt_manager = None
 
-        # profiling
-        self._save_trace = self._spec.save_trace
-
     # Abstract #
     # ---------#
 
