@@ -312,12 +312,13 @@ class Tuner:
         # Run this trainable class #
         # -------------------------#
 
+        max_t = int(np.ceil(self._spec.trainer.spec.total_iterations/self._spec.train_steps_per_tune_step))
         ahb = AsyncHyperBandScheduler(
             time_attr="training_iteration",
             metric="cost",
             mode="min",
-            grace_period=self._spec.grace_period,
-            max_t=int(np.ceil(self._spec.trainer.spec.total_iterations/self._spec.train_steps_per_tune_step)))
+            grace_period=max_t if self._spec.grace_period == -1 else self._spec.grace_period,
+            max_t=max_t)
 
         num_cpus = multiprocessing.cpu_count()
         num_gpus = ivy.num_gpus()
