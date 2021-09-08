@@ -91,9 +91,9 @@ def _convert_tuner_spec(config):
                         np.log(max_val) / log_exponent,
                         num_grid_samples))).astype(np.int32).tolist()
                 else:
-                    grid_vals = np.round(exponent ** (np.linspace(np.log(min_val) / log_exponent,
-                                                                  np.log(max_val) / log_exponent,
-                                                                  num_grid_samples))).tolist()
+                    grid_vals = exponent ** (np.linspace(np.log(min_val) / log_exponent,
+                                                         np.log(max_val) / log_exponent,
+                                                         num_grid_samples)).tolist()
             else:
                 if as_int:
                     grid_vals = np.round(np.linspace(min_val, max_val, num_grid_samples)).astype(np.uint32).tolist()
