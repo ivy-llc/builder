@@ -22,7 +22,7 @@ from ivy_builder.specs.network_spec import NetworkSpec
 from ivy_builder.specs.trainer_spec import TrainerSpec
 from ivy_builder.specs.tuner_spec import TunerSpec
 
-SPEC_KEYS = ['dd', 'ds', 'dls', 'ns', 'ts']
+SPEC_KEYS = ['dd', 'ds', 'ls', 'ns', 'ts']
 
 
 # noinspection PyUnboundLocalVariable
@@ -30,7 +30,7 @@ def _convert_tuner_spec(config):
     return_dict = dict()
 
     for i, (key, arg) in enumerate(config.items()):
-        spec_key = [spec_key for spec_key in SPEC_KEYS if spec_key in key]
+        spec_key = [spec_key for spec_key in SPEC_KEYS if key[0:3] == spec_key + '_']
         if not spec_key:
             return_dict[key] = arg
             continue
@@ -143,25 +143,25 @@ class Tuner:
         self._data_loader_class = data_loader_class
         self._network_class = network_class
         self._trainer_class = trainer_class
-        self._dataset_dirs_args = dataset_dirs_args
+        self._dataset_dirs_args = ivy.default(dataset_dirs_args, dict())
         self._dataset_dirs_class = dataset_dirs_class
         self._dataset_dirs = dataset_dirs
-        self._dataset_spec_args = dataset_spec_args
+        self._dataset_spec_args = ivy.default(dataset_spec_args, dict())
         self._dataset_spec_class = dataset_spec_class
         self._dataset_spec = dataset_spec
-        self._data_loader_spec_args = data_loader_spec_args
+        self._data_loader_spec_args = ivy.default(data_loader_spec_args, dict())
         self._data_loader_spec_class = data_loader_spec_class
         self._data_loader_spec = data_loader_spec
         self._data_loader = data_loader
-        self._network_spec_args = network_spec_args
+        self._network_spec_args = ivy.default(network_spec_args, dict())
         self._network_spec_class = network_spec_class
         self._network_spec = network_spec
         self._network = network
-        self._trainer_spec_args = trainer_spec_args
+        self._trainer_spec_args = ivy.default(trainer_spec_args, dict())
         self._trainer_spec_class = trainer_spec_class
         self._trainer_spec = trainer_spec
         self._trainer = trainer
-        self._tuner_spec_args = tuner_spec_args
+        self._tuner_spec_args = ivy.default(tuner_spec_args, dict())
         self._tuner_spec_class = tuner_spec_class
         self._tuner_spec = tuner_spec
         self._json_spec_path = json_spec_path
@@ -254,12 +254,8 @@ class Tuner:
                 new_args = dict()
                 for class_key, args in zip(SPEC_KEYS, [dataset_dirs_args, dataset_spec_args, data_loader_spec_args,
                                                        network_spec_args, trainer_spec_args]):
-                    if args:
-                        new_args[class_key] = dict([(key, self.config[class_key + '_' + key])
-                                                    if class_key + '_' + key in self.config
-                                                    else (key, value) for key, value in args.items()])
-                    else:
-                        new_args[class_key] = None
+                    config_args = dict([(k[3:], v) for k, v in self.config.items() if k[0:3] == class_key + '_'])
+                    new_args[class_key] = {**args, **config_args}
 
                 self._trainer = builder.build_trainer(data_loader_class=data_loader_class,
                                                       network_class=network_class,
@@ -270,7 +266,7 @@ class Tuner:
                                                       dataset_spec_args=new_args['ds'],
                                                       dataset_spec_class=dataset_spec_class,
                                                       dataset_spec=dataset_spec,
-                                                      data_loader_spec_args=new_args['dls'],
+                                                      data_loader_spec_args=new_args['ls'],
                                                       data_loader_spec_class=data_loader_spec_class,
                                                       data_loader_spec=data_loader_spec,
                                                       data_loader=data_loader,
