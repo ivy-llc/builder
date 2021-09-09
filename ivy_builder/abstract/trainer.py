@@ -27,6 +27,8 @@ from ivy_builder.checkpoints import Checkpoint, CheckpointManager
 logging.getLogger().setLevel(logging.INFO)
 logging.basicConfig(format='%(message)s')
 
+MIN_DENOMINATOR = 1e-12
+
 
 def _get_valid_filepath(base_dir, base_filename, file_type):
     i = 0
@@ -251,6 +253,12 @@ class Trainer:
         training_batch = self._spec.data_loader.get_next_batch()
         cost, grads = ivy.execute_with_gradients(
             lambda v: self._compute_cost(training_batch, v=v), self._spec.network.v)
+        if 'max_grad_val' in self._spec:
+            grads = grads.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
+        if 'max_grad_vector_norm' in self._spec:
+            ratio = self._spec.max_grad_vector_norm/(grads.vector_norm(global_norm=True) + MIN_DENOMINATOR)
+            if ratio < 1:
+                grads = grads * ratio
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
         self._spec.network.v = self._optimizer.step(self._spec.network.v, grads)
         if with_output:
