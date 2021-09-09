@@ -25,6 +25,7 @@ class TrainerSpec(Container):
                  custom_train_step: bool = False,
                  save_trace: bool = False,
                  auto_detect_weights: bool = True,
+                 log_gradients: (tuple, str) = 'all',
                  device: str = None,
                  **kwargs) -> None:
         """
@@ -49,4 +50,8 @@ class TrainerSpec(Container):
         self['custom_train_step'] = custom_train_step
         self['save_trace'] = save_trace
         self['auto_detect_weights'] = auto_detect_weights
+        if log_gradients == 'all' or 'all' in log_gradients:
+            log_gradients = ['mean', 'abs_mean', 'var', 'abs_var', 'min', 'abs_min', 'max', 'abs_max', 'vector_norm',
+                             'global_vector_norm']
+        self['log_gradients'] = log_gradients
         self['device'] = ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu')

@@ -12,6 +12,10 @@ import logging
 import datetime
 import numpy as np
 from datetime import datetime
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except ModuleNotFoundError:
+    SummaryWriter = None
 
 # local
 from ivy_builder.abstract.network import Network
@@ -60,6 +64,12 @@ class Trainer:
         # uninitialized variables
         self._chkpt = None
         self._chkpt_manager = None
+
+        # summary writer
+        if SummaryWriter is not None:
+            self._writer = SummaryWriter(os.path.join(self._spec.log_dir, 'tnsrbrd'))
+        else:
+            self._writer = None
 
     # Abstract #
     # ---------#
@@ -131,6 +141,45 @@ class Trainer:
     def _log_scalars(self):
         self._write_scalar_summaries(self._spec.data_loader, self._spec.network, self._training_batch,
                                      self._global_step)
+
+    def _log_gradients(self, grads, global_step, name_hierarchy='gradients'):
+        if not ivy.exists(self._writer):
+            raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
+        if 'global_vector_norm' in self._spec.log_gradients:
+            self._writer.add_scalar(name_hierarchy + '/global vector norm',
+                                    grads.vector_norm(global_norm=True), global_step)
+        for k, v in grads.items():
+            new_name_hierarchy = name_hierarchy + '/' + k
+            if isinstance(v, dict):
+                self._log_gradients(v, global_step, new_name_hierarchy)
+            else:
+                if 'mean' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/mean',
+                                            ivy.reduce_mean(v)[0], global_step)
+                if 'abs_mean' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/abs mean',
+                                            ivy.reduce_mean(ivy.abs(v))[0], global_step)
+                if 'var' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/var',
+                                            ivy.reduce_var(v)[0], global_step)
+                if 'abs_var' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/abs var',
+                                            ivy.reduce_var(ivy.abs(v))[0], global_step)
+                if 'min' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/min',
+                                            ivy.reduce_min(v)[0], global_step)
+                if 'abs_min' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/abs min',
+                                            ivy.reduce_min(ivy.abs(v))[0], global_step)
+                if 'max' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/max',
+                                            ivy.reduce_max(v)[0], global_step)
+                if 'abs_max' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/abs max',
+                                            ivy.reduce_max(ivy.abs(v))[0], global_step)
+                if 'vector_norm' in self._spec.log_gradients:
+                    self._writer.add_scalar(new_name_hierarchy + '/vector norm',
+                                            ivy.vector_norm(v)[0], global_step)
 
     def _save(self):
         self._chkpt_manager.save(self._global_step)
