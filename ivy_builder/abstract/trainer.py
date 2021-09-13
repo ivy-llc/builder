@@ -204,10 +204,15 @@ class Trainer:
     def _log_memory(self, global_step):
         if not ivy.exists(self._writer):
             raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
-        self._writer.add_scalar('memory/RAM/global/percent_used', psutil.virtual_memory().percent, global_step)
+        vm = psutil.virtual_memory()
+        self._writer.add_scalar('memory/RAM/global/percent_used', (1-(vm.available/vm.total))*100, global_step)
+        this_process = psutil.Process(os.getpid())
+        self._writer.add_scalar('memory/RAM/local/percent_used',
+                                (this_process.memory_info().rss/vm.total)*100, global_step)
         for i, handle in enumerate(self._gpu_handles):
             info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
-            self._writer.add_scalar('memory/GPU_{}/global/percent_used'.format(i), info.used/info.total, global_step)
+            self._writer.add_scalar('memory/GPU_{}/global/percent_used'.format(i),
+                                    (info.used/info.total)*100, global_step)
 
     def _save(self):
         self._chkpt_manager.save(self._global_step)
