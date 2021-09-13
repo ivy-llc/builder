@@ -7,9 +7,11 @@ except ModuleNotFoundError:
     git = None
 import abc
 import shutil
+import psutil
 import pathlib
 import logging
 import datetime
+import nvidia_smi
 import numpy as np
 from datetime import datetime
 try:
@@ -72,6 +74,15 @@ class Trainer:
             self._writer = SummaryWriter(os.path.join(self._spec.log_dir, 'tnsrbrd'))
         else:
             self._writer = None
+
+        # gpu memory logging
+        # noinspection PyBroadException
+        try:
+            nvidia_smi.nvmlInit()
+            self._gpu_handles = [nvidia_smi.nvmlDeviceGetHandleByIndex(i)
+                                 for i in range(nvidia_smi.nvmlDeviceGetCount())]
+        except Exception:
+            self._gpu_handles = list()
 
     # Abstract #
     # ---------#
@@ -182,6 +193,14 @@ class Trainer:
                 if 'vector_norm' in self._spec.log_gradients:
                     self._writer.add_scalar(new_name_hierarchy + '/vector norm',
                                             ivy.vector_norm(v)[0], global_step)
+
+    def _log_memory(self, global_step):
+        if not ivy.exists(self._writer):
+            raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
+        self._writer.add_scalar('memory/RAM/global/percent_used', psutil.virtual_memory().percent, global_step)
+        for i, handle in enumerate(self._gpu_handles):
+            info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+            self._writer.add_scalar('memory/GPU_{}/global/percent_used'.format(i), info.used/info.total, global_step)
 
     def _save(self):
         self._chkpt_manager.save(self._global_step)
