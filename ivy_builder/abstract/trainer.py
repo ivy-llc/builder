@@ -6,6 +6,7 @@ try:
 except ModuleNotFoundError:
     git = None
 import abc
+import time
 import shutil
 import psutil
 import pathlib
@@ -84,6 +85,9 @@ class Trainer:
         except Exception:
             self._gpu_handles = list()
 
+        # timing
+        self._start_time = time.perf_counter()
+
     # Abstract #
     # ---------#
 
@@ -152,8 +156,11 @@ class Trainer:
                                                 step_counter=self._global_step)
 
     def _log_scalars(self):
+        if self._spec.log_time:
+            self._writer.add_scalar('time between logs', time.perf_counter() - self._start_time, self._global_step)
         self._write_scalar_summaries(self._spec.data_loader, self._spec.network, self._training_batch,
                                      self._global_step)
+        self._start_time = time.perf_counter()
 
     def _log_gradients(self, grads, global_step, name_hierarchy='gradients'):
         if not ivy.exists(self._writer):
@@ -376,6 +383,7 @@ class Trainer:
         """
         run the trainer, returning the iteration step reached
         """
+        self._start_time = time.perf_counter()
         return self._train(False, starting_iteration, total_iterations)
 
     def visualize(self) -> None:
