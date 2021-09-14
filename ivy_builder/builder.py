@@ -290,7 +290,7 @@ def build_dataset_spec(dataset_dirs_args=None,
     if dataset_spec_args is None:
         dataset_spec_args = dict()
     dataset_spec_args = ivy.Container(dataset_spec_args)
-    dataset_spec_args = ivy.Container.combine(dataset_spec_args, {'di': dataset_dirs})
+    dataset_spec_args = ivy.Container.combine(dataset_spec_args, ivy.Container(dirs=dataset_dirs))
 
     # load json file
     if isinstance(json_spec_path, str):
@@ -346,7 +346,7 @@ def build_network_specification(dataset_dirs_args=None,
     if network_spec_args is None:
         network_spec_args = dict()
     network_spec_args = ivy.Container(network_spec_args)
-    network_spec_args = ivy.Container.combine(network_spec_args, {'dataset_sp': dataset_spec})
+    network_spec_args = ivy.Container.combine(network_spec_args, ivy.Container(dataset_spec=dataset_spec))
 
     # load json file
     if isinstance(json_spec_path, str):
@@ -448,7 +448,7 @@ def build_data_loader_spec(dataset_dirs_args=None,
     if data_loader_spec_args is None:
         data_loader_spec_args = dict()
     data_loader_spec_args = ivy.Container(data_loader_spec_args)
-    data_loader_spec_args = ivy.Container.combine(data_loader_spec_args, {'dataset_sp': dataset_spec})
+    data_loader_spec_args = ivy.Container.combine(data_loader_spec_args, ivy.Container(dataset_spec=dataset_spec))
 
     # load json file
     if isinstance(json_spec_path, str):
@@ -581,7 +581,7 @@ def build_trainer_spec(data_loader_class=None,
         trainer_spec_args = dict()
     trainer_spec_args = ivy.Container(trainer_spec_args)
     trainer_spec_args = ivy.Container.combine(trainer_spec_args,
-                                              ivy.Container(data_load=data_loader,
+                                              ivy.Container(data_loader=data_loader,
                                                             network=network))
 
     # load json file
