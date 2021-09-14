@@ -219,7 +219,11 @@ def command_line_str_to_spec_dict(spec_str):
         spec_dict = json.loads(spec_str.replace("'", '"'))
     else:
         spec_dict = {}
-    for key in ['dataset_dirs', 'dataset', 'data_loader', 'network', 'trainer', 'tuner']:
+    all_keys = ['dataset_dirs', 'dataset', 'data_loader', 'network', 'trainer', 'tuner']
+    for key in spec_dict.keys():
+        if key not in all_keys:
+            raise Exception('spec dict keys must all be one of {}, but found {}'.format(all_keys, key))
+    for key in all_keys:
         if key not in spec_dict:
             spec_dict[key] = {}
     return spec_dict
