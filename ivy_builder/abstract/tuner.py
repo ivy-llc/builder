@@ -133,7 +133,7 @@ class Tuner:
                  tuner_spec_class: TunerSpec.__base__ = TunerSpec,
                  tuner_spec: TunerSpec = None,
                  json_spec_path: str = None,
-                 spec_dict: dict = None):
+                 spec_cont: dict = None):
         """
         base class for any tune trainers
         """
@@ -165,7 +165,7 @@ class Tuner:
         self._tuner_spec_class = tuner_spec_class
         self._tuner_spec = tuner_spec
         self._json_spec_path = json_spec_path
-        self._spec_dict = spec_dict
+        self._spec_cont = spec_cont
 
         # initialized on _setup
         self._trainer = None
@@ -203,7 +203,7 @@ class Tuner:
             tuner_spec_args=self._tuner_spec_args,
             tuner_spec_class=self._tuner_spec_class,
             json_spec_path=self._json_spec_path,
-            spec_dict=self._spec_dict)
+            spec_cont=self._spec_cont)
         self._spec = _convert_tuner_spec(self._spec)
 
     def tune(self):
@@ -236,7 +236,7 @@ class Tuner:
         trainer_spec_class = self._trainer_spec_class
         trainer_spec = self._trainer_spec
         json_spec_path = self._json_spec_path
-        spec_dict = self._spec_dict
+        spec_cont = self._spec_cont
         orig_log_dir = self._spec.trainer.spec.log_dir
 
         # noinspection PyAttributeOutsideInit
@@ -278,7 +278,7 @@ class Tuner:
                                                       trainer_spec_class=trainer_spec_class,
                                                       trainer_spec=trainer_spec,
                                                       json_spec_path=json_spec_path,
-                                                      spec_dict=spec_dict)
+                                                      spec_cont=spec_cont)
                 self._trainer.setup()
 
             def step(self):
