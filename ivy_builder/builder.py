@@ -232,7 +232,7 @@ def command_line_str_to_spec_cont(spec_str):
 def build_dataset_dirs(dataset_dirs_args=None,
                        dataset_dirs_class=None,
                        json_spec_path=None,
-                       spec_dict=None):
+                       spec_cont=None):
     """
     build dataset directories specification
     """
@@ -240,19 +240,21 @@ def build_dataset_dirs(dataset_dirs_args=None,
     # define dataset directories specification arguments
     if dataset_dirs_args is None:
         dataset_dirs_args = dict()
+    dataset_dirs_args = ivy.Container(dataset_dirs_args)
 
     # load json file
     if isinstance(json_spec_path, str):
         json_spec = json_spec_from_fpath(json_spec_path, 'dataset_dirs_args.json')
     else:
-        json_spec = dict()
+        json_spec = ivy.Container()
 
     # load from spec dict
-    this_spec_dict =\
-        spec_dict['dataset_dirs'] if isinstance(spec_dict, dict) and 'dataset_dirs' in spec_dict else dict()
+    this_spec_cont =\
+        ivy.Container(spec_cont['dataset_dirs']) if isinstance(spec_cont, dict) and 'dataset_dirs' in spec_cont \
+            else ivy.Container()
 
     # combine args
-    dataset_dirs_args = {**json_spec, **this_spec_dict, **dataset_dirs_args}
+    dataset_dirs_args = ivy.Container.combine(json_spec, this_spec_cont, dataset_dirs_args)
 
     # override dataset_dirs_class if specified in dataset_dirs_args
     dataset_dirs_class = ivy.default(ivy.default(
@@ -270,7 +272,7 @@ def build_dataset_spec(dataset_dirs_args=None,
                        dataset_spec_args=None,
                        dataset_spec_class=None,
                        json_spec_path=None,
-                       spec_dict=None):
+                       spec_cont=None):
     """
     build dataset specification
     """
@@ -282,25 +284,27 @@ def build_dataset_spec(dataset_dirs_args=None,
             dataset_dirs_args=dataset_dirs_args,
             dataset_dirs_class=dataset_dirs_class,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # define dataset specification arguments
     if dataset_spec_args is None:
         dataset_spec_args = dict()
-    dataset_spec_args = {**dataset_spec_args, **{'dirs': dataset_dirs}}
+    dataset_spec_args = ivy.Container(dataset_spec_args)
+    dataset_spec_args = ivy.Container.combine(dataset_spec_args, {'di': dataset_dirs})
 
     # load json file
     if isinstance(json_spec_path, str):
         json_spec = json_spec_from_fpath(json_spec_path, 'dataset_args.json')
     else:
-        json_spec = dict()
+        json_spec = ivy.Container()
 
     # load from spec dict
-    this_spec_dict =\
-        spec_dict['dataset'] if isinstance(spec_dict, dict) and 'dataset' in spec_dict else dict()
+    this_spec_cont =\
+        ivy.Container(spec_cont['dataset']) if isinstance(spec_cont, dict) and 'dataset' in spec_cont \
+            else ivy.Container()
 
     # combine args
-    dataset_spec_args = {**json_spec, **this_spec_dict, **dataset_spec_args}
+    dataset_spec_args = ivy.Container.combine(json_spec, this_spec_cont, dataset_spec_args)
 
     # override dataset_spec_class if specified in dataset_spec_args
     dataset_spec_class = ivy.default(ivy.default(
@@ -321,7 +325,7 @@ def build_network_specification(dataset_dirs_args=None,
                                 network_spec_args=None,
                                 network_spec_class=None,
                                 json_spec_path=None,
-                                spec_dict=None):
+                                spec_cont=None):
     """
     build network specification
     """
@@ -336,25 +340,27 @@ def build_network_specification(dataset_dirs_args=None,
             dataset_spec_args=dataset_spec_args,
             dataset_spec_class=dataset_spec_class,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # define network specification arguments
     if network_spec_args is None:
         network_spec_args = dict()
-    network_spec_args = {**network_spec_args, **{'dataset_spec': dataset_spec}}
+    network_spec_args = ivy.Container(network_spec_args)
+    network_spec_args = ivy.Container.combine(network_spec_args, {'dataset_sp': dataset_spec})
 
     # load json file
     if isinstance(json_spec_path, str):
         json_spec = json_spec_from_fpath(json_spec_path, 'network_args.json')
     else:
-        json_spec = dict()
+        json_spec = ivy.Container()
 
     # load from spec dict
-    this_spec_dict =\
-        spec_dict['network'] if isinstance(spec_dict, dict) and 'network' in spec_dict else dict()
+    this_spec_cont =\
+        ivy.Container(spec_cont['network']) if isinstance(spec_cont, dict) and 'network' in spec_cont \
+            else ivy.Container()
 
     # combine args
-    network_spec_args = {**json_spec, **this_spec_dict, **network_spec_args}
+    network_spec_args = ivy.Container.combine(json_spec, this_spec_cont, network_spec_args)
 
     # override network_spec_class if specified in network_spec_args
     network_spec_class = ivy.default(ivy.default(
@@ -377,7 +383,7 @@ def build_network(network_class=None,
                   network_spec_class=None,
                   network_spec=None,
                   json_spec_path=None,
-                  spec_dict=None):
+                  spec_cont=None):
     """
     build network
     """
@@ -395,7 +401,7 @@ def build_network(network_class=None,
             network_spec_args=network_spec_args,
             network_spec_class=network_spec_class,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # override network_class if specified in network_spec
     network_class = ivy.default(ivy.default(
@@ -421,7 +427,7 @@ def build_data_loader_spec(dataset_dirs_args=None,
                            data_loader_spec_args=None,
                            data_loader_spec_class=None,
                            json_spec_path=None,
-                           spec_dict=None):
+                           spec_cont=None):
     """
     build data loader specification
     """
@@ -436,25 +442,27 @@ def build_data_loader_spec(dataset_dirs_args=None,
             dataset_spec_args=dataset_spec_args,
             dataset_spec_class=dataset_spec_class,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # define data loader specification arguments
     if data_loader_spec_args is None:
         data_loader_spec_args = dict()
-    data_loader_spec_args = {**data_loader_spec_args, **{'dataset_spec': dataset_spec}}
+    data_loader_spec_args = ivy.Container(data_loader_spec_args)
+    data_loader_spec_args = ivy.Container.combine(data_loader_spec_args, {'dataset_sp': dataset_spec})
 
     # load json file
     if isinstance(json_spec_path, str):
         json_spec = json_spec_from_fpath(json_spec_path, 'data_loader_args.json')
     else:
-        json_spec = dict()
+        json_spec = ivy.Container()
 
     # load from spec dict
-    this_spec_dict =\
-        spec_dict['data_loader'] if isinstance(spec_dict, dict) and 'data_loader' in spec_dict else dict()
+    this_spec_cont =\
+        ivy.Container(spec_cont['data_loader']) if isinstance(spec_cont, dict) and 'data_loader' in spec_cont \
+            else ivy.Container()
 
     # combine args
-    data_loader_spec_args = {**json_spec, **this_spec_dict, **data_loader_spec_args}
+    data_loader_spec_args = ivy.Container.combine(json_spec, this_spec_cont, data_loader_spec_args)
 
     # override data_loader_spec_class if specified in data_loader_spec_args
     data_loader_spec_class = ivy.default(ivy.default(
@@ -477,7 +485,7 @@ def build_data_loader(data_loader_class=None,
                       data_loader_spec_class=None,
                       data_loader_spec=None,
                       json_spec_path=None,
-                      spec_dict=None):
+                      spec_cont=None):
     """
     build data loader
     """
@@ -495,7 +503,7 @@ def build_data_loader(data_loader_class=None,
             data_loader_spec_args=data_loader_spec_args,
             data_loader_spec_class=data_loader_spec_class,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # override data_loader_class if specified in data_loader_spec
     data_loader_class = ivy.default(ivy.default(
@@ -531,7 +539,7 @@ def build_trainer_spec(data_loader_class=None,
                        trainer_spec_args=None,
                        trainer_spec_class=None,
                        json_spec_path=None,
-                       spec_dict=None):
+                       spec_cont=None):
     """
     build trainer specification
     """
@@ -551,7 +559,7 @@ def build_trainer_spec(data_loader_class=None,
             data_loader_spec_class=data_loader_spec_class,
             data_loader_spec=data_loader_spec,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # build network
     network = ivy.default(
@@ -566,26 +574,29 @@ def build_trainer_spec(data_loader_class=None,
             network_spec_class=network_spec_class,
             network_spec=network_spec,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # define trainer specification arguments
     if trainer_spec_args is None:
         trainer_spec_args = dict()
-    trainer_spec_args = {**trainer_spec_args, **{'data_loader': data_loader,
-                                                 'network': network}}
+    trainer_spec_args = ivy.Container(trainer_spec_args)
+    trainer_spec_args = ivy.Container.combine(trainer_spec_args,
+                                              ivy.Container(data_load=data_loader,
+                                                            network=network))
 
     # load json file
     if isinstance(json_spec_path, str):
         json_spec = json_spec_from_fpath(json_spec_path, 'trainer_args.json')
     else:
-        json_spec = dict()
+        json_spec = ivy.Container()
 
     # load from spec dict
-    this_spec_dict =\
-        spec_dict['trainer'] if isinstance(spec_dict, dict) and 'trainer' in spec_dict else dict()
+    this_spec_cont =\
+        ivy.Container(spec_cont['trainer']) if isinstance(spec_cont, dict) and 'trainer' in spec_cont \
+            else ivy.Container()
 
     # combine args
-    trainer_spec_args = {**json_spec, **this_spec_dict, **trainer_spec_args}
+    trainer_spec_args = ivy.Container.combine(json_spec, this_spec_cont, trainer_spec_args)
 
     # override trainer_spec_class if specified in trainer_spec_args
     trainer_spec_class = ivy.default(ivy.default(
@@ -618,7 +629,7 @@ def build_trainer(data_loader_class=None,
                   trainer_spec_class=None,
                   trainer_spec=None,
                   json_spec_path=None,
-                  spec_dict=None):
+                  spec_cont=None):
     """
     build trainer
     """
@@ -646,7 +657,7 @@ def build_trainer(data_loader_class=None,
             trainer_spec_args=trainer_spec_args,
             trainer_spec_class=trainer_spec_class,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # override trainer_class if specified in trainer_spec
     trainer_class = ivy.default(ivy.default(
@@ -687,7 +698,7 @@ def build_tuner_spec(data_loader_class=None,
                      tuner_spec_args=None,
                      tuner_spec_class=None,
                      json_spec_path=None,
-                     spec_dict=None):
+                     spec_cont=None):
     """
     build tuner specification
     """
@@ -695,19 +706,20 @@ def build_tuner_spec(data_loader_class=None,
     # define dataset directories specification arguments
     if tuner_spec_args is None:
         tuner_spec_args = dict()
+    tuner_spec_args = ivy.Container(tuner_spec_args)
 
     # load json file
     if isinstance(json_spec_path, str):
         json_spec = json_spec_from_fpath(json_spec_path, 'tuner_args.json')
     else:
-        json_spec = dict()
+        json_spec = ivy.Container()
 
     # load from spec dict
-    this_spec_dict =\
-        spec_dict['tuner'] if isinstance(spec_dict, dict) and 'tuner' in spec_dict else dict()
+    this_spec_cont =\
+        ivy.Container(spec_cont['tuner']) if isinstance(spec_cont, dict) and 'tuner' in spec_cont else ivy.Container()
 
     # combine args
-    tuner_spec_args = {**json_spec, **this_spec_dict, **tuner_spec_args}
+    tuner_spec_args = ivy.Container.combine(json_spec, this_spec_cont, tuner_spec_args)
 
     # override tuner_spec_class if specified in tuner_spec_args
     tuner_spec_class = ivy.default(ivy.default(
@@ -743,7 +755,7 @@ def build_tuner_spec(data_loader_class=None,
             trainer_spec_class=trainer_spec_class,
             trainer_spec=trainer_spec,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # return tuner specification
     return tuner_spec_class(trainer,
@@ -776,7 +788,7 @@ def build_tuner(data_loader_class=None,
                 tuner_spec=None,
                 tuner_class=None,
                 json_spec_path=None,
-                spec_dict=None):
+                spec_cont=None):
     """
     build tuner
     """
@@ -809,7 +821,7 @@ def build_tuner(data_loader_class=None,
             tuner_spec_args=tuner_spec_args,
             tuner_spec_class=tuner_spec_class,
             json_spec_path=json_spec_path,
-            spec_dict=spec_dict))
+            spec_cont=spec_cont))
 
     # override tuner_class if specified in tuner_spec_args
     tuner_class = ivy.default(ivy.default(
@@ -843,4 +855,4 @@ def build_tuner(data_loader_class=None,
         tuner_spec_class=tuner_spec_class,
         tuner_spec=tuner_spec,
         json_spec_path=json_spec_path,
-        spec_dict=spec_dict)
+        spec_cont=spec_cont)
