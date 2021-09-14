@@ -12,4 +12,4 @@ class DatasetSpec(Container):
         base class for storing general properties of the dataset which is saved on disk
         """
         super().__init__(kwargs)
-        self['dirs'] = dirs
+        self.dirs = dirs

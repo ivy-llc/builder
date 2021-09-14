@@ -12,4 +12,4 @@ class DataLoaderSpec(Container):
         base class for storing general parameters which define the way in which the data loader loads the dataset
         """
         super().__init__(kwargs)
-        self['dataset_spec'] = dataset_spec
+        self.dataset_spec = dataset_spec

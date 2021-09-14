@@ -88,6 +88,10 @@ class Trainer:
         # timing
         self._start_time = time.perf_counter()
 
+        # network
+        self._network = self._spec.network
+        self._net_spec = self._network.spec
+
     # Abstract #
     # ---------#
 
@@ -151,7 +155,7 @@ class Trainer:
 
     def _init_checkpoint_manager(self):
         pathlib.Path(os.path.join(self._spec.log_dir, 'chkpts')).mkdir(parents=True, exist_ok=True)
-        self._chkpt = Checkpoint(optimizer=self._optimizer, net=self._spec.network)
+        self._chkpt = Checkpoint(optimizer=self._optimizer, net=self._network)
         self._chkpt_manager = CheckpointManager(self._chkpt, os.path.join(self._spec.log_dir, 'chkpts'), 20,
                                                 step_counter=self._global_step)
 
@@ -161,7 +165,7 @@ class Trainer:
                 self._writer.add_scalar('time between logs', time.perf_counter() - self._start_time, self._global_step)
             if self._spec.log_learning_rate:
                 self._writer.add_scalar('learning rate', self._learning_rate, self._global_step)
-        self._write_scalar_summaries(self._spec.data_loader, self._spec.network, self._training_batch,
+        self._write_scalar_summaries(self._spec.data_loader, self._network, self._training_batch,
                                      self._global_step)
         self._start_time = time.perf_counter()
 
@@ -256,7 +260,7 @@ class Trainer:
 
     def _initialize_model(self, checkpoint_path=None):
         self._pre_init()
-        self._spec.network.build()
+        self._network.build()
         self._save_spec_to_disk()
         self._save_info_to_disk()
         starting_iteration = 0
@@ -286,7 +290,10 @@ class Trainer:
     def _train_step(self, with_output=False):
         training_batch = self._spec.data_loader.get_next_batch()
         cost, grads = ivy.execute_with_gradients(
-            lambda v: self._compute_cost(training_batch, v=v), self._spec.network.v)
+            lambda v: self._compute_cost(training_batch, v=self._network.v.set_at_key_chains(v)),
+            self._network.v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
+            self._net_spec.keep_v_keychains else
+            self._network.v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
         if 'max_grad_val' in self._spec:
             grads = grads.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
         if 'max_grad_vector_norm' in self._spec:
@@ -294,7 +301,7 @@ class Trainer:
             if ratio < 1:
                 grads = grads * ratio
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
-        self._spec.network.v = self._optimizer.step(self._spec.network.v, grads)
+        self._network.v = self._optimizer.step(self._network.v, grads, ignore_missing=bool(self._net_spec.v_keychains))
         if with_output:
             return training_batch, cost
         return cost
@@ -342,7 +349,7 @@ class Trainer:
             if log_scalars_on_this_it:
                 self._log_scalars()
             if log_viz_on_this_it or vis_mode:
-                self._write_image_summaries(self._spec.data_loader, self._spec.network, self._training_batch,
+                self._write_image_summaries(self._spec.data_loader, self._network, self._training_batch,
                                             self._global_step)
             if self._global_step % self._spec.save_freq == 0 and self._spec.save_freq > 0 and not vis_mode:
                 self._save()
@@ -364,7 +371,7 @@ class Trainer:
         save the network weights and optimizer state in checkpoint file
         :param checkpoint_path: path of the checkpoint file for saving the weights and optimizer state
         """
-        checkpoint = ivy.Container({'network': self._spec.network.v,
+        checkpoint = ivy.Container({'network': self._network.v,
                                     'optimizer': self._optimizer.state})
         os.makedirs('/'.join(checkpoint_path.split('/')[:-1]), exist_ok=True)
         checkpoint.to_disk_as_hdf5(checkpoint_path)

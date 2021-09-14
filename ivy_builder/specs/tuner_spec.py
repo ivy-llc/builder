@@ -18,11 +18,11 @@ class TunerSpec(Container):
         parameters which define the training procedure
         """
         super().__init__(kwargs)
-        self['trainer'] = trainer
-        self['train_steps_per_tune_step'] = train_steps_per_tune_step
-        self['framework'] = framework
-        self['name'] = name
-        self['num_samples'] = num_samples
-        self['parallel_trials'] = parallel_trials
-        self['grace_period'] = grace_period
-        self['checkpoint_freq'] = checkpoint_freq
+        self.trainer = trainer
+        self.train_steps_per_tune_step = train_steps_per_tune_step
+        self.framework = framework
+        self.name = name
+        self.num_samples = num_samples
+        self.parallel_trials = parallel_trials
+        self.grace_period = grace_period
+        self.checkpoint_freq = checkpoint_freq
