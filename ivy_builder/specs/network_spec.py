@@ -23,6 +23,11 @@ class NetworkSpec(Container):
         super().__init__(kwargs)
         if 'subnets' in self:
             for k, subet_spec in self.subnets.items():
+                if 'network_spec_class' in subet_spec:
+                    spec_class = load_class_from_str(subet_spec.network_spec_class)
+                    subet_spec = spec_class(**{**kwargs['subnets'][k],
+                                               **dict(dataset_spec=dataset_spec, device=device)})
+                    self.subnets[k] = subet_spec
                 self.subnets[k].network_class = load_class_from_str(subet_spec.network_class)
                 self.subnets[k].store_vars = ivy.default(self.subnets[k].if_exists('store_vars'), True)
                 self.subnets[k].dataset_spec = dataset_spec
