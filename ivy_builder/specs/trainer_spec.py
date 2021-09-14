@@ -20,6 +20,7 @@ class TrainerSpec(Container):
                  log_vis: bool = True,
                  log_validation: bool = True,
                  log_time: bool = True,
+                 log_learning_rate: bool = True,
                  starting_iteration: int = None,
                  total_iterations: int = 1e6,
                  initial_learning_rate: float = 1e-4,
@@ -46,6 +47,7 @@ class TrainerSpec(Container):
         self['log_vis'] = log_vis
         self['log_validation'] = log_validation
         self['log_time'] = log_time
+        self['log_learning_rate'] = log_learning_rate
         self['starting_iteration'] = starting_iteration
         self['total_iterations'] = total_iterations
         self['initial_learning_rate'] = initial_learning_rate

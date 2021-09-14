@@ -156,8 +156,11 @@ class Trainer:
                                                 step_counter=self._global_step)
 
     def _log_scalars(self):
-        if self._spec.log_time:
-            self._writer.add_scalar('time between logs', time.perf_counter() - self._start_time, self._global_step)
+        if ivy.exists(self._writer):
+            if self._spec.log_time:
+                self._writer.add_scalar('time between logs', time.perf_counter() - self._start_time, self._global_step)
+            if self._spec.log_learning_rate:
+                self._writer.add_scalar('learning rate', self._learning_rate, self._global_step)
         self._write_scalar_summaries(self._spec.data_loader, self._spec.network, self._training_batch,
                                      self._global_step)
         self._start_time = time.perf_counter()
