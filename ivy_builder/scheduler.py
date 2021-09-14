@@ -74,7 +74,7 @@ class SequentialScheduler:
                     existing_spec_dict_str = cmd_line_args_str.split('spec_dict(')[-1].split(')')[0]
                     existing_spec_dict = json.loads(existing_spec_dict_str)
                     combined_spec_dict = ivy.Container.combine(
-                        ivy.Container(existing_spec_dict), ivy.Container(SHARED_JSS)).to_dict()
+                        ivy.Container(SHARED_JSS), ivy.Container(existing_spec_dict)).to_dict()
                     combined_spec_dict_str = json.dumps(combined_spec_dict)
                     cmd_line_args_str.replace(existing_spec_dict_str, combined_spec_dict_str)
                 else:
