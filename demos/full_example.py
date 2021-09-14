@@ -23,77 +23,35 @@ from ivy_builder.specs import NetworkSpec
 class ExampleDatasetDirs(DatasetDirs):
 
     def __init__(self):
-        super().__init__()
-        self._root_dir = '/some/dataset/dir'
-        self._vector_dir = os.path.join(self._root_dir, 'vectors')
-        self._image_dir = os.path.join(self._root_dir, 'images')
-
-    # Getters #
-    # --------#
-
-    @property
-    def root_dir(self):
-        return self._root_dir
-
-    @property
-    def vector_dir(self):
-        return self._vector_dir
-
-    @property
-    def image_dir(self):
-        return self._image_dir
+        root_dir = '/some/dataset/dir'
+        super().__init__(root_dir=root_dir,
+                         vector_dir=os.path.join(root_dir, 'vectors'),
+                         image_dir=os.path.join(root_dir, 'images'))
 
 
 class ExampleDatasetSpec(DatasetSpec):
 
     def __init__(self, dirs, num_examples, vector_dim, image_dims):
-        super().__init__(dirs)
-        self._num_examples = num_examples
-        self._vector_dim = vector_dim
-        self._image_dims = image_dims
-
-    # Getters #
-    # --------#
-
-    @property
-    def num_examples(self):
-        return self._num_examples
-
-    @property
-    def vector_dim(self):
-        return self._vector_dim
-
-    @property
-    def image_dims(self):
-        return self._image_dims
+        super().__init__(dirs,
+                         num_examples=num_examples,
+                         vector_dim=vector_dim,
+                         image_dims=image_dims)
 
 
 class ExampleDataLoaderSpec(DataLoaderSpec):
 
     def __init__(self, dataset_spec, batch_size, shuffle):
-        super().__init__(dataset_spec, batch_size=batch_size)
-        self._shuffle = shuffle
-
-    # Getters #
-    # --------#
-
-    @property
-    def shuffle(self, **kwargs):
-        return self._shuffle
+        super().__init__(dataset_spec,
+                         batch_size=batch_size,
+                         shuffle=shuffle)
 
 
 class ExampleNetworkSpec(NetworkSpec):
 
     def __init__(self, dataset_spec, device, num_layers):
-        super().__init__(dataset_spec, device)
-        self._num_layers = num_layers
-
-    # Getters #
-    # --------#
-
-    @property
-    def num_layers(self):
-        return self._num_layers
+        super().__init__(dataset_spec,
+                         device,
+                         num_layers=num_layers)
 
 
 # Custom Data Loader #
@@ -112,19 +70,15 @@ class ExampleDataLoader(DataLoader):
 
         # load vector data
         vector_dim = self._spec.dataset_spec.vector_dim
-        vector_dir = self._spec.dataset_spec.dirs.vector_dir
-        print('loading vector data from ' + vector_dir + '...')
         self._targets = ivy.zeros((self._num_examples, vector_dim, 1))
 
         # load image data
         image_dims = self._spec.dataset_spec.image_dims
-        image_dir = self._spec.dataset_spec.dirs.image_dir
-        print('loading image data from ' + image_dir + '...')
         self._input = ivy.ones((self._num_examples, image_dims[0], image_dims[1], 3))
 
-        self._training_data = {'targets': self._targets, 'input': self._input}
-        self._validation_data = {'targets': self._targets, 'input': self._input}
-        self._data = {'training': self._training_data, 'validation': self._validation_data}
+        self._training_data = ivy.Container(targets=self._targets, input=self._input)
+        self._validation_data = ivy.Container(targets=self._targets, input=self._input)
+        self._data = ivy.Container(training=self._training_data, validation=self._validation_data)
 
     def get_next_batch(self, dataset_key='training'):
         data = self._data[dataset_key]
@@ -132,7 +86,7 @@ class ExampleDataLoader(DataLoader):
             self._i = np.random.randint(0, self._num_examples)
         else:
             self._i = (self._i + 1) % self._num_examples
-        return data['input'][self._i], data['targets'][self._i]
+        return data.input[self._i], data.targets[self._i]
 
 
 # Custom Network #
