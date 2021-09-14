@@ -21,7 +21,7 @@ class Network(ivy.Module):
     @abc.abstractmethod
     def _build(self) -> None:
         """
-        compute learning rate, given global step
+        Network builder method, to be overriden
         """
         raise NotImplementedError
 

@@ -101,15 +101,15 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
 
     # dataset specification
     dataset_spec_filepath = os.path.join(example_dir, 'json_specs', 'dataset_spec.json.example')
-    dataset_spec_args = builder.parse_json_to_dict(dataset_spec_filepath)
+    dataset_spec_args = builder.parse_json_to_cont(dataset_spec_filepath)
 
     # data loader specification
     data_loader_spec_filepath = os.path.join(example_dir, 'json_specs', 'data_loader_spec.json.example')
-    data_loader_spec_args = builder.parse_json_to_dict(data_loader_spec_filepath)
+    data_loader_spec_args = builder.parse_json_to_cont(data_loader_spec_filepath)
 
     # network specification
     network_spec_filepath = os.path.join(example_dir, 'json_specs', 'network_spec.json.example')
-    network_spec_args = builder.parse_json_to_dict(network_spec_filepath)
+    network_spec_args = builder.parse_json_to_cont(network_spec_filepath)
 
     builder_helpers.remove_dirs()
 

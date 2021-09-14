@@ -17,18 +17,20 @@ from ivy_builder.abstract.tuner import Tuner
 
 def _import_arg_specified_class_if_present(args_or_spec, class_str):
     if class_str in args_or_spec:
-        mod_str = '.'.join(args_or_spec[class_str].split('.')[:-1])
-        class_str = args_or_spec[class_str].split('.')[-1]
-        loaded_class = getattr(importlib.import_module(mod_str), class_str)
-        return loaded_class
-    return
+        return load_class_from_str(args_or_spec[class_str])
 
 
-def parse_json_to_dict(json_filepath):
+def load_class_from_str(full_str):
+    mod_str = '.'.join(full_str.split('.')[:-1])
+    class_str = full_str.split('.')[-1]
+    return getattr(importlib.import_module(mod_str), class_str)
+
+
+def parse_json_to_cont(json_filepath):
     """
     return the data from json file in the form of a python dict
     """
-    return_dict = dict()
+    return_cont = ivy.Container()
     with open(json_filepath) as json_data_file:
         loaded_dict = json.load(json_data_file)
     for k, v in loaded_dict.items():
@@ -37,35 +39,34 @@ def parse_json_to_dict(json_filepath):
             for rel_fpath in rel_fpaths:
                 rel_fpath = os.path.normpath(os.path.join(rel_fpath, json_filepath.split('/')[-1]))
                 fpath = os.path.normpath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
-                return_dict = {**return_dict, **parse_json_to_dict(fpath)}
-    return {**return_dict, **loaded_dict}
+                return_cont = ivy.Container.combine(return_cont, parse_json_to_cont(fpath))
+    return ivy.Container.combine(return_cont, loaded_dict)
 
 
 def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
     base_dir = json_spec_path
     if not os.path.isdir(base_dir):
         raise Exception('base_dir {} does not exist.'.format(base_dir))
-    json_spec = dict()
+    json_spec = ivy.Container()
     while True:
         fpath = os.path.normpath(os.path.join(base_dir, json_fname))
         if os.path.isfile(fpath):
             if store_duplicates:
-                json_spec_cont = ivy.Container(json_spec)
-                parsed_json_cont = ivy.Container(parse_json_to_dict(fpath))
+                parsed_json_cont = ivy.Container(parse_json_to_cont(fpath))
                 duplicate_key_chains = list()
 
                 def map_fn(x, kc):
-                    if kc in json_spec_cont:
+                    if kc in json_spec:
                         duplicate_key_chains.append(kc)
-                        return ivy.Container(duplicated={'parent_dir': json_spec_cont[kc], 'this_dir': x})
+                        return ivy.Container(duplicated={'parent_dir': json_spec[kc], 'this_dir': x})
                     else:
                         return x
 
                 parsed_json_cont = parsed_json_cont.map(map_fn)
-                json_spec = {**parsed_json_cont.to_dict(),
-                             **json_spec_cont.prune_key_chains(duplicate_key_chains).to_dict()}
+                json_spec = ivy.Container.combine(parsed_json_cont,
+                                                  json_spec.prune_key_chains(duplicate_key_chains))
             else:
-                json_spec = {**parse_json_to_dict(fpath), **json_spec}
+                json_spec = ivy.Container.combine(ivy.Container(parse_json_to_cont(fpath)), json_spec)
         if base_dir.split('/')[-1] == 'json_args':
             return json_spec
         base_dir = os.path.normpath(os.path.join(base_dir, '..'))
@@ -79,17 +80,16 @@ def get_json_args(json_spec_path, keys_to_ignore, keychains_to_ignore, keychain_
         defaults = '.defaults'
     else:
         defaults = ''
-    cont_dict = dict()
+    cont = ivy.Container()
     if current_dir_only:
         for spec_name in spec_names:
             fpath = os.path.join(json_spec_path, spec_name + '.json' + defaults)
             if os.path.isfile(fpath):
-                cont_dict[spec_name] = parse_json_to_dict(fpath)
+                cont[spec_name] = parse_json_to_cont(fpath)
     else:
         for spec_name in spec_names:
-            cont_dict[spec_name] = \
+            cont[spec_name] = \
                 json_spec_from_fpath(json_spec_path, spec_name + '.json' + defaults, store_duplicates)
-    cont = ivy.Container(**cont_dict)
     for keychain_to_ignore in keychains_to_ignore:
         if keychain_to_ignore in cont:
             cont[keychain_to_ignore] = 'not_shown'
@@ -211,22 +211,22 @@ def spec_to_dict(spec):
     return spec.to_dict()
 
 
-def command_line_str_to_spec_dict(spec_str):
+def command_line_str_to_spec_cont(spec_str):
     """
     save the python dict as a json file at specified filepath
     """
     if spec_str is not None:
-        spec_dict = json.loads(spec_str.replace("'", '"'))
+        spec_cont = ivy.Container(json.loads(spec_str.replace("'", '"')))
     else:
-        spec_dict = {}
+        spec_cont = ivy.Container()
     all_keys = ['dataset_dirs', 'dataset', 'data_loader', 'network', 'trainer', 'tuner']
-    for key in spec_dict.keys():
+    for key in spec_cont.keys():
         if key not in all_keys:
             raise Exception('spec dict keys must all be one of {}, but found {}'.format(all_keys, key))
     for key in all_keys:
-        if key not in spec_dict:
-            spec_dict[key] = {}
-    return spec_dict
+        if key not in spec_cont:
+            spec_cont[key] = ivy.Container()
+    return spec_cont
 
 
 def build_dataset_dirs(dataset_dirs_args=None,
