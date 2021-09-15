@@ -98,7 +98,7 @@ class Trainer:
     # Private Methods #
 
     @abc.abstractmethod
-    def _compute_cost(self, batch: ivy.Array, v: ivy.Container) -> ivy.Array:
+    def _compute_cost(self, batch: ivy.Array, v: ivy.Container = None) -> ivy.Array:
         """
         compute training cost from input batch
         """
