@@ -287,10 +287,9 @@ class Trainer:
     # Training #
     # ---------#
 
-    def _train_step(self, with_output=False):
-        training_batch = self._spec.data_loader.get_next_batch()
+    def _train_step_from_batch(self, batch, with_output=False):
         cost, grads = ivy.execute_with_gradients(
-            lambda v: self._compute_cost(training_batch, v=self._network.v.set_at_key_chains(v)),
+            lambda v: self._compute_cost(batch, v=self._network.v.set_at_key_chains(v)),
             self._network.v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
             self._net_spec.keep_v_keychains else
             self._network.v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
@@ -303,8 +302,11 @@ class Trainer:
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
         self._network.v = self._optimizer.step(self._network.v, grads, ignore_missing=bool(self._net_spec.v_keychains))
         if with_output:
-            return training_batch, cost
+            return batch, cost
         return cost
+
+    def _train_step(self, with_output=False):
+        return self._train_step_from_batch(self._spec.data_loader.get_next_batch(), with_output)
 
     def _data_load_and_train_step(self, vis_mode, log_scalars_on_this_it, log_viz_on_this_it):
         if vis_mode:
