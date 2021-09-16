@@ -52,5 +52,5 @@ class JSONDataLoaderSpec(DataLoaderSpec):
         self.queue_timeout = queue_timeout  # conflicts with ivy.Container argument
 
     @property
-    def _kwargs(self):
+    def kwargs(self):
         return self._locals
