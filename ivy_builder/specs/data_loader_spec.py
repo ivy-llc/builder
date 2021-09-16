@@ -1,9 +1,12 @@
+# global
+import abc
+
 # local
-from ivy.core.container import Container
+from ivy_builder.specs.spec import Spec
 from ivy_builder.specs.dataset_spec import DatasetSpec
 
 
-class DataLoaderSpec(Container):
+class DataLoaderSpec(Spec, abc.ABC):
 
     def __init__(self,
                  dataset_spec: DatasetSpec,
@@ -11,5 +14,6 @@ class DataLoaderSpec(Container):
         """
         base class for storing general parameters which define the way in which the data loader loads the dataset
         """
-        super().__init__(kwargs)
-        self.dataset_spec = dataset_spec
+        self._locals = locals()
+        super().__init__(dataset_spec=dataset_spec,
+                         **kwargs)

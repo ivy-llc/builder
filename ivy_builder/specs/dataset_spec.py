@@ -1,9 +1,12 @@
+# global
+import abc
+
 # local
-from ivy.core.container import Container
+from ivy_builder.specs.spec import Spec
 from ivy_builder.specs.dataset_dirs import DatasetDirs
 
 
-class DatasetSpec(Container):
+class DatasetSpec(Spec, abc.ABC):
 
     def __init__(self,
                  dirs: DatasetDirs,
@@ -11,5 +14,6 @@ class DatasetSpec(Container):
         """
         base class for storing general properties of the dataset which is saved on disk
         """
-        super().__init__(kwargs)
-        self.dirs = dirs
+        self._locals = locals()
+        super().__init__(dirs=dirs,
+                         **kwargs)

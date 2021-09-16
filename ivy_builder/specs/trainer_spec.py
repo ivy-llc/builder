@@ -1,10 +1,13 @@
-# local
+# global
 import ivy
-from ivy.core.container import Container
+import abc
+
+# local
+from ivy_builder.specs.spec import Spec
 from ivy_builder.abstract.network import Network
 
 
-class TrainerSpec(Container):
+class TrainerSpec(Spec, abc.ABC):
 
     def __init__(self,
                  data_loader: None,
@@ -25,7 +28,6 @@ class TrainerSpec(Container):
                  total_iterations: int = 1e6,
                  initial_learning_rate: float = 1e-4,
                  custom_train_step: bool = False,
-                 save_trace: bool = False,
                  auto_detect_weights: bool = True,
                  log_gradients: (tuple, str) = 'all',
                  device: str = None,
@@ -33,29 +35,29 @@ class TrainerSpec(Container):
         """
         parameters which define the training procedure
         """
-        super().__init__(kwargs)
-        self.data_loader = data_loader
-        self.network = network
-        self.log_dir = log_dir
-        self.overwrite_log_dir = overwrite_log_dir
-        self.seed = seed
-        self.ld_chkpt = ld_chkpt
-        self.save_freq = save_freq
-        self.log_freq = log_freq
-        self.vis_freq = vis_freq
-        self.log_scalars = log_scalars
-        self.log_vis = log_vis
-        self.log_validation = log_validation
-        self.log_time = log_time
-        self.log_learning_rate = log_learning_rate
-        self.starting_iteration = starting_iteration
-        self.total_iterations = total_iterations
-        self.initial_learning_rate = initial_learning_rate
-        self.custom_train_step = custom_train_step
-        self.save_trace = save_trace
-        self.auto_detect_weights = auto_detect_weights
+        self._locals = locals()
         if log_gradients == 'all' or 'all' in log_gradients:
             log_gradients = ['mean', 'abs_mean', 'var', 'abs_var', 'min', 'abs_min', 'max', 'abs_max', 'vector_norm',
                              'global_vector_norm']
-        self.log_gradients = log_gradients
-        self.device = ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu')
+        super().__init__(data_loader=data_loader,
+                         network=network,
+                         log_dir=log_dir,
+                         overwrite_log_dir=overwrite_log_dir,
+                         seed=seed,
+                         ld_chkpt=ld_chkpt,
+                         save_freq=save_freq,
+                         log_freq=log_freq,
+                         vis_freq=vis_freq,
+                         log_scalars=log_scalars,
+                         log_vis=log_vis,
+                         log_validation=log_validation,
+                         log_time=log_time,
+                         log_learning_rate=log_learning_rate,
+                         starting_iteration=starting_iteration,
+                         total_iterations=total_iterations,
+                         initial_learning_rate=initial_learning_rate,
+                         custom_train_step=custom_train_step,
+                         auto_detect_weights=auto_detect_weights,
+                         log_gradients=log_gradients,
+                         device=ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
+                         **kwargs)

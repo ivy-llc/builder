@@ -15,6 +15,9 @@ from ivy_builder.specs.tuner_spec import TunerSpec
 from ivy_builder.abstract.tuner import Tuner
 
 
+# Utility Methods #
+# ----------------#
+
 def _import_arg_specified_class_if_present(args_or_spec, class_str):
     if class_str in args_or_spec:
         return load_class_from_str(args_or_spec[class_str])
@@ -228,6 +231,9 @@ def command_line_str_to_spec_cont(spec_str):
             spec_cont[key] = ivy.Container()
     return spec_cont
 
+
+# Builder Methods #
+# ----------------#
 
 def build_dataset_dirs(dataset_dirs_args=None,
                        dataset_dirs_class=None,

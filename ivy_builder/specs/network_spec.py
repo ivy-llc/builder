@@ -1,9 +1,10 @@
 # global
+import ivy
+import abc
 import importlib
 
 # local
-import ivy
-from ivy.core.container import Container
+from ivy_builder.specs.spec import Spec
 from ivy_builder.specs import DatasetSpec
 
 
@@ -14,14 +15,19 @@ def load_class_from_str(full_str):
     return getattr(importlib.import_module(mod_str), class_str)
 
 
-class NetworkSpec(Container):
+class NetworkSpec(Spec, abc.ABC):
 
     def __init__(self, dataset_spec: DatasetSpec = None, device: str = 'cpu:0', v_keychains=None,
                  keep_v_keychains=False, **kwargs) -> None:
         """
         base class for storing general specifications of the neural network
         """
-        super().__init__(kwargs)
+        self._locals = locals()
+        super().__init__(dataset_spec=dataset_spec,
+                         device=device,
+                         v_keychains=v_keychains,
+                         keep_v_keychains=keep_v_keychains,
+                         **kwargs)
         if 'subnets' in self:
             for k, subet_spec in self.subnets.items():
                 if 'network_spec_class' in subet_spec:
@@ -42,7 +48,3 @@ class NetworkSpec(Container):
                 self.subnets[k].store_vars = ivy.default(self.subnets[k].if_exists('store_vars'), True)
                 self.subnets[k].dataset_spec = dataset_spec
                 self.subnets[k].device = device
-        self.dataset_spec = dataset_spec
-        self.device = device
-        self.v_keychains = v_keychains
-        self.keep_v_keychains = keep_v_keychains

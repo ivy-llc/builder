@@ -1,8 +1,11 @@
+# global
+import abc
+
 # local
-from ivy.core.container import Container
+from ivy_builder.specs.spec import Spec
 
 
-class TunerSpec(Container):
+class TunerSpec(Spec, abc.ABC):
 
     def __init__(self,
                  trainer: None,
@@ -17,12 +20,13 @@ class TunerSpec(Container):
         """
         parameters which define the training procedure
         """
-        super().__init__(kwargs)
-        self.trainer = trainer
-        self.train_steps_per_tune_step = train_steps_per_tune_step
-        self.framework = framework
-        self.name = name
-        self.num_samples = num_samples
-        self.parallel_trials = parallel_trials
-        self.grace_period = grace_period
-        self.checkpoint_freq = checkpoint_freq
+        self._locals = locals()
+        super().__init__(trainer=trainer,
+                         train_steps_per_tune_step=train_steps_per_tune_step,
+                         framework=framework,
+                         name=name,
+                         num_samples=num_samples,
+                         parallel_trials=parallel_trials,
+                         grace_period=grace_period,
+                         checkpoint_freq=checkpoint_freq,
+                         **kwargs)
