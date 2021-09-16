@@ -1,6 +1,7 @@
-# local
+# global
 import ivy
 
+# local
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 
 
@@ -12,6 +13,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                  prefetch_to_gpu=True, single_pass=False, array_strs=None, float_strs=None, uint8_strs=None,
                  custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled',
                  **kwargs):
+        self._locals = locals()
 
         unused_key_chains = [] if unused_key_chains is None else unused_key_chains
         array_strs = [] if array_strs is None else array_strs
@@ -35,7 +37,6 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  preshuffle_data=preshuffle_data,
                                                  shuffle_buffer_size=shuffle_buffer_size,
                                                  with_prefetching=with_prefetching,
-                                                 queue_timeout=queue_timeout,
                                                  post_proc_fn=post_proc_fn,
                                                  prefetch_to_gpu=prefetch_to_gpu,
                                                  single_pass=single_pass,
@@ -48,3 +49,8 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  custom_fns=custom_fns,
                                                  array_mode=array_mode,
                                                  **kwargs)
+        self.queue_timeout = queue_timeout  # conflicts with ivy.Container argument
+
+    @property
+    def _kwargs(self):
+        return self._locals
