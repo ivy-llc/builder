@@ -268,7 +268,8 @@ class Trainer:
     def _initialize_model(self, checkpoint_path=None):
         self._pre_init()
         self._network.build()
-        self._save_spec_to_disk()
+        if self._spec.save_spec:
+            self._save_spec_to_disk()
         self._save_info_to_disk()
         starting_iteration = 0
         self._init_checkpoint_manager()
