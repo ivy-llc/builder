@@ -1,11 +1,11 @@
 # global
 import ivy
 import abc
-import copy
 
 # local
 from ivy_builder.specs.spec import Spec
 from ivy_builder.abstract.network import Network
+from ivy_builder.specs.spec import locals_to_kwargs
 
 
 class TrainerSpec(Spec, abc.ABC):
@@ -36,7 +36,7 @@ class TrainerSpec(Spec, abc.ABC):
         """
         parameters which define the training procedure
         """
-        kw = copy.deepcopy(locals()['kwargs'])
+        kw = locals_to_kwargs(locals())
         if log_gradients == 'all' or 'all' in log_gradients:
             log_gradients = ['mean', 'abs_mean', 'var', 'abs_var', 'min', 'abs_min', 'max', 'abs_max', 'vector_norm',
                              'global_vector_norm']

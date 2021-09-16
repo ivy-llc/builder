@@ -1,12 +1,12 @@
 # global
 import ivy
 import abc
-import copy
 import importlib
 
 # local
 from ivy_builder.specs.spec import Spec
 from ivy_builder.specs import DatasetSpec
+from ivy_builder.specs.spec import locals_to_kwargs
 
 
 # ToDo: fix cyclic imports, so this method can be imported from the builder module
@@ -23,7 +23,7 @@ class NetworkSpec(Spec, abc.ABC):
         """
         base class for storing general specifications of the neural network
         """
-        kw = copy.deepcopy(locals()['kwargs'])
+        kw = locals_to_kwargs(locals())
         super().__init__(dataset_spec=dataset_spec,
                          device=device,
                          v_keychains=v_keychains,

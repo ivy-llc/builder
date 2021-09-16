@@ -1,8 +1,8 @@
 # global
 import ivy
-import copy
 
 # local
+from ivy_builder.specs.spec import locals_to_kwargs
 from ivy_builder.specs.data_loader_spec import DataLoaderSpec
 
 
@@ -15,7 +15,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                  custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled',
                  **kwargs):
 
-        kw = copy.deepcopy(locals()['kwargs'])
+        kw = locals_to_kwargs(locals())
 
         unused_key_chains = [] if unused_key_chains is None else unused_key_chains
         array_strs = [] if array_strs is None else array_strs

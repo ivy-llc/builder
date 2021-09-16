@@ -1,9 +1,9 @@
 # global
 import abc
-import copy
 
 # local
 from ivy_builder.specs.spec import Spec
+from ivy_builder.specs.spec import locals_to_kwargs
 
 
 class TunerSpec(Spec, abc.ABC):
@@ -21,7 +21,7 @@ class TunerSpec(Spec, abc.ABC):
         """
         parameters which define the training procedure
         """
-        kw = copy.deepcopy(locals()['kwargs'])
+        kw = locals_to_kwargs(locals())
         super().__init__(trainer=trainer,
                          train_steps_per_tune_step=train_steps_per_tune_step,
                          framework=framework,
