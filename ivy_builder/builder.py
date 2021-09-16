@@ -214,6 +214,29 @@ def spec_to_dict(spec):
     return spec.to_dict()
 
 
+def _obj_to_class_str(obj_in):
+    return str(obj_in.__class__).split("'")[1]
+
+
+def trainer_to_spec_args_dict(trainer):
+    args_dict = dict()
+    args_dict['data_loader_class'] = _obj_to_class_str(trainer.spec.data_loader)
+    args_dict['network_class'] = _obj_to_class_str(trainer.spec.network)
+    args_dict['trainer_class'] = _obj_to_class_str(trainer)
+    args_dict['dataset_dirs_args'] = ivy.Container(trainer.spec.data_loader.spec.dataset_spec.dirs.kwargs).to_dict()
+    args_dict['dataset_dirs_class'] = _obj_to_class_str(trainer.spec.data_loader.spec.dataset_spec.dirs)
+    args_dict['dataset_spec_args'] = ivy.Container(trainer.spec.data_loader.spec.dataset_spec.kwargs).to_dict()
+    args_dict['dataset_spec_class'] = _obj_to_class_str(trainer.spec.data_loader.spec.dataset_spec)
+    args_dict['data_loader_spec_args'] = ivy.Container(trainer.spec.data_loader.spec.kwargs).to_dict()
+    args_dict['data_loader_spec_class'] = _obj_to_class_str(trainer.spec.data_loader.spec)
+    args_dict['network_spec_args'] = ivy.Container(trainer.spec.network.spec.kwargs).to_dict()
+    args_dict['network_spec_class'] = _obj_to_class_str(trainer.spec.network.spec)
+    args_dict['trainer_spec_args'] = ivy.Container(trainer.spec.kwargs).prune_key_chains(
+        ['data_loader', 'network']).to_dict()
+    args_dict['trainer_spec_class'] = _obj_to_class_str(trainer.spec)
+    return args_dict
+
+
 def command_line_str_to_spec_cont(spec_str):
     """
     save the python dict as a json file at specified filepath

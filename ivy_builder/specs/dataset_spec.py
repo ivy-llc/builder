@@ -1,5 +1,6 @@
 # global
 import abc
+import copy
 
 # local
 from ivy_builder.specs.spec import Spec
@@ -14,6 +15,7 @@ class DatasetSpec(Spec, abc.ABC):
         """
         base class for storing general properties of the dataset which is saved on disk
         """
-        self._locals = locals()
+        kw = copy.deepcopy(locals()['kwargs'])
         super().__init__(dirs=dirs,
                          **kwargs)
+        self._kwargs = kw

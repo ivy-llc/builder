@@ -1,5 +1,6 @@
 # global
 import abc
+import copy
 
 # local
 from ivy_builder.specs.spec import Spec
@@ -14,6 +15,7 @@ class DataLoaderSpec(Spec, abc.ABC):
         """
         base class for storing general parameters which define the way in which the data loader loads the dataset
         """
-        self._locals = locals()
+        kw = copy.deepcopy(locals()['kwargs'])
         super().__init__(dataset_spec=dataset_spec,
                          **kwargs)
+        self._kwargs = kw

@@ -15,4 +15,4 @@ class Spec(ivy.Container):
     @property
     @abc.abstractmethod
     def kwargs(self):
-        return self._locals
+        return self._kwargs

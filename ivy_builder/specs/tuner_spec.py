@@ -1,5 +1,6 @@
 # global
 import abc
+import copy
 
 # local
 from ivy_builder.specs.spec import Spec
@@ -20,7 +21,7 @@ class TunerSpec(Spec, abc.ABC):
         """
         parameters which define the training procedure
         """
-        self._locals = locals()
+        kw = copy.deepcopy(locals()['kwargs'])
         super().__init__(trainer=trainer,
                          train_steps_per_tune_step=train_steps_per_tune_step,
                          framework=framework,
@@ -30,3 +31,4 @@ class TunerSpec(Spec, abc.ABC):
                          grace_period=grace_period,
                          checkpoint_freq=checkpoint_freq,
                          **kwargs)
+        self._kwargs = kw

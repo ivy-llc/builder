@@ -24,7 +24,7 @@ except ModuleNotFoundError:
 from ivy_builder.abstract.network import Network
 from ivy_builder.specs.trainer_spec import TrainerSpec
 from ivy_builder.abstract.data_loader import DataLoader
-from ivy_builder.builder import spec_to_dict, save_dict_as_json
+from ivy_builder.builder import spec_to_dict, trainer_to_spec_args_dict, save_dict_as_json
 from ivy_builder.checkpoints import Checkpoint, CheckpointManager
 
 logging.getLogger().setLevel(logging.INFO)
@@ -232,12 +232,19 @@ class Trainer:
             shutil.rmtree(self._spec.log_dir, ignore_errors=True)
         os.makedirs(self._spec.log_dir, exist_ok=True)
 
-        # write spec json
+        # create directory
         spec_dir = os.path.join(self._spec.log_dir, 'spec')
         os.makedirs(spec_dir, exist_ok=True)
+
+        # write spec json
         complete_spec_filepath = _get_valid_filepath(spec_dir, 'complete_spec', '.json')
         spec_dict = spec_to_dict(self._spec)
         save_dict_as_json(spec_dict, complete_spec_filepath)
+
+        # write spec args json
+        complete_spec_args_filepath = _get_valid_filepath(spec_dir, 'complete_spec_args', '.json')
+        spec_args_dict = trainer_to_spec_args_dict(self)
+        save_dict_as_json(spec_args_dict, complete_spec_args_filepath)
 
     def _save_info_to_disk(self):
         info_dir = os.path.join(self._spec.log_dir, 'info')

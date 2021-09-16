@@ -1,6 +1,7 @@
 # global
 import ivy
 import abc
+import copy
 import importlib
 
 # local
@@ -22,7 +23,7 @@ class NetworkSpec(Spec, abc.ABC):
         """
         base class for storing general specifications of the neural network
         """
-        self._locals = locals()
+        kw = copy.deepcopy(locals()['kwargs'])
         super().__init__(dataset_spec=dataset_spec,
                          device=device,
                          v_keychains=v_keychains,
@@ -48,3 +49,4 @@ class NetworkSpec(Spec, abc.ABC):
                 self.subnets[k].store_vars = ivy.default(self.subnets[k].if_exists('store_vars'), True)
                 self.subnets[k].dataset_spec = dataset_spec
                 self.subnets[k].device = device
+        self._kwargs = kw

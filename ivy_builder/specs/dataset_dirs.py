@@ -1,5 +1,6 @@
 # global
 import abc
+import copy
 
 # local
 from ivy_builder.specs.spec import Spec
@@ -12,5 +13,6 @@ class DatasetDirs(Spec, abc.ABC):
         """
         base class for storing directories necessary for the data loader
         """
-        self._locals = locals()
+        kw = copy.deepcopy(locals()['kwargs'])
         super().__init__(**kwargs)
+        self._kwargs = kw

@@ -1,6 +1,7 @@
 # global
 import ivy
 import abc
+import copy
 
 # local
 from ivy_builder.specs.spec import Spec
@@ -35,7 +36,7 @@ class TrainerSpec(Spec, abc.ABC):
         """
         parameters which define the training procedure
         """
-        self._locals = locals()
+        kw = copy.deepcopy(locals()['kwargs'])
         if log_gradients == 'all' or 'all' in log_gradients:
             log_gradients = ['mean', 'abs_mean', 'var', 'abs_var', 'min', 'abs_min', 'max', 'abs_max', 'vector_norm',
                              'global_vector_norm']
@@ -61,3 +62,4 @@ class TrainerSpec(Spec, abc.ABC):
                          log_gradients=log_gradients,
                          device=ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
                          **kwargs)
+        self._kwargs = kw
