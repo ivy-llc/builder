@@ -32,18 +32,16 @@ class CheckpointManager:
         self._directory = directory
         self._max_to_keep = max_to_keep
         self._step_counter = step_counter
+        self._latest_checkpoint_fpath = None
         self._get_latest_checkpoint_fpath()
 
     def _get_latest_checkpoint_fpath(self):
-        if os.path.exists(self._directory):
-            contents = os.listdir(self._directory)
-            if len(contents) == 0:
-                self._latest_checkpoint_fpath = None
-            else:
-                contents.sort(key=lambda x: int(x.split('-')[-1].split('.hdf5')[0]))
-                self._latest_checkpoint_fpath = os.path.join(self._directory, contents[-1])
-        else:
-            self._latest_checkpoint_fpath = None
+        if not os.path.exists(self._directory):
+            return
+        contents = os.listdir(self._directory)
+        if contents:
+            contents.sort(key=lambda x: int(x.split('-')[-1].split('.hdf5')[0]))
+            self._latest_checkpoint_fpath = os.path.join(self._directory, contents[-1])
 
     @property
     def latest_checkpoint_fpath(self):
