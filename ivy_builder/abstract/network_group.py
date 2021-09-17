@@ -27,5 +27,5 @@ class NetworkGroup(BaseNetwork, ABC):
         """
         for k, subnet_spec in self._subnet_specs.items():
             subnet = subnet_spec.network_class(subnet_spec, v=ivy.default(lambda: self._v_in[k], None, True))
-            subnet.build(store_vars=subnet_spec.store_vars)
+            subnet.build(store_vars=ivy.default(subnet_spec.if_exists('store_vars'), True))
             setattr(self, k, subnet)
