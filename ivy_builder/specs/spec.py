@@ -6,16 +6,20 @@ import inspect
 
 
 def locals_to_kwargs(locals_in):
-    locals_cp = copy.deepcopy(locals_in)
+    keys_to_del = list()
     for k, v in locals_in.items():
-        if inspect.isclass(v) or k[0:2] == '__' or k == 'self':
-            del locals_cp[k]
-    if 'kwargs' in locals_cp:
-        kwargs_dict = locals_cp['kwargs']
-        del locals_cp['kwargs']
+        if inspect.isclass(v) or k[0:2] == '__' or k in\
+                ['self', 'dataset_dirs', 'dataset_spec', 'data_loader_spec', 'data_loader', 'network_spec', 'network',
+                 'trainer_spec', 'trainer', 'tuner_spec', 'tuner']:
+            keys_to_del.append(k)
+    for key_to_del in keys_to_del:
+        del locals_in[key_to_del]
+    if 'kwargs' in locals_in:
+        kwargs_dict = locals_in['kwargs']
+        del locals_in['kwargs']
     else:
         kwargs_dict = {}
-    return {**locals_cp, **kwargs_dict}
+    return copy.deepcopy({**locals_in, **kwargs_dict})
 
 
 class Spec(ivy.Container):
