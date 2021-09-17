@@ -19,7 +19,7 @@ def load_class_from_str(full_str):
 class NetworkSpec(Spec, abc.ABC):
 
     def __init__(self, dataset_spec: DatasetSpec = None, device: str = 'cpu:0', v_keychains=None,
-                 keep_v_keychains=False, **kwargs) -> None:
+                 keep_v_keychains=False, build_mode='explicit', **kwargs) -> None:
         """
         base class for storing general specifications of the neural network
         """
@@ -28,6 +28,7 @@ class NetworkSpec(Spec, abc.ABC):
                          device=device,
                          v_keychains=v_keychains,
                          keep_v_keychains=keep_v_keychains,
+                         build_mode=build_mode,
                          **kwargs)
         if 'subnets' in self:
             for k, subet_spec in self.subnets.items():

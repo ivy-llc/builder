@@ -25,13 +25,6 @@ class Network(ivy.Module):
         """
         raise NotImplementedError
 
-    def build(self, store_vars=True):
-        self._build()
-        ivy.Module.__init__(self, v=self._v_in, dev_str=self._spec.device)
-        if not store_vars:
-            # ToDo: verify variables in self.v created during ivy.Module.__init__ are released once this method exits
-            self.v = ivy.Container()
-
     # Getters #
     # --------#
 
