@@ -19,9 +19,10 @@ class NetworkGroup(BaseNetwork, ABC):
         self._v_in = v
         self._spec = spec
         self._subnet_specs = spec.subnets
+        self._subnets = ivy.Container()
         super(NetworkGroup, self).__init__(spec, v=v)
 
-    def _build_subnets(self, *args, **kwargs) -> None:
+    def _build_subnets(self, *args, **kwargs) -> bool:
         """
         Build the network subnets.
         """
@@ -29,10 +30,13 @@ class NetworkGroup(BaseNetwork, ABC):
             subnet = subnet_spec.network_class(subnet_spec, v=ivy.default(lambda: self._v_in[k], None, True))
             if subnet_spec.build_mode == 'explicit':
                 subnet.build(*args, **kwargs, store_vars=ivy.default(subnet_spec.if_exists('store_vars'), True))
+            self._subnets[k] = subnet
             setattr(self, k, subnet)
+        return bool(np.prod([subnet.built for subnet in self._subnets.values()]))
 
-    def _build(self, *args, **kwargs) -> None:
+    def _build(self, *args, **kwargs) -> bool:
         """
         Network builder method. This should be overriden if additional building if required.
         """
         self._build_subnets(*args, **kwargs)
+        return bool(np.prod([subnet.built for subnet in self._subnets.values()]))
