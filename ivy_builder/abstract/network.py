@@ -11,13 +11,16 @@ class Network(ivy.Module):
     # noinspection PyMissingConstructor
     def __init__(self,
                  network_spec: NetworkSpec,
+                 build_mode: str = 'explicit',
+                 store_vars: bool = True,
                  v=None) -> None:
         """
         base class for any networks
         """
         self._spec = network_spec
         ivy.Module.__init__(self, v=v, dev_str=self._spec.device,
-                            build_mode=ivy.default(self._spec.if_exists('build_mode'), 'on_call'))
+                            build_mode=ivy.default(self._spec.if_exists('build_mode'), build_mode),
+                            store_vars=ivy.default(self._spec.if_exists('store_vars'), store_vars))
 
     @abc.abstractmethod
     def _build(self) -> None:

@@ -1,5 +1,6 @@
 # global
 import ivy
+import numpy as np
 from abc import ABC
 
 # local
@@ -28,10 +29,8 @@ class NetworkGroup(BaseNetwork, ABC):
         """
         for k, subnet_spec in self._subnet_specs.items():
             subnet = subnet_spec.network_class(subnet_spec, v=ivy.default(lambda: self._v_in[k], None, True))
-            if subnet_spec.build_mode == 'explicit':
-                subnet.build(*args, **kwargs, store_vars=ivy.default(subnet_spec.if_exists('store_vars'), True))
+            subnet.build(*args, **kwargs)
             self._subnets[k] = subnet
-            setattr(self, k, subnet)
         return bool(np.prod([subnet.built for subnet in self._subnets.values()]))
 
     def _build(self, *args, **kwargs) -> bool:
