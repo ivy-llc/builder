@@ -20,6 +20,7 @@ from ivy_builder.specs import NetworkSpec
 # Custom Specification Classes #
 # -----------------------------#
 
+# noinspection PyAbstractClass
 class ExampleDatasetDirs(DatasetDirs):
 
     def __init__(self):
@@ -29,6 +30,7 @@ class ExampleDatasetDirs(DatasetDirs):
                          image_dir=os.path.join(root_dir, 'images'))
 
 
+# noinspection PyAbstractClass
 class ExampleDatasetSpec(DatasetSpec):
 
     def __init__(self, dirs, num_examples, vector_dim, image_dims):
@@ -38,6 +40,7 @@ class ExampleDatasetSpec(DatasetSpec):
                          image_dims=image_dims)
 
 
+# noinspection PyAbstractClass
 class ExampleDataLoaderSpec(DataLoaderSpec):
 
     def __init__(self, dataset_spec, batch_size, shuffle):
@@ -46,6 +49,7 @@ class ExampleDataLoaderSpec(DataLoaderSpec):
                          shuffle=shuffle)
 
 
+# noinspection PyAbstractClass
 class ExampleNetworkSpec(NetworkSpec):
 
     def __init__(self, dataset_spec, device, num_layers):
@@ -98,7 +102,7 @@ class ExampleNetwork(Network, ivy.Module):
     def __init__(self, network_spec):
         super().__init__(network_spec)
 
-    def _build(self):
+    def _build(self, *args, **kwargs):
         self._layers = list()
         for i in range(self._spec.num_layers):
             self._layers.append(ivy.Linear(3, 1))
@@ -120,7 +124,7 @@ class ExampleTrainer(Trainer):
         super().__init__(trainer_spec)
         self._sgd_optimizer = ivy.SGD(self._spec.initial_learning_rate)
 
-    def _compute_cost(self, batch, v):
+    def _compute_cost(self, batch, v=None):
         target = batch[1]
         network_output = self._spec.network(batch[0], v=v)
         return ivy.reduce_mean((network_output - target) ** 2)[0]

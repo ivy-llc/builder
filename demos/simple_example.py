@@ -17,7 +17,7 @@ class ExampleNetwork(Network):
     def __init__(self, network_spec):
         super().__init__(network_spec)
 
-    def _build(self):
+    def _build(self, *args, **kwargs):
         self._l1 = ivy.Linear(1, 1)
 
     def _forward(self, x):
@@ -39,7 +39,7 @@ class ExampleTrainer(Trainer):
         super().__init__(trainer_spec)
         self._sgd_optimizer = ivy.SGD(self._spec.initial_learning_rate)
 
-    def _compute_cost(self, batch, v):
+    def _compute_cost(self, batch, v=None):
         network_output = self._spec.network(batch, v=v)
         target = ivy.array([[0.]])
         return ivy.reduce_mean((network_output - target)**2)[0]

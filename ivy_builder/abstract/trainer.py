@@ -267,7 +267,8 @@ class Trainer:
 
     def _initialize_model(self, checkpoint_path=None):
         self._pre_init()
-        self._network.build()
+        if self._net_spec.build_mode == 'explicit':
+            self._network.build()
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
@@ -403,6 +404,7 @@ class Trainer:
         starting_iteration = self._initialize_model()
         if self._spec.starting_iteration is None:
             self._starting_iteration = starting_iteration
+        self._compute_cost(self._spec.data_loader.get_next_batch())  # for on_call variable creation
 
     def train(self, starting_iteration: int = None, total_iterations: int = None) -> None:
         """

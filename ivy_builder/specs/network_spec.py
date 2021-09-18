@@ -19,7 +19,7 @@ def load_class_from_str(full_str):
 class NetworkSpec(Spec, abc.ABC):
 
     def __init__(self, dataset_spec: DatasetSpec = None, device: str = 'cpu:0', v_keychains=None,
-                 keep_v_keychains=False, build_mode='explicit', **kwargs) -> None:
+                 keep_v_keychains=False, build_mode='on_call', **kwargs) -> None:
         """
         base class for storing general specifications of the neural network
         """
@@ -48,6 +48,7 @@ class NetworkSpec(Spec, abc.ABC):
                 else:
                     self.subnets[k].network_class = subet_spec.network_class
                 self.subnets[k].store_vars = ivy.default(self.subnets[k].if_exists('store_vars'), True)
+                self.subnets[k].build_mode = ivy.default(self.subnets[k].if_exists('build_mode'), self.build_mode)
                 self.subnets[k].dataset_spec = dataset_spec
                 self.subnets[k].device = device
         self._kwargs = kw
