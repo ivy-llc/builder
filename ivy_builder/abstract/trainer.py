@@ -91,6 +91,7 @@ class Trainer:
         # network
         self._network = self._spec.network
         self._net_spec = self._network.spec
+        self._partial_grad_updates = bool(self._net_spec.v_keychains)
 
     # Abstract #
     # ---------#
@@ -309,7 +310,11 @@ class Trainer:
             if ratio < 1:
                 grads = grads * ratio
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
-        self._network.v = self._optimizer.step(self._network.v, grads, ignore_missing=bool(self._net_spec.v_keychains))
+        new_v = self._optimizer.step(self._network.v, grads, ignore_missing=self._partial_grad_updates)
+        if self._partial_grad_updates:
+            self._network.v.set_at_key_chains(new_v)
+        else:
+            self._network.v = new_v
         if with_output:
             return batch, cost
         return cost
