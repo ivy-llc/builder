@@ -16,7 +16,8 @@ class Network(ivy.Module):
         base class for any networks
         """
         self._spec = network_spec
-        ivy.Module.__init__(self, v=v, dev_str=self._spec.device, build_mode=self._spec.build_mode)
+        ivy.Module.__init__(self, v=v, dev_str=self._spec.device,
+                            build_mode=ivy.default(self._spec.if_exists('build_mode'), 'on_call'))
 
     @abc.abstractmethod
     def _build(self) -> None:
