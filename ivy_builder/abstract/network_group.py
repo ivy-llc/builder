@@ -26,18 +26,19 @@ class NetworkGroup(BaseNetwork, ABC):
         """
         Build the network subnets.
         """
+        built_rets = list()
         for k, subnet_spec in self._spec.subnets.items():
             subnet = subnet_spec.network_class(subnet_spec, v=ivy.default(lambda: self._v_in[k], None, True))
-            subnet.build(*args, **kwargs)
+            built_rets.append(subnet.build(*args, **kwargs))
             self._subnets[k] = subnet
-        return bool(np.prod([subnet.built for subnet in self._subnets.values()]))
+        return ivy.Container(dict(zip(self._spec.subnets.keys(), built_rets)))
 
     def _build(self, *args, **kwargs) -> bool:
         """
         Network builder method. This should be overriden if additional building if required.
         """
-        self._build_subnets(*args, **kwargs)
-        return bool(np.prod([subnet.built for subnet in self._subnets.values()]))
+
+        return bool(np.prod([bool(ret) for ret in self._build_subnets(*args, **kwargs)]))
 
     # Properties #
     # -----------#
