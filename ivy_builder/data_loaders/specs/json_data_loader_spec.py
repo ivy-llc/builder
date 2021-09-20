@@ -13,7 +13,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                  shuffle_buffer_size=0, with_prefetching=True, queue_timeout=5.0, post_proc_fn=None,
                  prefetch_to_gpu=True, single_pass=False, array_strs=None, float_strs=None, uint8_strs=None,
                  custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled',
-                 **kwargs):
+                 load_gray_as_rgb=True, **kwargs):
 
         kw = locals_to_kwargs(locals())
 
@@ -50,6 +50,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  custom_strs=custom_strs,
                                                  custom_fns=custom_fns,
                                                  array_mode=array_mode,
+                                                 load_gray_as_rgb=load_gray_as_rgb,
                                                  **kwargs)
         self.queue_timeout = queue_timeout  # conflicts with ivy.Container argument
 

@@ -297,6 +297,9 @@ class JSONDataLoader(DataLoader):
                                 'To install opencv, run pip install opencv-python.')
             img_rgb = cv2.imread(full_path, -1)
             if len(img_rgb.shape) == 2:
+                if not self._spec.load_gray_as_rgb:
+                    raise Exception('Found an image with shape {}, but load_gray_as_rgb is set to False.'
+                                    'Set this to True in order to tile grayscale images to RGB.'.format(img_rgb.shape))
                 img_rgb = np.tile(np.expand_dims(img_rgb, -1), (1, 1, 3))
             img = ivy.array(np.expand_dims(img_rgb.astype(np.float32), 0))/255
             imgs.append(img)
