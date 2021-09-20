@@ -22,87 +22,131 @@ from ivy_builder.specs.network_spec import NetworkSpec
 from ivy_builder.specs.trainer_spec import TrainerSpec
 from ivy_builder.specs.tuner_spec import TunerSpec
 
-SPEC_KEYS = ['dd', 'ds', 'ls', 'ns', 'ts']
+SPEC_KEYS = ['dataset_dirs', 'dataset_spec', 'data_loader_spec', 'network_spec', 'trainer_spec']
+
+
+def _is_numeric_leaf(val):
+    if not isinstance(val, Container):
+        return False
+    if val.if_exists('min') and val.if_exists('max'):
+        return True
+    return False
+
+
+def _is_config_leaf(val):
+    if not isinstance(val, Container):
+        return False
+    if val.if_exists('configs'):
+        return True
+    return False
+
+
+def _is_leaf(val):
+    return _is_numeric_leaf(val) or _is_config_leaf(val)
+
+
+def _convert_numeric_leaf(val):
+    min_val = val.min
+    max_val = val.max
+    mean_val = (max_val + min_val) / 2
+    sd_val = max_val - mean_val
+    gaussian = val.if_exists('gaussian')
+    uniform = val.if_exists('uniform')
+    grid = val.if_exists('grid')
+    if val.if_exists('exponent'):
+        exponential = True
+        exponent = val.exponent
+        log_exponent = np.log(exponent)
+    else:
+        exponential = False
+    as_int = val.if_exists('as_int')
+    if gaussian:
+        if exponential:
+            if as_int:
+                sample_func = lambda spec, m=mean_val, s=sd_val: \
+                    int(np.round(exponent ** (np.random.normal(np.log(m) / log_exponent,
+                                                               np.log(s) / log_exponent))))
+            else:
+                sample_func = lambda spec, m=mean_val, s=sd_val: \
+                    exponent ** (np.random.normal(np.log(m) / log_exponent,
+                                                  np.log(s) / log_exponent))
+        else:
+            if as_int:
+                sample_func = lambda spec, m=mean_val, s=sd_val: \
+                    int(np.round(np.random.normal(m, s)))
+            else:
+                sample_func = lambda spec, m=mean_val, s=sd_val: \
+                    np.random.normal(m, s)
+        numeric_leaf = tune.sample_from(sample_func)
+    elif uniform:
+        if exponential:
+            if as_int:
+                sample_func = lambda spec, mi=min_val, ma=max_val: \
+                    int(np.round(exponent ** (np.random.uniform(np.log(mi) / log_exponent,
+                                                                np.log(ma) / log_exponent))))
+            else:
+                sample_func = lambda spec, mi=min_val, ma=max_val: \
+                    exponent ** (np.random.uniform(np.log(mi) / log_exponent,
+                                                   np.log(ma) / log_exponent))
+        else:
+            if as_int:
+                sample_func = lambda spec, mi=min_val, ma=max_val: int(np.round(np.random.uniform(mi, ma)))
+            else:
+                sample_func = lambda spec, mi=min_val, ma=max_val: np.random.uniform(mi, ma)
+        numeric_leaf = tune.sample_from(sample_func)
+    elif grid:
+        num_grid_samples = val.num_grid_samples
+        if exponential:
+            if as_int:
+                # noinspection PyUnboundLocalVariable
+                grid_vals = np.round(exponent ** (np.linspace(
+                    np.log(min_val) / log_exponent,
+                    np.log(max_val) / log_exponent,
+                    num_grid_samples))).astype(np.int32).tolist()
+            else:
+                # noinspection PyUnboundLocalVariable
+                grid_vals = (exponent ** (np.linspace(np.log(min_val) / log_exponent,
+                                                      np.log(max_val) / log_exponent,
+                                                      num_grid_samples))).tolist()
+        else:
+            if as_int:
+                grid_vals = np.round(np.linspace(min_val, max_val, num_grid_samples)).astype(np.uint32).tolist()
+            else:
+                grid_vals = np.linspace(min_val, max_val, num_grid_samples).tolist()
+        numeric_leaf = tune.grid_search(grid_vals)
+    else:
+        raise Exception('invalid mode, one of [ gaussian | uniform | grid ] must be selected.')
+    return numeric_leaf
+
+
+def _convert_config_leaf(val):
+    if val.if_exists('grid'):
+        return tune.grid_search(val.configs)
+    return tune.sample_from(lambda: np.random.choice(val.configs))
 
 
 # noinspection PyUnboundLocalVariable
-def _convert_tuner_spec(config):
-    return_dict = dict()
-
-    for i, (key, arg) in enumerate(config.items()):
-        spec_key = [spec_key for spec_key in SPEC_KEYS if key[0:3] == spec_key + '_']
+def _convert_tuner_spec(spec, key_chain=''):
+    new_spec = Container()
+    for i, (key, val) in enumerate(spec.items()):
+        key_chain = (key_chain + '/' + key) if key_chain != '' else key
+        spec_key = [sk for sk in SPEC_KEYS if sk in key_chain]
         if not spec_key:
-            return_dict[key] = arg
+            new_spec[key] = val
             continue
-        min_val = arg['min']
-        max_val = arg['max']
-        mean_val = (max_val + min_val) / 2
-        sd_val = max_val - mean_val
-        gaussian = 'gaussian' in arg and arg['gaussian']
-        uniform = 'uniform' in arg and arg['uniform']
-        grid = 'grid' in arg and arg['grid']
-        if 'exponent' in arg and arg['exponent']:
-            exponential = True
-            exponent = arg['exponent']
-            log_exponent = np.log(exponent)
+        if not _is_leaf(val):
+            if not isinstance(val, Container):
+                new_spec[key] = val
+            else:
+                new_spec[key] = _convert_tuner_spec(val, key_chain)
+            continue
+        if _is_numeric_leaf(val):
+            new_spec[key] = _convert_numeric_leaf(val)
+        elif _is_config_leaf(val):
+            new_spec[key] = _convert_config_leaf(val)
         else:
-            exponential = False
-        as_int = 'as_int' in arg and arg['as_int']
-        if gaussian:
-            if exponential:
-                if as_int:
-                    sample_func = lambda spec, m=mean_val, s=sd_val:\
-                        int(np.round(exponent ** (np.random.normal(np.log(m) / log_exponent,
-                                                                   np.log(s) / log_exponent))))
-                else:
-                    sample_func = lambda spec, m=mean_val, s=sd_val:\
-                        exponent ** (np.random.normal(np.log(m) / log_exponent,
-                                                      np.log(s) / log_exponent))
-            else:
-                if as_int:
-                    sample_func = lambda spec, m=mean_val, s=sd_val:\
-                        int(np.round(np.random.normal(m, s)))
-                else:
-                    sample_func = lambda spec, m=mean_val, s=sd_val:\
-                        np.random.normal(m, s)
-            return_dict[key] = tune.sample_from(sample_func)
-        elif uniform:
-            if exponential:
-                if as_int:
-                    sample_func = lambda spec, mi=min_val, ma=max_val:\
-                        int(np.round(exponent ** (np.random.uniform(np.log(mi) / log_exponent,
-                                                                    np.log(ma) / log_exponent))))
-                else:
-                    sample_func = lambda spec, mi=min_val, ma=max_val:\
-                        exponent ** (np.random.uniform(np.log(mi) / log_exponent,
-                                                       np.log(ma) / log_exponent))
-            else:
-                if as_int:
-                    sample_func = lambda spec, mi=min_val, ma=max_val: int(np.round(np.random.uniform(mi, ma)))
-                else:
-                    sample_func = lambda spec, mi=min_val, ma=max_val: np.random.uniform(mi, ma)
-            return_dict[key] = tune.sample_from(sample_func)
-        elif grid:
-            num_grid_samples = arg['num_grid_samples']
-            if exponential:
-                if as_int:
-                    grid_vals = np.round(exponent ** (np.linspace(
-                        np.log(min_val) / log_exponent,
-                        np.log(max_val) / log_exponent,
-                        num_grid_samples))).astype(np.int32).tolist()
-                else:
-                    grid_vals = (exponent ** (np.linspace(np.log(min_val) / log_exponent,
-                                                          np.log(max_val) / log_exponent,
-                                                          num_grid_samples))).tolist()
-            else:
-                if as_int:
-                    grid_vals = np.round(np.linspace(min_val, max_val, num_grid_samples)).astype(np.uint32).tolist()
-                else:
-                    grid_vals = np.linspace(min_val, max_val, num_grid_samples).tolist()
-            return_dict[key] = tune.grid_search(grid_vals)
-        else:
-            raise Exception('invalid mode, one of [ gaussian | uniform | grid ] must be selected.')
-    return Container(return_dict)
+            raise Exception('invalid leaf')
+    return new_spec
 
 
 class Tuner:
@@ -260,21 +304,21 @@ class Tuner:
                 self._trainer = builder.build_trainer(data_loader_class=data_loader_class,
                                                       network_class=network_class,
                                                       trainer_class=trainer_class,
-                                                      dataset_dirs_args=new_args['dd'],
+                                                      dataset_dirs_args=new_args['dataset_dirs'],
                                                       dataset_dirs_class=dataset_dirs_class,
                                                       dataset_dirs=dataset_dirs,
-                                                      dataset_spec_args=new_args['ds'],
+                                                      dataset_spec_args=new_args['dataset_spec'],
                                                       dataset_spec_class=dataset_spec_class,
                                                       dataset_spec=dataset_spec,
-                                                      data_loader_spec_args=new_args['ls'],
+                                                      data_loader_spec_args=new_args['data_loader_spec'],
                                                       data_loader_spec_class=data_loader_spec_class,
                                                       data_loader_spec=data_loader_spec,
                                                       data_loader=data_loader,
-                                                      network_spec_args=new_args['ns'],
+                                                      network_spec_args=new_args['network_spec'],
                                                       network_spec_class=network_spec_class,
                                                       network_spec=network_spec,
                                                       network=network,
-                                                      trainer_spec_args=new_args['ts'],
+                                                      trainer_spec_args=new_args['trainer_spec'],
                                                       trainer_spec_class=trainer_spec_class,
                                                       trainer_spec=trainer_spec,
                                                       json_spec_path=json_spec_path,
