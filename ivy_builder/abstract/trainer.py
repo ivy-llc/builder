@@ -357,19 +357,22 @@ class Trainer:
 
         while self._global_step < self._total_iterations or self._total_iterations == -1:
 
-            log_scalars_on_this_it = self._spec.log_scalars and self._global_step % self._spec.log_freq == 0 \
-                                     and self._spec.log_freq > 0 and not vis_mode
-            log_viz_on_this_it = self._spec.log_vis and self._global_step % vis_freq == 0 and self._spec.vis_freq > 0
+            final_step = self._global_step == self._total_iterations - 1
+            log_scalars = (self._global_step % self._spec.log_freq == 0 or (final_step and self._spec.log_at_end)) \
+                          and self._spec.log_freq > 0 and not vis_mode
+            log_viz = (self._global_step % vis_freq == 0 or (final_step and self._spec.vis_at_end)) \
+                      and self._spec.vis_freq > 0
+            save = (self._global_step % self._spec.save_freq == 0 or (final_step and self._spec.save_at_end)) \
+                   and self._spec.save_freq > 0 and not vis_mode
 
-            self._data_load_and_train_step(vis_mode, log_scalars_on_this_it, log_viz_on_this_it)
+            self._data_load_and_train_step(vis_mode, log_scalars, log_viz)
 
-            if log_scalars_on_this_it:
+            if log_scalars:
                 self._log_scalars()
-            if log_viz_on_this_it or vis_mode:
+            if log_viz or vis_mode:
                 self._write_image_summaries(self._spec.data_loader, self._network, self._training_batch,
                                             self._global_step)
-            if (self._global_step % self._spec.save_freq == 0 or self._global_step == self._total_iterations - 1) \
-                    and self._spec.save_freq > 0 and not vis_mode:
+            if save:
                 self._save()
 
             self._global_step += 1
