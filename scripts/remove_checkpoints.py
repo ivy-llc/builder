@@ -14,6 +14,7 @@ if __name__ == '__main__':
                         help='The cutoff value for the checkpoints, above which existing checkpoints will be removed.')
     parsed_args = parser.parse_args()
     checkpoint_dir = ivy.default(parsed_args.checkpoint_dir, os.getcwd())
+    assert checkpoint_dir.split('/')[-1] == 'chkpts'
     checkpoint_fnames = os.listdir(checkpoint_dir)
     checkpoint_fnames.sort(key=lambda x: int(x.split('-')[-1].split('.')[0]))
     for checkpoint_fname in checkpoint_fnames:
