@@ -32,6 +32,9 @@ class ExampleDataLoader(DataLoader):
     def get_next_batch(self, dataset_key=None):
         return ivy.array([[1.]])
 
+    def get_first_batch(self, dataset_key=None):
+        return ivy.array([[1.]])
+
 
 class ExampleTrainer(Trainer):
 

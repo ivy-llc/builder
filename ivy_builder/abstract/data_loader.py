@@ -16,7 +16,14 @@ class DataLoader(abc.ABC):
     @abc.abstractmethod
     def get_next_batch(self, dataset_key: str = None):
         """
-        get next sample from the data, as specified by the key, as a tuple of loaded tensors
+        get next sample from the data, as specified by the key, as an ivy.Container
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_first_batch(self, dataset_key: str = None):
+        """
+        get the first batch, as specified by the key, as an ivy.Container
         """
         raise NotImplementedError
 

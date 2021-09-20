@@ -92,6 +92,10 @@ class ExampleDataLoader(DataLoader):
             self._i = (self._i + 1) % self._num_examples
         return data.input[self._i], data.targets[self._i]
 
+    def get_first_batch(self, dataset_key='training'):
+        data = self._data[dataset_key]
+        return data.input[0], data.targets[0]
+
 
 # Custom Network #
 # ---------------#

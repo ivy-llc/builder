@@ -66,7 +66,7 @@ class JSONDataLoader(DataLoader):
         self._iterator = iter(self._dataset)
 
         # dummy batch
-        self._dummy_batch = None
+        self._first_batch = None
 
         # counter
         self._counter = 0
@@ -531,10 +531,10 @@ class JSONDataLoader(DataLoader):
     def get_next_batch(self, dataset_key=None):
         return next(self._iterator)
 
-    def get_dummy_batch(self):
-        if self._dummy_batch is None:
-            self._dummy_batch = self.get_next_batch()
-        return self._dummy_batch.as_random_uniform()
+    def get_first_batch(self, dataset_key=None):
+        if self._first_batch is None:
+            self._first_batch = self._dataset[0]
+        return self._first_batch
 
     def close(self):
         self._dataset.close()
