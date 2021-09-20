@@ -355,7 +355,7 @@ class Trainer:
 
         local_counter = 0
 
-        while self._global_step < int(self._total_iterations) or int(self._total_iterations) == -1:
+        while self._global_step < self._total_iterations or self._total_iterations == -1:
 
             log_scalars_on_this_it = self._spec.log_scalars and self._global_step % self._spec.log_freq == 0 \
                                      and self._spec.log_freq > 0 and not vis_mode
@@ -368,7 +368,8 @@ class Trainer:
             if log_viz_on_this_it or vis_mode:
                 self._write_image_summaries(self._spec.data_loader, self._network, self._training_batch,
                                             self._global_step)
-            if self._global_step % self._spec.save_freq == 0 and self._spec.save_freq > 0 and not vis_mode:
+            if (self._global_step % self._spec.save_freq == 0 or self._global_step == self._total_iterations - 1) \
+                    and self._spec.save_freq > 0 and not vis_mode:
                 self._save()
 
             self._global_step += 1
