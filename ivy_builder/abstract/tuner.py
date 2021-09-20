@@ -23,6 +23,11 @@ from ivy_builder.specs.trainer_spec import TrainerSpec
 from ivy_builder.specs.tuner_spec import TunerSpec
 
 SPEC_KEYS = ['dataset_dirs', 'dataset_spec', 'data_loader_spec', 'network_spec', 'trainer_spec']
+SHORT_SPEC_KEYS_DICT = {'dataset_dirs': 'dd',
+                        'dataset_spec': 'ds',
+                        'data_loader_spec': 'ls',
+                        'network_spec': 'ns',
+                        'trainer_spec': 'ts'}
 
 
 def _is_numeric_leaf(val):
@@ -302,7 +307,8 @@ class Tuner:
                 self.timestep = 0
                 self._trainer_global_step = 0
                 self._train_steps_per_tune_step = self.config['train_steps_per_tune_step']
-                self._config_str = '_'.join([str(key) + '_' + ("%.2g" % val if isinstance(val, float) else str(val))
+                self._config_str = '_'.join([str(SHORT_SPEC_KEYS_DICT[key]) + '_' +
+                                             ("%.2g" % val if isinstance(val, float) else str(val))
                                              for key, val in self.config.items()
                                              if (isinstance(val, (float, int)) and key != 'train_steps_per_tune_step')])
                 trainer_spec_args['log_dir'] = os.path.join(orig_log_dir, self._config_str)
