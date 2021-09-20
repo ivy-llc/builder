@@ -125,6 +125,13 @@ def _convert_config_leaf(val):
     return tune.sample_from(lambda: np.random.choice(val.configs))
 
 
+def _convert_multi_config_leaf(keys, val):
+    new_config = Container()
+    new_config.grid = val.if_exists('grid')
+    new_config.configs = [dict(zip(keys, v)) for v in val.configs]
+    return _convert_config_leaf(new_config)
+
+
 # noinspection PyUnboundLocalVariable
 def _convert_tuner_spec(spec, key_chain=''):
     new_spec = Container()
@@ -143,7 +150,11 @@ def _convert_tuner_spec(spec, key_chain=''):
         if _is_numeric_leaf(val):
             new_spec[key] = _convert_numeric_leaf(val)
         elif _is_config_leaf(val):
-            new_spec[key] = _convert_config_leaf(val)
+            keys = key.split('_AND_')
+            if len(keys) == 1:
+                new_spec[keys[0]] = _convert_config_leaf(val)
+            else:
+                new_spec = {**new_spec, **_convert_multi_config_leaf(keys, val)}
         else:
             raise Exception('invalid leaf')
     return new_spec

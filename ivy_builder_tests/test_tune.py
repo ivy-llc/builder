@@ -69,7 +69,16 @@ def test_tune_general_spec(dev_str, call):
                                          "grid": True},
                                     "spec_c_b":
                                         {"configs": ['100', '200']},
-                                }
+                                },
+                            'spec_d':
+                                {
+                                    'spec_e_AND_spec_f_AND_spec_g':
+                                        {
+                                            "configs": [(False, False, False), (False, True, False),
+                                                        (True, False, True), (False, True, True)],
+                                            "grid": True
+                                        }
+                                },
                             },
                        'name': 'asynchyperband_test',
                        'num_samples': 1,
