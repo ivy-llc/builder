@@ -154,7 +154,7 @@ def _convert_tuner_spec(spec, key_chain=''):
             if len(keys) == 1:
                 new_spec[keys[0]] = _convert_config_leaf(val)
             else:
-                new_spec = {**new_spec, **_convert_multi_config_leaf(keys, val)}
+                new_spec[key] = _convert_multi_config_leaf(keys, val)
         else:
             raise Exception('invalid leaf')
     return new_spec
@@ -309,8 +309,10 @@ class Tuner:
                 new_args = dict()
                 for class_key, args in zip(SPEC_KEYS, [dataset_dirs_args, dataset_spec_args, data_loader_spec_args,
                                                        network_spec_args, trainer_spec_args]):
-                    config_args = dict([(k[3:], v) for k, v in self.config.items() if k[0:3] == class_key + '_'])
-                    new_args[class_key] = {**args, **config_args}
+                    new_args[class_key] =\
+                        Container({**args, **(self.config[class_key] if
+                                              class_key in self.config else {})}).prune_key_from_key_chains(
+                            containing='_AND_')
 
                 self._trainer = builder.build_trainer(data_loader_class=data_loader_class,
                                                       network_class=network_class,
