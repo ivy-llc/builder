@@ -1,8 +1,4 @@
 {
-  "minimal_again": [
-    "demos.simple_example.main",
-    ""
-  ],
   "minimal": [
     "demos.simple_example.main",
     ""
