@@ -167,7 +167,7 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
                            if si != 0 else wi for si, wi in zip(seq_idxs, window_idxs)]
         if shuffle_buffer_size == 0:
             assert np.allclose(ivy.to_numpy(valid_batch.seq_info.length),
-                               np.tile(np.array(padded_seq_lens).reshape(-1, 1), (1, 2)))
+                               np.tile(np.array(seq_lens).reshape(-1, 1), (1, 2)))
             assert np.allclose(ivy.to_numpy(valid_batch.seq_info.idx),
                                np.concatenate((np.array(in_seq_win_idxs).reshape(-1, 1),
                                                np.array(in_seq_win_idxs).reshape(-1, 1) +
@@ -199,6 +199,51 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
 
     # test removed key chain
     assert 'depth' not in batch.observations.image.ego.ego_cam_px
+
+    # delete
+    data_loader.close()
+    del data_loader
+
+
+@pytest.mark.parametrize(
+    "preload_containers", [True, False])
+@pytest.mark.parametrize(
+    "array_mode", ['hdf5', 'pickled'])
+@pytest.mark.parametrize(
+    "with_prefetching", [True, False])
+def test_json_loader_containers_to_skip(dev_str, f, call, preload_containers, array_mode, with_prefetching):
+
+    # seed
+    f.seed(0)
+    np.random.seed(0)
+
+    # dataset dir
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    ds_dir = os.path.join(current_dir, 'dataset')
+    dataset_dirs = DatasetDirs(dataset_dir=ds_dir, containers_dir=os.path.join(ds_dir, 'containers'))
+
+    dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 1], cont_fname_template='%06d_%06d.json')
+    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=2, window_size=1, starting_idx=0,
+                                          preload_containers=preload_containers, array_mode=array_mode, num_sequences=6,
+                                          array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
+                                          preshuffle_data=False, with_prefetching=with_prefetching, num_workers=1,
+                                          containers_to_skip=[(0, 1), (1, 1), (4, 0)])
+
+    # data loader
+    data_loader = JSONDataLoader(data_loader_spec)
+
+    # testing
+    for i, (idx, length, seq_idx) in enumerate(zip([[0, 0], [2, 0], [1, 0], [1, 2], [1, 2], [0, 0], [0, 2], [0, 1]],
+                                                   [[2, 3], [3, 2], [2, 3], [3, 3], [3, 3], [1, 2], [3, 3], [2, 2]],
+                                                   [[0, 1], [1, 2], [2, 3], [3, 3], [4, 4], [5, 0], [1, 1], [2, 2]])):
+
+        # get training batch
+        batch = data_loader.get_next_batch()
+
+        # test seq_info
+        assert np.array_equal(ivy.to_numpy(batch.seq_info.idx), np.expand_dims(np.asarray(idx), -1))
+        assert np.array_equal(ivy.to_numpy(batch.seq_info.length), np.expand_dims(np.asarray(length), -1))
+        assert np.array_equal(ivy.to_numpy(batch.seq_info.seq_idx), np.expand_dims(np.asarray(seq_idx), -1))
 
     # delete
     data_loader.close()

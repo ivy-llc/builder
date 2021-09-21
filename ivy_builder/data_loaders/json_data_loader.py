@@ -44,11 +44,16 @@ class JSONDataLoader(DataLoader):
 
         # variables
         self._window_size = self._spec.window_size
+        self._spec.dataset_spec.unpruned_sequence_lengths = self._spec.dataset_spec.sequence_lengths
         if 'sequence_lengths' in self._spec.dataset_spec:
             self._fixed_sequence_length = isinstance(self._spec.dataset_spec.sequence_lengths, int)
             if self._fixed_sequence_length:
                 self._windows_per_seq = self._spec.dataset_spec.sequence_lengths - (self._window_size - 1)
             else:
+                # update sequences lengths
+                self._spec.dataset_spec.sequence_lengths =\
+                    [sl - sum([c[0] == i for c in self._spec.containers_to_skip])
+                     for i, sl in enumerate(self._spec.dataset_spec.sequence_lengths)]
                 self._windows_per_seq = ivy.array(self._spec.dataset_spec.sequence_lengths) - (self._window_size - 1)
         else:
             self._fixed_sequence_length = False
@@ -192,7 +197,15 @@ class JSONDataLoader(DataLoader):
     # Dynamic Windowing #
     # ------------------#
 
+    def _update_seq_info_for_window(self, seq_info):
+        seq_idx = int(seq_info.seq_idx[0])
+        num_removed = sum([cts[0] == seq_idx for cts in self._spec.containers_to_skip])
+        seq_info = seq_info.copy()
+        seq_info.length = seq_info.length - num_removed
+        return seq_info
+
     def _group_tensor_into_windowed_tensor_simple(self, x, seq_info):
+        seq_info = self._update_seq_info_for_window(seq_info)
         if self._fixed_sequence_length:
             return ivy.reshape(ivy.gather_nd(x, ivy.array(self._gather_idxs)),
                                (self._windows_per_seq, self._window_size) + x.shape[1:])
@@ -368,20 +381,26 @@ class JSONDataLoader(DataLoader):
 
         class ContainerIdxMap:
 
-            def __init__(self, sizes, fpath_template, seq_idxs=None, start=None, end=None, max_seq_len=None):
+            def __init__(self, sizes, fpath_template, seq_idxs=None, start=None, end=None, max_seq_len=None,
+                         conts_to_skip=None, pruned_sizes=None):
                 if isinstance(sizes, (tuple, list)):
-                    self._sizes = dict(zip(range(start, end + 1), sizes[start:end+1]))
+                    pruned_sizes = ivy.default(
+                        pruned_sizes, [sl - sum([c[0] == i for c in conts_to_skip]) for i, sl in enumerate(sizes)])
+                    self._raw_sizes = dict(zip(range(start, end + 1), sizes[start:end + 1]))
+                    self._pruned_sizes = dict(zip(range(start, end + 1), pruned_sizes[start:end + 1]))
                 elif isinstance(sizes, (int, dict)):
-                    self._sizes = sizes
+                    self._raw_sizes = sizes
+                    self._pruned_sizes = ivy.default(pruned_sizes, sizes)
                 else:
                     raise Exception('Invalid type for sizes, expected one of int, dict, tuple or list,'
                                     'but found {} or type {}'.format(sizes, type(sizes)))
-                self._constant_size = isinstance(self._sizes, int)
+                self._constant_size = isinstance(self._raw_sizes, int)
                 if max_seq_len:
                     self._max_seq_len = max_seq_len
                 else:
-                    self._max_seq_len = self._sizes if self._constant_size else max(self._sizes.values())
+                    self._max_seq_len = self._pruned_sizes if self._constant_size else max(self._pruned_sizes.values())
                 self._fpath_template = fpath_template
+                self._conts_to_skip = conts_to_skip
                 if seq_idxs:
                     self._seq_idxs = seq_idxs
                 else:
@@ -398,10 +417,12 @@ class JSONDataLoader(DataLoader):
                     raise Exception('Invalid type for slice_obj, expected either slice or int,'
                                     'but found {} of type {}'.format(slice_obj, type(slice_obj)))
                 if self._constant_size:
-                    sizes = self._sizes
+                    sizes = self._raw_sizes
                 else:
-                    sizes = collections.OrderedDict([(seq_idx, self._sizes[seq_idx]) for seq_idx in seq_idxs.values()])
-                return ContainerIdxMap(sizes, self._fpath_template, seq_idxs, max_seq_len=self._max_seq_len)
+                    sizes = collections.OrderedDict([(seq_idx, self._raw_sizes[seq_idx])
+                                                     for seq_idx in seq_idxs.values()])
+                return ContainerIdxMap(sizes, self._fpath_template, seq_idxs, max_seq_len=self._max_seq_len,
+                                       conts_to_skip=self._conts_to_skip, pruned_sizes=self._pruned_sizes)
 
             def __len__(self):
                 return len(self._seq_idxs)
@@ -413,19 +434,21 @@ class JSONDataLoader(DataLoader):
 
             def to_filepaths(self):
                 seq_idxs = self._seq_idxs.values()
-                sizes = [self._sizes if self._constant_size else self._sizes[seq_idx] for seq_idx in seq_idxs]
-                return [[self._fpath_template % (seq_idx, win_idx) for win_idx in
-                         range(size)] + [''] * (self._max_seq_len - size) for seq_idx, size in zip(seq_idxs, sizes)]
+                sizes = [self._raw_sizes if self._constant_size else self._raw_sizes[seq_idx] for seq_idx in seq_idxs]
+                rets = [[self._fpath_template % (seq_idx, win_idx) for win_idx in
+                         range(size) if (seq_idx, win_idx) not in self._conts_to_skip]
+                        for seq_idx, size in zip(seq_idxs, sizes)]
+                return [r + [''] * (self._max_seq_len - len(r)) for r in rets]
 
             @property
             def sizes(self):
-                return self._sizes
+                return self._pruned_sizes
 
         # container filepaths
         container_idx_map = ContainerIdxMap(
-            self._spec.dataset_spec.sequence_lengths,
+            self._spec.dataset_spec.unpruned_sequence_lengths,
             os.path.join(self._container_data_dir, self._spec.dataset_spec.cont_fname_template),
-            start=starting_example, end=ending_example)
+            start=starting_example, end=ending_example, conts_to_skip=self._spec.containers_to_skip)
 
         if self._spec.num_sequences != -1:
             container_idx_map = container_idx_map[0:self._spec.num_sequences]

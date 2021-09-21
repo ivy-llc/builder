@@ -13,18 +13,19 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                  shuffle_buffer_size=0, with_prefetching=True, queue_timeout=5.0, post_proc_fn=None,
                  prefetch_to_gpu=True, single_pass=False, array_strs=None, float_strs=None, uint8_strs=None,
                  custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled',
-                 load_gray_as_rgb=True, **kwargs):
+                 load_gray_as_rgb=True, containers_to_skip=None, **kwargs):
 
         kw = locals_to_kwargs(locals())
 
-        unused_key_chains = [] if unused_key_chains is None else unused_key_chains
-        array_strs = [] if array_strs is None else array_strs
-        float_strs = [] if float_strs is None else float_strs
-        uint8_strs = [] if uint8_strs is None else uint8_strs
-        custom_img_strs = [[]] if custom_img_strs is None else custom_img_strs
-        custom_img_fns = [] if custom_img_fns is None else custom_img_fns
-        custom_strs = [[]] if custom_strs is None else custom_strs
-        custom_fns = [] if custom_fns is None else custom_fns
+        unused_key_chains = ivy.default(unused_key_chains, [])
+        array_strs = ivy.default(array_strs, [])
+        float_strs = ivy.default(float_strs, [])
+        uint8_strs = ivy.default(uint8_strs, [])
+        custom_img_strs = ivy.default(custom_img_strs, [[]])
+        custom_img_fns = ivy.default(custom_img_fns, [])
+        custom_strs = ivy.default(custom_strs, [[]])
+        custom_fns = ivy.default(custom_fns, [])
+        containers_to_skip = ivy.default(containers_to_skip, [])
         prefetch_to_gpu = prefetch_to_gpu if ivy.gpu_is_available() else False
 
         super(JSONDataLoaderSpec, self).__init__(dataset_spec,
@@ -51,6 +52,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  custom_fns=custom_fns,
                                                  array_mode=array_mode,
                                                  load_gray_as_rgb=load_gray_as_rgb,
+                                                 containers_to_skip=containers_to_skip,
                                                  **kwargs)
         self.queue_timeout = queue_timeout  # conflicts with ivy.Container argument
 
