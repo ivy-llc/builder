@@ -438,7 +438,7 @@ class JSONDataLoader(DataLoader):
                 rets = [[self._fpath_template % (seq_idx, win_idx) for win_idx in
                          range(size) if (seq_idx, win_idx) not in self._conts_to_skip]
                         for seq_idx, size in zip(seq_idxs, sizes)]
-                return [r + [''] * (self._max_seq_len - len(r)) for r in rets]
+                return [r + [''] * (self._max_seq_len - len(r)) for r in rets if ''.join(r) != '']
 
             @property
             def sizes(self):

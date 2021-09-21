@@ -227,15 +227,15 @@ def test_json_loader_containers_to_skip(dev_str, f, call, preload_containers, ar
                                           preload_containers=preload_containers, array_mode=array_mode, num_sequences=6,
                                           array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
                                           preshuffle_data=False, with_prefetching=with_prefetching, num_workers=1,
-                                          containers_to_skip=[(0, 1), (1, 1), (4, 0)])
+                                          containers_to_skip=[(0, 1), (1, 1), (5, 0)])
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
 
     # testing
-    for i, (idx, length, seq_idx) in enumerate(zip([[0, 0], [2, 0], [1, 0], [1, 2], [1, 2], [0, 0], [0, 2], [0, 1]],
-                                                   [[2, 3], [3, 2], [2, 3], [3, 3], [3, 3], [1, 2], [3, 3], [2, 2]],
-                                                   [[0, 1], [1, 2], [2, 3], [3, 3], [4, 4], [5, 0], [1, 1], [2, 2]])):
+    for i, (idx, length, seq_idx) in enumerate(zip([[0, 0], [2, 0], [1, 0], [1, 2], [0, 1], [2, 0], [0, 2], [0, 1]],
+                                                   [[2, 3], [3, 2], [2, 3], [3, 3], [3, 3], [3, 2], [3, 3], [2, 2]],
+                                                   [[0, 1], [1, 2], [2, 3], [3, 3], [4, 4], [4, 0], [1, 1], [2, 2]])):
 
         # get training batch
         batch = data_loader.get_next_batch()
