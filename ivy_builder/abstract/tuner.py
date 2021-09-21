@@ -28,6 +28,7 @@ SHORT_SPEC_KEYS_DICT = {'dataset_dirs': 'dd',
                         'data_loader_spec': 'ls',
                         'network_spec': 'ns',
                         'trainer_spec': 'ts'}
+FIXED_CONFIG_KEYS = ['train_steps_per_tune_step', 'framework']
 
 
 def _is_numeric_leaf(val):
@@ -307,10 +308,11 @@ class Tuner:
                 self.timestep = 0
                 self._trainer_global_step = 0
                 self._train_steps_per_tune_step = self.config['train_steps_per_tune_step']
-                self._config_str = '_'.join([str(SHORT_SPEC_KEYS_DICT[key]) + '_' +
-                                             ("%.2g" % val if isinstance(val, float) else str(val))
-                                             for key, val in self.config.items()
-                                             if (isinstance(val, (float, int)) and key != 'train_steps_per_tune_step')])
+                config_cont = Container(self.config)
+                self._config_str = '_'.join(
+                    [str(SHORT_SPEC_KEYS_DICT[kc.split('/')[0]]) + '_' + kc.split('/')[-1] + '_' +
+                     ("%.2g" % val if isinstance(val, float) else str(val)) for kc, val in config_cont.to_iterator()
+                     if (isinstance(val, (float, int, bool)) and kc not in FIXED_CONFIG_KEYS)])
                 trainer_spec_args['log_dir'] = os.path.join(orig_log_dir, self._config_str)
                 new_args = dict()
                 for class_key, args in zip(SPEC_KEYS, [dataset_dirs_args, dataset_spec_args, data_loader_spec_args,
