@@ -32,11 +32,12 @@ def prune_checkpoints(base_dir, cutoff, last_only, is_chkpts=False):
     contents.sort()
 
     for item in contents:
-        if os.path.isdir(item):
+        fpath = os.path.join(base_dir, item)
+        if os.path.isdir(fpath):
             is_chkpts = False
             if item == 'chkpts':
                 is_chkpts = True
-            prune_checkpoints(os.path.join(base_dir, item), cutoff, last_only, is_chkpts)
+            prune_checkpoints(fpath, cutoff, last_only, is_chkpts)
 
 
 def main():
