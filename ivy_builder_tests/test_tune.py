@@ -2,6 +2,7 @@
 import os
 import ray
 import ivy
+import math
 import pytest
 
 # local
@@ -103,8 +104,9 @@ def test_tune_resume_training(dev_str, call):
     builder_helpers.remove_dirs()
 
     # tuner spec args
+    train_steps_per_tune_step = 2
     tuner_spec_args = {'framework': ivy.current_framework_str(),
-                       'train_steps_per_tune_step': 2,
+                       'train_steps_per_tune_step': train_steps_per_tune_step,
                        'trainer_spec':
                            {'initial_learning_rate':
                                 {'min': 10 ** -5,
@@ -120,28 +122,45 @@ def test_tune_resume_training(dev_str, call):
                        'checkpoint_freq': 0}
 
     # first run
-    trainer_spec_args = {'total_iterations': 5,
+    total_iterations = 5
+    trainer_spec_args = {'total_iterations': total_iterations,
                          'ld_chkpt': False,
                          'log_freq': 1,
                          'log_dir': os.path.join(THIS_DIR, 'log'),
                          'save_freq': 1}
     tuner = builder.build_tuner(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
                                 trainer_spec_args=trainer_spec_args, tuner_spec_args=tuner_spec_args)
-    first_run_info = tuner.tune()
-    first_losses = ivy.Container(first_run_info.results).at_keys('cost').to_flat_list()
+    first_results = ivy.Container(tuner.tune().results)
+    first_losses = first_results.at_keys('cost').to_flat_list()
 
     # second run
-    trainer_spec_args = {'total_iterations': 10,
+    trainer_spec_args = {'total_iterations': total_iterations*2,
                          'ld_chkpt': True,
                          'log_freq': 1,
                          'log_dir': os.path.join(THIS_DIR, 'log'),
                          'save_freq': 1}
     tuner = builder.build_tuner(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
                                 trainer_spec_args=trainer_spec_args, tuner_spec_args=tuner_spec_args)
-    second_run_info = tuner.tune()
-    second_losses = ivy.Container(second_run_info.results).at_keys('cost').to_flat_list()
+    second_results = ivy.Container(tuner.tune().results)
+    second_losses = second_results.at_keys('cost').to_flat_list()
 
     # assertion
+
+    # first session ends training at ceil(5/2)=3 timesteps
+    first_timestep = int(math.ceil(total_iterations/train_steps_per_tune_step))
+    assert min([fts == first_timestep for fts in first_results.at_keys('timestep').to_flat_list()])
+
+    # second session ends training at ceil(10/2)=5 timesteps
+    second_timestep = int(math.ceil(total_iterations*2/train_steps_per_tune_step))
+    assert min([sts == second_timestep for sts in second_results.at_keys('timestep').to_flat_list()])
+
+    # both sessions trained for ceil(5/2)=3 training iterations
+    training_iteration = int(math.ceil(total_iterations/train_steps_per_tune_step))
+    assert min([fti == sti == training_iteration for fti, sti in
+                zip(first_results.at_keys('training_iteration').to_flat_list(),
+                    second_results.at_keys('training_iteration').to_flat_list())])
+
+    # the loss is lower for the second session, after the checkpoint load from the first
     assert min([second_loss < first_loss for first_loss, second_loss in zip(first_losses, second_losses)])
 
     # end

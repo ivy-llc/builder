@@ -353,8 +353,7 @@ class Tuner:
                 # noinspection PyProtectedMember
                 self._trainer_global_step = self._trainer._starting_iteration
                 self._trainer_total_iterations = self._trainer.spec.total_iterations
-                # ToDo: set the timestep below to the correct value, based on train_steps_per_tune_step
-                self.timestep = 0
+                self.timestep = int(math.floor(self._trainer_global_step / self._train_steps_per_tune_step))
 
             def step(self):
                 total_iterations = min(self._trainer_global_step + self._train_steps_per_tune_step,
@@ -388,7 +387,7 @@ class Tuner:
 
         max_t = int(np.ceil(self._spec.trainer.spec.total_iterations/self._spec.train_steps_per_tune_step))
         ahb = AsyncHyperBandScheduler(
-            time_attr="training_iteration",
+            time_attr="timestep",
             metric="cost",
             mode="min",
             grace_period=max_t if self._spec.grace_period == -1 else self._spec.grace_period,
@@ -411,7 +410,7 @@ class Tuner:
             progress_reporter=reporter,
             name=self._spec.name,
             scheduler=ahb,
-            stop={"training_iteration":
+            stop={"timestep":
                       int(np.ceil(self._spec.trainer.spec.total_iterations/self._spec.train_steps_per_tune_step))},
             num_samples=self._spec.num_samples,
             resources_per_trial={
