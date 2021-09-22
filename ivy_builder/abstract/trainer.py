@@ -274,26 +274,25 @@ class Trainer:
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
-        starting_iteration = 0
         self._init_checkpoint_manager()
         if not checkpoint_path:
             checkpoint_path = self._chkpt_manager.latest_checkpoint_fpath
-        if self._spec.ld_chkpt is True and checkpoint_path is None:
-            raise Exception('Unable to load checkpoint, no checkpoint files found.')
-        if self._spec.ld_chkpt is True and checkpoint_path is not None:
+        if self._spec.ld_chkpt is True:
+            if checkpoint_path is None:
+                raise Exception('Unable to load checkpoint, no checkpoint files found.')
             self._chkpt.restore(checkpoint_path)
             logging.info('loaded checkpoints from {}'.format(checkpoint_path))
             starting_iteration = int(checkpoint_path.split('-')[-1].split('.')[0])
             logging.info('#--------------#\n# MODEL LOADED #\n#--------------#')
             self._post_init()
+            if ivy.exists(self._spec.starting_iteration):
+                assert starting_iteration == self._spec.starting_iteration
             return starting_iteration
         else:
             logging.info('#-------------#\n# MODEL BUILT #\n#-------------#')
         self._global_step = self._spec.starting_iteration
         self._post_init()
-        if isinstance(self._spec.starting_iteration, int):
-            return self._spec.starting_iteration
-        return starting_iteration
+        return ivy.default(self._spec.starting_iteration, 0)
 
     # Training #
     # ---------#
@@ -335,12 +334,8 @@ class Trainer:
 
     def _train(self, vis_mode=False, starting_iteration=None, total_iterations=None):
 
-        if starting_iteration:
-            self._starting_iteration = starting_iteration
-        if total_iterations:
-            self._total_iterations = total_iterations
-        else:
-            self._total_iterations = self._spec.total_iterations
+        self._starting_iteration = ivy.default(starting_iteration, self._starting_iteration)
+        self._total_iterations = ivy.default(total_iterations, self._spec.total_iterations)
 
         self._global_step = self._starting_iteration
         self._learning_rate = self._learning_rate_func(self._global_step)
@@ -411,9 +406,7 @@ class Trainer:
         """
         setup the trainer, ready for training
         """
-        starting_iteration = self._initialize_model()
-        if self._spec.starting_iteration is None:
-            self._starting_iteration = starting_iteration
+        self._starting_iteration = self._initialize_model()
 
     def train(self, starting_iteration: int = None, total_iterations: int = None) -> None:
         """

@@ -312,8 +312,6 @@ class Tuner:
 
             def setup(self, _):
                 ivy.set_framework(self.config['framework'])
-                self.timestep = 0
-                self._trainer_global_step = 0
                 self._train_steps_per_tune_step = self.config['train_steps_per_tune_step']
                 config_cont = Container(self.config)
                 self._config_str = '_'.join(
@@ -352,14 +350,22 @@ class Tuner:
                                                       json_spec_path=json_spec_path,
                                                       spec_cont=spec_cont)
                 self._trainer.setup()
+                # noinspection PyProtectedMember
+                self._trainer_global_step = self._trainer._starting_iteration
+                self._trainer_total_iterations = self._trainer.spec.total_iterations
+                # ToDo: set the timestep below to the correct value, based on train_steps_per_tune_step
+                self.timestep = 0
 
             def step(self):
-                self._trainer_global_step = self._trainer.train(self._trainer_global_step,
-                                                                self._trainer_global_step +
-                                                                self._train_steps_per_tune_step)
+                total_iterations = min(self._trainer_global_step + self._train_steps_per_tune_step,
+                                       self._trainer_total_iterations)
+                self._trainer_global_step = self._trainer.train(self._trainer_global_step, total_iterations)
                 self.timestep += 1
-                return {'timestep': self.timestep,
-                        'cost': ivy.to_numpy(self._trainer.moving_average_loss)}
+                ret_dict = {'timestep': self.timestep,
+                            'cost': ivy.to_numpy(self._trainer.moving_average_loss)}
+                if self._trainer_global_step >= self._trainer_total_iterations:
+                    ret_dict[tune.result.DONE] = True
+                return ret_dict
 
             def save_checkpoint(self, checkpoint_dir):
                 os.makedirs(checkpoint_dir, exist_ok=True)
