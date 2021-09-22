@@ -56,7 +56,7 @@ class JSONDataLoader(DataLoader):
             else:
                 # update sequences lengths
                 self._spec.dataset_spec.sequence_lengths =\
-                    [sl - sum([c[0] == i for c in self._spec.containers_to_skip])
+                    [self._compute_seq_len(i, sl, self._spec.containers_to_skip)
                      for i, sl in enumerate(self._spec.dataset_spec.sequence_lengths)]
                 self._spec.num_sequences =\
                     sum([sl > 0 for sl in self._spec.dataset_spec.sequence_lengths[start_idx:end_idx+1]])
@@ -85,6 +85,22 @@ class JSONDataLoader(DataLoader):
 
     def __del__(self):
         self.close()
+
+    # Helpers #
+    # --------#
+
+    @staticmethod
+    def _skip_cont(seq_idx, win_idx, conts_to_skip):
+        if (seq_idx, None) in conts_to_skip or (None, win_idx) in conts_to_skip or \
+                (seq_idx, win_idx) in conts_to_skip:
+            return True
+        return False
+
+    @staticmethod
+    def _compute_seq_len(i, sl, conts_to_skip):
+        if (i, None) in conts_to_skip:
+            return 0
+        return sl - sum([c[0] == i or c[0] is None and c[1] < sl for c in conts_to_skip])
 
     # Dataset in RAM #
     # ---------------#
@@ -205,9 +221,10 @@ class JSONDataLoader(DataLoader):
         if not ivy.exists(seq_info):
             return
         seq_idx = int(seq_info.seq_idx[0])
-        num_removed = sum([cts[0] == seq_idx for cts in self._spec.containers_to_skip])
+        seq_len = int(seq_info.length[0])
+        new_len = self._compute_seq_len(seq_idx, seq_len, self._spec.containers_to_skip)
         seq_info = seq_info.copy()
-        seq_info.length = seq_info.length - num_removed
+        seq_info.length = ivy.ones_like(seq_info.length) * new_len
         return seq_info
 
     def _group_tensor_into_windowed_tensor_simple(self, x, seq_info):
@@ -391,7 +408,8 @@ class JSONDataLoader(DataLoader):
                          conts_to_skip=None, pruned_sizes=None):
                 if isinstance(sizes, (tuple, list)):
                     pruned_sizes = ivy.default(
-                        pruned_sizes, [sl - sum([c[0] == i for c in conts_to_skip]) for i, sl in enumerate(sizes)])
+                        pruned_sizes, [JSONDataLoader._compute_seq_len(i, sl, conts_to_skip)
+                                       for i, sl in enumerate(sizes)])
                     num_empty = sum([ps == 0 for ps in pruned_sizes])
                     self._raw_sizes = dict(zip(range(start, end + 1 + num_empty),
                                                sizes[start:end + 1 + num_empty]))
@@ -450,7 +468,7 @@ class JSONDataLoader(DataLoader):
                 seq_idxs = self._seq_idxs.values()
                 sizes = [self._raw_sizes if self._constant_size else self._raw_sizes[seq_idx] for seq_idx in seq_idxs]
                 rets = [[self._fpath_template % (seq_idx, win_idx) for win_idx in
-                         range(size) if (seq_idx, win_idx) not in self._conts_to_skip]
+                         range(size) if not JSONDataLoader._skip_cont(seq_idx, win_idx, self._conts_to_skip)]
                         for seq_idx, size in zip(seq_idxs, sizes)]
                 return [r + [''] * (self._max_seq_len - len(r)) for r in rets if ''.join(r) != '']
 

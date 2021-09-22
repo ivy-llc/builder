@@ -216,7 +216,9 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
 @pytest.mark.parametrize(
     "containers_to_skip", [[(0, 0), (0, 1), (1, 1), (5, 0)],
                            [(0, 1), (1, 1), (5, 0)],
-                           [(0, 0), (2, 1), (1, 2), (3, 1)]])
+                           [(0, 0), (2, 1), (1, 2), (3, 1)],
+                           [(1, None), (3, None), (4, 0)],
+                           [(None, 0), (None, 2), (3, 1)]])
 def test_json_loader_containers_to_skip(dev_str, f, call, preload_containers, array_mode, with_prefetching, batch_size,
                                         containers_to_skip):
 
@@ -250,9 +252,17 @@ def test_json_loader_containers_to_skip(dev_str, f, call, preload_containers, ar
                                [4, 3, 1],
                                [4, 3, 2],
                                [5, 1, 0]]
-    seq_idxs = [i[0] for i in seq_idx_length_and_idxs if (i[0], i[2]) not in containers_to_skip]
-    lengths = [i[1] for i in seq_idx_length_and_idxs if (i[0], i[2]) not in containers_to_skip]
-    idxs = [i[2] for i in seq_idx_length_and_idxs if (i[0], i[2]) not in containers_to_skip]
+
+    def _skip(seq_idx_length_and_idx):
+        seq_idx_, _, idx_ = seq_idx_length_and_idx
+        if (seq_idx_, None) in containers_to_skip or (None, idx_) in containers_to_skip or \
+                (seq_idx_, idx_) in containers_to_skip:
+            return True
+        return False
+
+    seq_idxs = [i[0] for i in seq_idx_length_and_idxs if not _skip(i)]
+    lengths = [i[1] for i in seq_idx_length_and_idxs if not _skip(i)]
+    idxs = [i[2] for i in seq_idx_length_and_idxs if not _skip(i)]
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
