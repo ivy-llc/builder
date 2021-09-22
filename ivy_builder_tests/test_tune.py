@@ -32,7 +32,7 @@ def test_tune_numeric_spec(dev_str, call):
                                  'exponent': 10
                                  }
                             },
-                       'name': 'asynchyperband_test',
+                       'name': 'tune',
                        'num_samples': 5,
                        'parallel_trials': 1,
                        'grace_period': 1,
@@ -81,7 +81,7 @@ def test_tune_general_spec(dev_str, call):
                                     "grid": True
                                 }
                             },
-                       'name': 'asynchyperband_test',
+                       'name': 'tune',
                        'num_samples': 1,
                        'parallel_trials': 1,
                        'grace_period': 1,
