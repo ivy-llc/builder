@@ -59,8 +59,15 @@ def _convert_numeric_leaf(val):
     mean_val = (max_val + min_val) / 2
     sd_val = max_val - mean_val
     gaussian = val.if_exists('gaussian')
-    uniform = val.if_exists('uniform')
     grid = val.if_exists('grid')
+    uniform = val.if_exists('uniform')
+    selections = [bool(gaussian), bool(grid), bool(uniform)]
+    num_selected = sum(selections)
+    if num_selected > 1:
+        raise Exception('only one of [ gaussian | grid | uniform ] can be selected,'
+                        'but {} are selected, with the following options set: {}'.format(num_selected, selections))
+    if num_selected == 0:
+        uniform = True
     if val.if_exists('exponent'):
         exponential = True
         exponent = val.exponent
@@ -102,7 +109,7 @@ def _convert_numeric_leaf(val):
             else:
                 sample_func = lambda spec, mi=min_val, ma=max_val: np.random.uniform(mi, ma)
         numeric_leaf = tune.sample_from(sample_func)
-    elif grid:
+    else:  # grid
         num_grid_samples = val.num_grid_samples
         if exponential:
             if as_int:
@@ -122,8 +129,6 @@ def _convert_numeric_leaf(val):
             else:
                 grid_vals = np.linspace(min_val, max_val, num_grid_samples).tolist()
         numeric_leaf = tune.grid_search(grid_vals)
-    else:
-        raise Exception('invalid mode, one of [ gaussian | uniform | grid ] must be selected.')
     return numeric_leaf
 
 

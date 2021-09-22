@@ -8,6 +8,8 @@ def remove_dirs(base_dir=None):
         base_dir = os.getcwd()
     shutil.rmtree(os.path.join(base_dir, 'log'), ignore_errors=True)
     shutil.rmtree(os.path.join(base_dir, 'chkpt'), ignore_errors=True)
+    shutil.rmtree(os.path.join(base_dir, 'tune'), ignore_errors=True)
+    shutil.rmtree(os.path.join(base_dir, 'ray'), ignore_errors=True)
     log_fpath = os.path.join(base_dir, 'log.log')
     if os.path.isfile(log_fpath):
         os.remove(log_fpath)
