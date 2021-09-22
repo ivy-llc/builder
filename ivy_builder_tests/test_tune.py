@@ -1,5 +1,6 @@
 # global
 import os
+import ray
 import ivy
 import pytest
 
@@ -9,6 +10,7 @@ import ivy_builder.builder as builder
 import ivy_builder_tests.helpers as builder_helpers
 from demos.simple_example import ExampleDataLoader, ExampleNetwork, ExampleTrainer
 
+ray.init()
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -50,12 +52,12 @@ def test_tune_general_spec(dev_str, call):
         pytest.skip()
 
     builder_helpers.remove_dirs()
-    trainer_spec_args = {'total_iterations': 10,
+    trainer_spec_args = {'total_iterations': 2,
                          'ld_chkpt': False,
                          'log_freq': 1,
                          'log_dir': os.path.join(THIS_DIR, 'log')}
     tuner_spec_args = {'framework': ivy.current_framework_str(),
-                       'train_steps_per_tune_step': 2,
+                       'train_steps_per_tune_step': 1,
                        'network_spec':
                            {'spec_a':
                                {
