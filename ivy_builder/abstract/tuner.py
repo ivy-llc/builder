@@ -414,7 +414,7 @@ class Tuner:
 
         num_cpus = multiprocessing.cpu_count()
         num_gpus = ivy.num_gpus()
-        cpus_per_trial = math.ceil(num_cpus/self._spec.parallel_trials)
+        cpus_per_trial = num_cpus/self._spec.parallel_trials
         gpus_per_trial = num_gpus/self._spec.parallel_trials
         ivy.unset_framework()
 
