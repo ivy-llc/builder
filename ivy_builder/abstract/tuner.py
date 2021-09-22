@@ -349,12 +349,21 @@ class Tuner:
                                                       trainer_spec=trainer_spec,
                                                       json_spec_path=json_spec_path,
                                                       spec_cont=spec_cont)
+                # unset at_end configs
+                self._save_at_end = self._trainer.spec.save_at_end
+                self._trainer.spec.save_at_end = False
+                self._log_at_end = self._trainer.spec.log_at_end
+                self._trainer.spec.log_at_end = False
+                self._vis_at_end = self._trainer.spec.vis_at_end
+                self._trainer.spec.vis_at_end = False
+
                 self._trainer.setup()
                 # noinspection PyProtectedMember
                 self._trainer_global_step = self._trainer._starting_iteration
                 self._trainer_total_iterations = self._trainer.spec.total_iterations
                 self.timestep = int(math.floor(self._trainer_global_step / self._train_steps_per_tune_step))
 
+            # noinspection PyProtectedMember
             def step(self):
                 total_iterations = min(self._trainer_global_step + self._train_steps_per_tune_step,
                                        self._trainer_total_iterations)
@@ -363,6 +372,16 @@ class Tuner:
                 ret_dict = {'timestep': self.timestep,
                             'cost': ivy.to_numpy(self._trainer.moving_average_loss)}
                 if self._trainer_global_step >= self._trainer_total_iterations:
+                    if self._save_at_end:
+                        self._trainer._save()
+                    if self._log_at_end:
+                        self._trainer.self._log_scalars()
+                    if self._vis_at_end:
+                        dl = self._trainer.spec.data_loader
+                        net = self._trainer.spec.network
+                        tb = self._trainer._training_batch
+                        gs = self._trainer._global_step
+                        self._trainer._write_image_summaries(dl, net, tb, gs)
                     ret_dict[tune.result.DONE] = True
                 return ret_dict
 
