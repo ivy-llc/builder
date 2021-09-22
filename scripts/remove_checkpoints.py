@@ -7,6 +7,7 @@ import argparse
 
 
 def prune_checkpoints_in_dir(chkpts_dir, cutoff, last_only):
+    print('pruning checkpoints in {}'.format(chkpts_dir))
     checkpoint_fnames = os.listdir(chkpts_dir)
     if len(checkpoint_fnames) == 0:
         print('No checkpoints found in {}'.format(chkpts_dir))
