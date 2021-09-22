@@ -38,14 +38,17 @@ class JSONDataLoader(DataLoader):
         # data loader specification
         self._spec = data_loader_spec
         self._container_data_dir = os.path.join(self._spec.dataset_spec.dirs.dataset_dir, 'containers/')
-
-        # base cache size
+        self._batch_size = self._spec.batch_size
         self._base_cache_size = self._spec.cache_size * self._spec.batch_size * self._spec.window_size
-
-        # variables
         self._window_size = self._spec.window_size
+        start_idx = self._spec.starting_idx
+        end_idx = start_idx + self._spec.num_sequences - 1
+
+        # specs before pruning via containers_to_skip
         self._spec.dataset_spec.unpruned_sequence_lengths = self._spec.dataset_spec.sequence_lengths
         self._spec.unpruned_num_sequences = self._spec.num_sequences
+
+        # sequence lengths and windows per sequence
         if 'sequence_lengths' in self._spec.dataset_spec:
             self._fixed_sequence_length = isinstance(self._spec.dataset_spec.sequence_lengths, int)
             if self._fixed_sequence_length:
@@ -55,14 +58,13 @@ class JSONDataLoader(DataLoader):
                 self._spec.dataset_spec.sequence_lengths =\
                     [sl - sum([c[0] == i for c in self._spec.containers_to_skip])
                      for i, sl in enumerate(self._spec.dataset_spec.sequence_lengths)]
-                self._spec.num_sequences = sum([sl > 0 for sl in self._spec.dataset_spec.sequence_lengths])
+                self._spec.num_sequences =\
+                    sum([sl > 0 for sl in self._spec.dataset_spec.sequence_lengths[start_idx:end_idx+1]])
                 self._windows_per_seq = ivy.array(self._spec.dataset_spec.sequence_lengths) - (self._window_size - 1)
         else:
             self._fixed_sequence_length = False
-        self._batch_size = self._spec.batch_size
 
-        # train and validation idxs
-        start_idx = self._spec.starting_idx
+        # new end idx following containers_to_skip pruning
         end_idx = start_idx + self._spec.num_sequences - 1
 
         # compute num workers for each component
@@ -411,7 +413,8 @@ class JSONDataLoader(DataLoader):
                 if seq_idxs:
                     self._seq_idxs = seq_idxs
                 else:
-                    vals = [i for i in range(start, end + 1 + num_empty) if pruned_sizes[i] > 0]
+                    vals = [v for i, v in enumerate(range(start, end + 1 + num_empty))
+                            if isinstance(self._pruned_sizes, int) or pruned_sizes[i] > 0]
                     keys = range(0, min(end - start + 1 + num_empty, len(vals)))
                     self._seq_idxs = dict(zip(keys, vals))
 
@@ -532,9 +535,8 @@ class JSONDataLoader(DataLoader):
                               self._num_workers.windowed)
         dataset = dataset.unbatch('unbatched',
                                   self._num_workers.unbatched,
-                                  batch_sizes=[seq_len - self._window_size + 1
+                                  batch_sizes=[max(seq_len, self._window_size) - self._window_size + 1
                                                for seq_len in self._sequence_lengths.values() if seq_len > 0])
-
         if self._spec.shuffle_buffer_size > 0:
             dataset = dataset.shuffle('shuffled',
                                       self._spec.shuffle_buffer_size,
