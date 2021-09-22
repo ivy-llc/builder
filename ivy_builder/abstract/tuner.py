@@ -375,7 +375,7 @@ class Tuner:
                     if self._save_at_end:
                         self._trainer._save()
                     if self._log_at_end:
-                        self._trainer.self._log_scalars()
+                        self._trainer._log_scalars()
                     if self._vis_at_end:
                         dl = self._trainer.spec.data_loader
                         net = self._trainer.spec.network
