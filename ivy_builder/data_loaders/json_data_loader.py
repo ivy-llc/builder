@@ -202,6 +202,8 @@ class JSONDataLoader(DataLoader):
     # ------------------#
 
     def _update_seq_info_for_window(self, seq_info):
+        if not ivy.exists(seq_info):
+            return
         seq_idx = int(seq_info.seq_idx[0])
         num_removed = sum([cts[0] == seq_idx for cts in self._spec.containers_to_skip])
         seq_info = seq_info.copy()
