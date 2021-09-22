@@ -6,10 +6,12 @@ import logging
 import numpy as np
 import multiprocessing
 try:
+    import ray
     from ray import tune
     from ray.tune import CLIReporter
     from ray.tune.schedulers.async_hyperband import AsyncHyperBandScheduler
 except ModuleNotFoundError:
+    ray = None
     tune = None
 
 # local
@@ -388,6 +390,9 @@ class Tuner:
         ivy.unset_framework()
 
         reporter = CLIReporter(['cost'])
+
+        # initialize ray with custom temp_dir
+        ray.init(_temp_dir=os.path.join('/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]), 'ray'))
 
         tune.run(TuneTrainable,
                  progress_reporter=reporter,
