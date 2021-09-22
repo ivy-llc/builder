@@ -400,23 +400,24 @@ class Tuner:
         ray.init(_temp_dir=os.path.join('/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]), 'ray'),
                  ignore_reinit_error=True)
 
-        tune.run(TuneTrainable,
-                 progress_reporter=reporter,
-                 name=self._spec.name,
-                 scheduler=ahb,
-                 stop={"training_iteration":
-                           int(np.ceil(self._spec.trainer.spec.total_iterations/self._spec.train_steps_per_tune_step))},
-                 num_samples=self._spec.num_samples,
-                 resources_per_trial={
-                     "cpu": cpus_per_trial,
-                     "gpu": gpus_per_trial
-                 },
-                 config=dict([(key, val) for key, val in self._spec.items()
-                              if (isinstance(val, dict) or isinstance(val, tune.sample.Function)
-                                  or key in ['framework', 'train_steps_per_tune_step'])]),
-                 local_dir='/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]),
-                 checkpoint_freq=self._spec.checkpoint_freq,
-                 checkpoint_at_end=True)
+        return tune.run(
+            TuneTrainable,
+            progress_reporter=reporter,
+            name=self._spec.name,
+            scheduler=ahb,
+            stop={"training_iteration":
+                      int(np.ceil(self._spec.trainer.spec.total_iterations/self._spec.train_steps_per_tune_step))},
+            num_samples=self._spec.num_samples,
+            resources_per_trial={
+                "cpu": cpus_per_trial,
+                "gpu": gpus_per_trial
+            },
+            config=dict([(key, val) for key, val in self._spec.items()
+                        if (isinstance(val, dict) or isinstance(val, tune.sample.Function)
+                            or key in ['framework', 'train_steps_per_tune_step'])]),
+            local_dir='/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]),
+            checkpoint_freq=self._spec.checkpoint_freq,
+            checkpoint_at_end=True)
 
     def close(self) -> None:
         """
