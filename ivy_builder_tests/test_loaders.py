@@ -211,7 +211,14 @@ def test_json_loader(dev_str, f, call, preload_containers, array_mode, with_pref
     "array_mode", ['hdf5', 'pickled'])
 @pytest.mark.parametrize(
     "with_prefetching", [True, False])
-def test_json_loader_containers_to_skip(dev_str, f, call, preload_containers, array_mode, with_prefetching):
+@pytest.mark.parametrize(
+    "batch_size", [2, 3])
+@pytest.mark.parametrize(
+    "containers_to_skip", [[(0, 0), (0, 1), (1, 1), (5, 0)],
+                           [(0, 1), (1, 1), (5, 0)],
+                           [(0, 0), (2, 1), (1, 2), (3, 1)]])
+def test_json_loader_containers_to_skip(dev_str, f, call, preload_containers, array_mode, with_prefetching, batch_size,
+                                        containers_to_skip):
 
     # seed
     f.seed(0)
@@ -223,19 +230,44 @@ def test_json_loader_containers_to_skip(dev_str, f, call, preload_containers, ar
     dataset_dirs = DatasetDirs(dataset_dir=ds_dir, containers_dir=os.path.join(ds_dir, 'containers'))
 
     dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=[2, 3, 2, 3, 3, 1], cont_fname_template='%06d_%06d.json')
-    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=2, window_size=1, starting_idx=0,
+    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=batch_size, window_size=1, starting_idx=0,
                                           preload_containers=preload_containers, array_mode=array_mode, num_sequences=6,
                                           array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
                                           preshuffle_data=False, with_prefetching=with_prefetching, num_workers=1,
-                                          containers_to_skip=[(0, 1), (1, 1), (5, 0)])
+                                          containers_to_skip=containers_to_skip)
+
+    seq_idx_length_and_idxs = [[0, 2, 0],
+                               [0, 2, 1],
+                               [1, 3, 0],
+                               [1, 3, 1],
+                               [1, 3, 2],
+                               [2, 2, 0],
+                               [2, 2, 1],
+                               [3, 3, 0],
+                               [3, 3, 1],
+                               [3, 3, 2],
+                               [4, 3, 0],
+                               [4, 3, 1],
+                               [4, 3, 2],
+                               [5, 1, 0]]
+    seq_idxs = [i[0] for i in seq_idx_length_and_idxs if (i[0], i[2]) not in containers_to_skip]
+    lengths = [i[1] for i in seq_idx_length_and_idxs if (i[0], i[2]) not in containers_to_skip]
+    idxs = [i[2] for i in seq_idx_length_and_idxs if (i[0], i[2]) not in containers_to_skip]
 
     # data loader
     data_loader = JSONDataLoader(data_loader_spec)
 
     # testing
-    for i, (idx, length, seq_idx) in enumerate(zip([[0, 0], [2, 0], [1, 0], [1, 2], [0, 1], [2, 0], [0, 2], [0, 1]],
-                                                   [[2, 3], [3, 2], [2, 3], [3, 3], [3, 3], [3, 2], [3, 3], [2, 2]],
-                                                   [[0, 1], [1, 2], [2, 3], [3, 3], [4, 4], [4, 0], [1, 1], [2, 2]])):
+    for i in range(7):
+
+        # get ground truth
+        idx = list()
+        length = list()
+        seq_idx = list()
+        for j in range(batch_size):
+            idx.append(idxs[(i*batch_size+j) % len(idxs)])
+            length.append(lengths[(i*batch_size+j) % len(lengths)])
+            seq_idx.append(seq_idxs[(i*batch_size+j) % len(seq_idxs)])
 
         # get training batch
         batch = data_loader.get_next_batch()

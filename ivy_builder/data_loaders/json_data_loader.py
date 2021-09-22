@@ -45,6 +45,7 @@ class JSONDataLoader(DataLoader):
         # variables
         self._window_size = self._spec.window_size
         self._spec.dataset_spec.unpruned_sequence_lengths = self._spec.dataset_spec.sequence_lengths
+        self._spec.unpruned_num_sequences = self._spec.num_sequences
         if 'sequence_lengths' in self._spec.dataset_spec:
             self._fixed_sequence_length = isinstance(self._spec.dataset_spec.sequence_lengths, int)
             if self._fixed_sequence_length:
@@ -54,6 +55,7 @@ class JSONDataLoader(DataLoader):
                 self._spec.dataset_spec.sequence_lengths =\
                     [sl - sum([c[0] == i for c in self._spec.containers_to_skip])
                      for i, sl in enumerate(self._spec.dataset_spec.sequence_lengths)]
+                self._spec.num_sequences = sum([sl > 0 for sl in self._spec.dataset_spec.sequence_lengths])
                 self._windows_per_seq = ivy.array(self._spec.dataset_spec.sequence_lengths) - (self._window_size - 1)
         else:
             self._fixed_sequence_length = False
@@ -386,11 +388,16 @@ class JSONDataLoader(DataLoader):
                 if isinstance(sizes, (tuple, list)):
                     pruned_sizes = ivy.default(
                         pruned_sizes, [sl - sum([c[0] == i for c in conts_to_skip]) for i, sl in enumerate(sizes)])
-                    self._raw_sizes = dict(zip(range(start, end + 1), sizes[start:end + 1]))
-                    self._pruned_sizes = dict(zip(range(start, end + 1), pruned_sizes[start:end + 1]))
+                    num_empty = sum([ps == 0 for ps in pruned_sizes])
+                    self._raw_sizes = dict(zip(range(start, end + 1 + num_empty),
+                                               sizes[start:end + 1 + num_empty]))
+                    self._pruned_sizes = dict(zip(range(start, end + 1 + num_empty),
+                                                  pruned_sizes[start:end + 1 + num_empty]))
                 elif isinstance(sizes, (int, dict)):
                     self._raw_sizes = sizes
                     self._pruned_sizes = ivy.default(pruned_sizes, sizes)
+                    num_empty = 0 if isinstance(self._pruned_sizes, int) else \
+                        sum([ps == 0 for ps in self._pruned_sizes])
                 else:
                     raise Exception('Invalid type for sizes, expected one of int, dict, tuple or list,'
                                     'but found {} or type {}'.format(sizes, type(sizes)))
@@ -404,7 +411,9 @@ class JSONDataLoader(DataLoader):
                 if seq_idxs:
                     self._seq_idxs = seq_idxs
                 else:
-                    self._seq_idxs = dict(zip(range(0, end - start + 1), range(start, end + 1)))
+                    vals = [i for i in range(start, end + 1 + num_empty) if pruned_sizes[i] > 0]
+                    keys = range(0, min(end - start + 1 + num_empty, len(vals)))
+                    self._seq_idxs = dict(zip(keys, vals))
 
             def __getitem__(self, slice_obj):
                 if isinstance(slice_obj, slice):
@@ -523,8 +532,9 @@ class JSONDataLoader(DataLoader):
                               self._num_workers.windowed)
         dataset = dataset.unbatch('unbatched',
                                   self._num_workers.unbatched,
-                                  batch_sizes=[max(seq_len - self._window_size + 1, 1)
-                                               for seq_len in self._sequence_lengths.values()])
+                                  batch_sizes=[seq_len - self._window_size + 1
+                                               for seq_len in self._sequence_lengths.values() if seq_len > 0])
+
         if self._spec.shuffle_buffer_size > 0:
             dataset = dataset.shuffle('shuffled',
                                       self._spec.shuffle_buffer_size,
