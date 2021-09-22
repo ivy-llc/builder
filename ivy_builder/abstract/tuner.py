@@ -392,7 +392,8 @@ class Tuner:
         reporter = CLIReporter(['cost'])
 
         # initialize ray with custom temp_dir
-        ray.init(_temp_dir=os.path.join('/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]), 'ray'))
+        ray.init(_temp_dir=os.path.join('/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]), 'ray'),
+                 ignore_reinit_error=True)
 
         tune.run(TuneTrainable,
                  progress_reporter=reporter,
