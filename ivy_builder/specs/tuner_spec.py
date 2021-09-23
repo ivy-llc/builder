@@ -17,11 +17,13 @@ class TunerSpec(Spec, abc.ABC):
                  parallel_trials: int,
                  grace_period: int,
                  checkpoint_freq: int,
+                 device_priority: str = 'gpu',
                  **kwargs) -> None:
         """
         parameters which define the training procedure
         """
         kw = locals_to_kwargs(locals())
+        assert device_priority in ['cpu', 'gpu']
         super().__init__(trainer=trainer,
                          train_steps_per_tune_step=train_steps_per_tune_step,
                          framework=framework,
@@ -30,5 +32,6 @@ class TunerSpec(Spec, abc.ABC):
                          parallel_trials=parallel_trials,
                          grace_period=grace_period,
                          checkpoint_freq=checkpoint_freq,
+                         device_priority=device_priority,
                          **kwargs)
         self._kwargs = kw

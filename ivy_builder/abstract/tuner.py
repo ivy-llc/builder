@@ -413,9 +413,23 @@ class Tuner:
             max_t=max_t)
 
         num_cpus = multiprocessing.cpu_count()
+        assert num_cpus > 0
         num_gpus = ivy.num_gpus()
         cpus_per_trial = num_cpus/self._spec.parallel_trials
         gpus_per_trial = num_gpus/self._spec.parallel_trials
+        if self._spec.device_priority == 'cpu' or num_gpus == 0:
+            cpus_per_trial = int(round(cpus_per_trial)) if cpus_per_trial > 1 else cpus_per_trial
+            parallel_trials = math.floor(num_cpus / cpus_per_trial)
+            gpus_per_trial = num_gpus / parallel_trials
+            gpus_per_trial = math.floor(gpus_per_trial) if gpus_per_trial > 1 else gpus_per_trial
+        elif self._spec.device_priority == 'gpu':
+            gpus_per_trial = int(round(gpus_per_trial)) if gpus_per_trial > 1 else gpus_per_trial
+            parallel_trials = math.floor(num_gpus / gpus_per_trial)
+            cpus_per_trial = num_cpus / parallel_trials
+            cpus_per_trial = math.floor(cpus_per_trial) if cpus_per_trial > 1 else cpus_per_trial
+        else:
+            raise Exception('device_priority must be one of [ cpu | gpu ], but found {}'.format(
+                self._spec.device_priority))
         ivy.unset_framework()
 
         reporter = CLIReporter(['cost'])
