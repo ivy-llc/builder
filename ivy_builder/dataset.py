@@ -132,6 +132,8 @@ class Dataset:
             item = dataset[slice_obj]
             if numpy_loading:
                 ivy.unset_framework()
+            if ivy.wrapped_mode():
+                item = item.to_native(nested=True)
             output_queue.put(item.to_dict())
 
     @staticmethod
@@ -330,8 +332,12 @@ class Dataset:
             return ivy.Container(queues=output_queues, queue_load_sizes=slice_sizes, queue_timeout=self._queue_timeout)
         else:
             [slice_queue.put(sub_slice) for slice_queue, sub_slice in zip(slice_queues, sub_slices)]
-            items_as_lists = [ivy.Container(output_queue.get(timeout=self._queue_timeout))
-                              for output_queue in output_queues]
+            if ivy.wrapped_mode():
+                items_as_lists = [ivy.Container(output_queue.get(timeout=self._queue_timeout)).to_ivy()
+                                  for output_queue in output_queues]
+            else:
+                items_as_lists = [ivy.Container(output_queue.get(timeout=self._queue_timeout))
+                                  for output_queue in output_queues]
             if self._numpy_loading:
                 ivy.unset_framework()
             self._first_pass = False
