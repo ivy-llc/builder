@@ -34,6 +34,7 @@ class TrainerSpec(Spec, abc.ABC):
                  auto_detect_weights: bool = True,
                  log_gradients: (tuple, str) = 'all',
                  log_variables: (tuple, str) = 'all',
+                 log_optimizer_state: (tuple, str) = 'all',
                  device: str = None,
                  **kwargs) -> None:
         """
@@ -46,6 +47,9 @@ class TrainerSpec(Spec, abc.ABC):
         if log_variables == 'all' or 'all' in log_variables:
             log_variables = ['mean', 'abs_mean', 'var', 'abs_var', 'min', 'abs_min', 'max', 'abs_max', 'vector_norm',
                              'global_vector_norm']
+        if log_optimizer_state == 'all' or 'all' in log_optimizer_state:
+            log_optimizer_state = ['mean', 'abs_mean', 'var', 'abs_var', 'min', 'abs_min', 'max', 'abs_max',
+                                   'vector_norm', 'global_vector_norm']
         super().__init__(data_loader=data_loader,
                          network=network,
                          log_dir=log_dir,
@@ -69,6 +73,7 @@ class TrainerSpec(Spec, abc.ABC):
                          auto_detect_weights=auto_detect_weights,
                          log_gradients=log_gradients,
                          log_variables=log_variables,
+                         log_optimizer_state=log_optimizer_state,
                          device=ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
                          **kwargs)
         self._kwargs = kw

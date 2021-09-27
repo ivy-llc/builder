@@ -215,6 +215,9 @@ class Trainer:
     def _log_variables(self, v, global_step):
         self._log_nested(v, global_step, 'variables', self._spec.log_variables)
 
+    def _log_optimizer_state(self, optimizer_state, global_step):
+        self._log_nested(optimizer_state, global_step, 'optimizer_state', self._spec.log_optimizer_state)
+
     def _log_memory(self, global_step):
         if not ivy.exists(self._writer):
             raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
