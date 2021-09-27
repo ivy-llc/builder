@@ -304,19 +304,19 @@ class Trainer:
     # ---------#
 
     def _train_step_from_batch(self, batch, with_output=False):
-        cost, grads = ivy.execute_with_gradients(
+        cost, self._gradients = ivy.execute_with_gradients(
             lambda v: self._compute_cost(batch, v=self._network.v.set_at_key_chains(v)),
             self._network.v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
             self._net_spec.keep_v_keychains else
             self._network.v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
         if 'max_grad_val' in self._spec:
-            grads = grads.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
+            grads = self._gradients.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
         if 'max_grad_vector_norm' in self._spec:
-            ratio = self._spec.max_grad_vector_norm/(grads.vector_norm(global_norm=True) + MIN_DENOMINATOR)
+            ratio = self._spec.max_grad_vector_norm/(self._gradients.vector_norm(global_norm=True) + MIN_DENOMINATOR)
             if ratio < 1:
-                grads = grads * ratio
+                self._gradients = self._gradients * ratio
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
-        new_v = self._optimizer.step(self._network.v, grads, ignore_missing=self._partial_grad_updates)
+        new_v = self._optimizer.step(self._network.v, self._gradients, ignore_missing=self._partial_grad_updates)
         if self._partial_grad_updates:
             self._network.v.set_at_key_chains(new_v)
         else:
