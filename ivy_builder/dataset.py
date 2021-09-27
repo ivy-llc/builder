@@ -533,7 +533,8 @@ class Dataset:
                 data = self[i]
                 assert data
                 if i == 0:
-                    print(data)
+                    logging.info('loaded first element successfully:')
+                    logging.info(data)
             except Exception as e:
                 with open('dataset_{}_read_error.dataset_log'.format(id(self)), 'a+') as f:
                     f.write(traceback.format_exc())
