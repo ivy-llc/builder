@@ -37,6 +37,9 @@ def test_full_trainers(dev_str, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
         pytest.skip()
+    if call is helpers.jnp_call and ivy.wrapped_mode():
+        # Jax does not support ivy.Array instances when calling _jax.grad()
+        pytest.skip()
     builder_helpers.remove_dirs()
     full_example.main()
     builder_helpers.remove_dirs()
@@ -91,6 +94,9 @@ def test_checkpoint_loading(dev_str, call):
 def test_reduced_cost_after_checkpoint_load(dev_str, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
+        pytest.skip()
+    if call is helpers.jnp_call and ivy.wrapped_mode():
+        # Jax does not support ivy.Array instances when calling _jax.grad()
         pytest.skip()
 
     example_dir = os.path.relpath(os.path.join(
