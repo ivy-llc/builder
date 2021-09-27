@@ -1,0 +1,11 @@
+{
+ "seq_info": {
+  "seq_idx": true,
+  "idx": true,
+  "length": true
+ },
+ "discounts": true,
+ "rewards": true,
+ "step_types": true,
+ "array": true
+}
