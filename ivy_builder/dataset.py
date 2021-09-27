@@ -523,6 +523,13 @@ class Dataset:
                        numpy_loading=False,
                        queue_timeout=self._queue_timeout)
 
+    def cycle_for_debugging(self):
+        i = 0
+        while True:
+            # noinspection PyTypeChecker
+            assert self[i]
+            i += 1
+
     def close(self):
         if not isinstance(self._base_dataset, ivy.Container):
             self._base_dataset.close()
