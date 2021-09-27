@@ -33,6 +33,7 @@ class TrainerSpec(Spec, abc.ABC):
                  custom_train_step: bool = False,
                  auto_detect_weights: bool = True,
                  log_gradients: (tuple, str) = 'all',
+                 log_variables: (tuple, str) = 'all',
                  device: str = None,
                  **kwargs) -> None:
         """
@@ -41,6 +42,9 @@ class TrainerSpec(Spec, abc.ABC):
         kw = locals_to_kwargs(locals())
         if log_gradients == 'all' or 'all' in log_gradients:
             log_gradients = ['mean', 'abs_mean', 'var', 'abs_var', 'min', 'abs_min', 'max', 'abs_max', 'vector_norm',
+                             'global_vector_norm']
+        if log_variables == 'all' or 'all' in log_variables:
+            log_variables = ['mean', 'abs_mean', 'var', 'abs_var', 'min', 'abs_min', 'max', 'abs_max', 'vector_norm',
                              'global_vector_norm']
         super().__init__(data_loader=data_loader,
                          network=network,
@@ -64,6 +68,7 @@ class TrainerSpec(Spec, abc.ABC):
                          custom_train_step=custom_train_step,
                          auto_detect_weights=auto_detect_weights,
                          log_gradients=log_gradients,
+                         log_variables=log_variables,
                          device=ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
                          **kwargs)
         self._kwargs = kw
