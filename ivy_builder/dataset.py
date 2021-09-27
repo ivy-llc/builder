@@ -530,7 +530,10 @@ class Dataset:
             logging.info('loading element {}'.format(i))
             try:
                 # noinspection PyTypeChecker
-                assert self[i]
+                data = self[i]
+                assert data
+                if i == 0:
+                    print(data)
             except Exception as e:
                 with open('dataset_{}_read_error.dataset_log'.format(id(self)), 'a+') as f:
                     f.write(traceback.format_exc())
