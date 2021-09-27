@@ -3,6 +3,7 @@ import ivy
 import math
 import queue
 import numbers
+import traceback
 import ivy.numpy
 import numpy as np
 try:
@@ -132,8 +133,8 @@ class Dataset:
             try:
                 item = dataset[slice_obj]
             except Exception as e:
-                with open('worker_fn_{}_error.log'.format(id(dataset)), 'a+') as f:
-                    f.write(str(e))
+                with open('worker_fn_{}_error.worker_log'.format(id(dataset)), 'a+') as f:
+                    f.write(traceback.format_exc())
                 raise e
             if numpy_loading:
                 ivy.unset_framework()
