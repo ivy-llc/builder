@@ -129,7 +129,12 @@ class Dataset:
                 return
             if numpy_loading:
                 ivy.set_framework('numpy')
-            item = dataset[slice_obj]
+            try:
+                item = dataset[slice_obj]
+            except Exception as e:
+                with open('worker_fn_{}_error.log'.format(id(dataset)), 'a+') as f:
+                    f.write(str(e))
+                raise e
             if numpy_loading:
                 ivy.unset_framework()
             if ivy.wrapped_mode():
