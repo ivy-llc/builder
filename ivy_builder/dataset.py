@@ -2,6 +2,7 @@
 import ivy
 import math
 import queue
+import logging
 import numbers
 import traceback
 import ivy.numpy
@@ -524,11 +525,17 @@ class Dataset:
                        queue_timeout=self._queue_timeout)
 
     def cycle_for_debugging(self):
-        i = 0
-        while True:
-            # noinspection PyTypeChecker
-            assert self[i]
-            i += 1
+        logging.info('\nabout to cycle through all elements in dataset {}!\n'.format(self._name))
+        for i in range(math.ceil(self._size)):
+            logging.info('loading element {}'.format(i))
+            try:
+                # noinspection PyTypeChecker
+                assert self[i]
+            except Exception as e:
+                with open('dataset_{}_read_error.dataset_log'.format(id(self)), 'a+') as f:
+                    f.write(traceback.format_exc())
+                raise e
+        logging.info('\nfinished cycling through all elements in dataset {}!\n'.format(self._name))
 
     def close(self):
         if not isinstance(self._base_dataset, ivy.Container):

@@ -595,8 +595,7 @@ class JSONDataLoader(DataLoader):
         return self._first_batch
 
     def cycle_for_debugging(self):
-        while True:
-            assert self.get_next_batch()
+        self._dataset.cycle_for_debugging()
 
     def close(self):
         self._dataset.close()
