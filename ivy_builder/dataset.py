@@ -1,5 +1,6 @@
 # global
 import ivy
+import sys
 import math
 import queue
 import logging
@@ -11,6 +12,14 @@ try:
     import torch.multiprocessing as multiprocessing
 except ModuleNotFoundError:
     import multiprocessing
+
+
+class LoggedDatasetException(Exception):
+    pass
+
+
+class EmptyDatasetException(Exception):
+    pass
 
 
 # noinspection PyMissingConstructor
@@ -120,21 +129,34 @@ class Dataset:
         self._workers_initialized = True
 
     @staticmethod
-    def _slice_dataset_with_error_checks(dataset, slice_obj, failed=False):
+    def _slice_dataset_with_error_checks(dataset, slice_obj, log_working_slice=False, trans_fn=None):
         try:
             ret = dataset[slice_obj]
-            if not failed:
+            if not log_working_slice:
                 return ret
-            logging.info('dataset {} slice {} succeeded, producing container:'.format(
-                dataset.name, slice_obj, ret))
+            is_cont = isinstance(dataset, ivy.Container)
+            dataset_name = 'cont' if is_cont else dataset.name
+            if is_cont and trans_fn:
+                ret = trans_fn(ret)
+            if not ret.shape or not ret.shape[0] > 0:
+                logging.info('{} dataset {} is empty'.format(dataset_name, slice_obj))
+                raise EmptyDatasetException('{} dataset {} was empty'.format(dataset_name, slice_obj))
+            logging.info('{} dataset {} succeeded, producing container:\n{}\n'.format(
+                dataset_name, slice_obj, ret[0]))
+        except LoggedDatasetException:
+            sys.exit(1)
         except Exception as e:
-            logging.info('dataset {} slice {} failed'.format(dataset.name, slice_obj))
-            # noinspection PyProtectedMember
-            Dataset._slice_dataset_with_error_checks(
-                dataset._base_dataset, dataset._base_slice_fn(slice_obj), True)
-            with open('worker_fn_{}_{}_error.worker_log'.format(dataset.name, id(dataset)), 'a+') as f:
-                f.write(traceback.format_exc())
-            raise e
+            is_cont = isinstance(dataset, ivy.Container)
+            dataset_name = 'cont' if is_cont else dataset.name
+            logging.info('{} dataset {} failed'.format(dataset_name, slice_obj))
+            if not is_cont:
+                # noinspection PyProtectedMember
+                Dataset._slice_dataset_with_error_checks(
+                    dataset._base_dataset, dataset._base_slice_fn(slice_obj), True, dataset._trans_fn)
+            if not isinstance(e, EmptyDatasetException):
+                logging.info('traceback for {} dataset {} failure:'.format(dataset_name, slice_obj))
+                logging.info(traceback.format_exc())
+            raise LoggedDatasetException(str(e))
 
     @staticmethod
     def _worker_fn(index_queue, output_queue, dataset, numpy_loading):
@@ -535,21 +557,18 @@ class Dataset:
                        numpy_loading=False,
                        queue_timeout=self._queue_timeout)
 
-    def cycle_for_debugging(self, offset=0):
+    def cycle_for_debugging(self, offset=0, num_logs=100):
         logging.info('\nabout to cycle through all elements in dataset {}!\n'.format(self._name))
+        log_freq = max(round(self._size/num_logs), 1)
         for i in range(offset, math.ceil(self._size)):
-            logging.info('loading element {}'.format(i))
-            try:
-                # noinspection PyTypeChecker
-                data = self[i]
-                assert data
-                if i == 0:
-                    logging.info('loaded first element successfully:')
-                    logging.info(data)
-            except Exception as e:
-                with open('dataset_{}_read_error.dataset_log'.format(id(self)), 'a+') as f:
-                    f.write(traceback.format_exc())
-                raise e
+            if i % log_freq == 0:
+                logging.info('loading element {} of {}'.format(i, self._size))
+                logging.info('{}%'.format((i/self._size)*100))
+            # noinspection PyTypeChecker
+            data = self[i]
+            if i == 0:
+                logging.info('loaded first element successfully:')
+                logging.info(data)
         logging.info('\nfinished cycling through all elements in dataset {}!\n'.format(self._name))
 
     def close(self):
