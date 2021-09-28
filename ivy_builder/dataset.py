@@ -46,11 +46,11 @@ class Dataset:
                  prefetching=False, queue_timeout=5.0, subprocess_depth=0):
         self._name = name
         self._size = size
-        self._base_slice_fn = base_slice_fn
+        self._base_slice_fn_arg = base_slice_fn
         if base_slice_fn is None:
-            self._slice_base_dataset = self._default_base_slice_fn
+            self._base_slice_fn = self._default_base_slice_fn
         else:
-            self._slice_base_dataset = base_slice_fn
+            self._base_slice_fn = base_slice_fn
         self._trans_fn = trans_fn
         self._slice_fn = slice_fn
         if slice_fn is None:
@@ -92,7 +92,7 @@ class Dataset:
         return Dataset(
             base_dataset=self._base_dataset if isinstance(self._base_dataset, ivy.Container)
             else self._base_dataset._deep_copy(), name=self._name, size=self._size,
-            base_slice_fn=self._base_slice_fn, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
+            base_slice_fn=self._base_slice_fn_arg, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
             elementwise_query_fn=self._elementwise_query_fn, with_caching=self._with_caching,
             cache_size=self._cache_size, num_processes=ivy.default(num_processes, self._num_processes),
             numpy_loading=self._numpy_loading, prefetching=self._prefetching, queue_timeout=self._queue_timeout,
@@ -180,10 +180,10 @@ class Dataset:
             return dataset[slice_obj]
 
     @staticmethod
-    def _default_base_slice_fn(slice_obj, dataset):
+    def _default_base_slice_fn(slice_obj):
         if isinstance(slice_obj, numbers.Number):
             slice_obj = slice(slice_obj, slice_obj+1, 1)
-        return Dataset._slice_dataset(slice_obj, dataset)
+        return slice_obj
 
     @staticmethod
     def _default_slice_fn(slice_obj, sliced_dataset, dataset_size):
@@ -198,7 +198,8 @@ class Dataset:
         return Dataset._slice_dataset(slice_obj, sliced_dataset)
 
     def _get_base_item(self, slice_obj):
-        base_dataset = self._slice_base_dataset(slice_obj, self._base_dataset)
+        base_slice_obj = self._base_slice_fn(slice_obj)
+        base_dataset = Dataset._slice_dataset(base_slice_obj, self._base_dataset)
         if self._trans_fn is not None:
             if self._elementwise_query_fn:
                 vals = [self._trans_fn(base_dataset[i]) for i in range(base_dataset.shape[0])]
@@ -370,7 +371,7 @@ class Dataset:
         def batch_cont(cont):
             return cont.map(batch_array)
 
-        def base_slice_fn(slc_obj, dataset):
+        def base_slice_fn(slc_obj):
             if isinstance(slc_obj, numbers.Number):
                 base_slice_obj =\
                     slice(int(round(batch_size * slc_obj)), int(round(batch_size * slc_obj + batch_size)), 1)
@@ -378,7 +379,7 @@ class Dataset:
                 so_start = int(round(batch_size * slc_obj.start))
                 so_stop = int(round(batch_size * slc_obj.stop))
                 base_slice_obj = slice(so_start, so_stop, 1)
-            return Dataset._slice_dataset(base_slice_obj, dataset)
+            return base_slice_obj
 
         return Dataset(base_dataset=self,
                        name=name,
@@ -414,14 +415,13 @@ class Dataset:
             size_so_far += data_size
         unrolled_size = size_so_far
 
-        def base_slice_fn(slice_obj, dataset):
+        def base_slice_fn(slice_obj):
             if isinstance(slice_obj, numbers.Number):
                 slice_obj = slice(slice_obj, slice_obj + 1, 1)
             so_start = unbatch_slice_dict[slice_obj.start]
             so_stop = unbatch_slice_dict[slice_obj.stop - 1] + 1
             so_stop = so_stop + 1 if so_stop == so_start else so_stop
-            so = slice(so_start, so_stop, 1)
-            return Dataset._slice_dataset(so, dataset)
+            return slice(so_start, so_stop, 1)
 
         def unbatch_fn(cont):
             return cont.map(lambda x, kc: [c for o in [ivy.unstack(item, 0) for item in x] for c in o])
@@ -483,15 +483,14 @@ class Dataset:
     def prefetch(self, name, numpy_loading=None):
 
         # noinspection PyUnresolvedReferences
-        def base_slice_fn(slc_obj, dataset):
+        def base_slice_fn(slc_obj):
             if isinstance(slc_obj, numbers.Number):
                 so_start = slc_obj
                 so_stop = slc_obj + 2
             else:
                 so_start = slc_obj.start
                 so_stop = slc_obj.stop + 1
-            base_slice_obj = slice(so_start, so_stop, 1)
-            return Dataset._slice_dataset(base_slice_obj, dataset)
+            return slice(so_start, so_stop, 1)
 
         self._prefetching = True
         self._num_processes = 2
