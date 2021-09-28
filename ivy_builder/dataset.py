@@ -535,9 +535,9 @@ class Dataset:
                        numpy_loading=False,
                        queue_timeout=self._queue_timeout)
 
-    def cycle_for_debugging(self):
+    def cycle_for_debugging(self, offset=0):
         logging.info('\nabout to cycle through all elements in dataset {}!\n'.format(self._name))
-        for i in range(math.ceil(self._size)):
+        for i in range(offset, math.ceil(self._size)):
             logging.info('loading element {}'.format(i))
             try:
                 # noinspection PyTypeChecker
