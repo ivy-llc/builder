@@ -120,6 +120,23 @@ class Dataset:
         self._workers_initialized = True
 
     @staticmethod
+    def _slice_dataset_with_error_checks(dataset, slice_obj, failed=False):
+        try:
+            ret = dataset[slice_obj]
+            if not failed:
+                return ret
+            logging.info('dataset {} slice {} succeeded, producing container:'.format(
+                dataset.name, slice_obj, ret))
+        except Exception as e:
+            logging.info('dataset {} slice {} failed'.format(dataset.name, slice_obj))
+            # noinspection PyProtectedMember
+            Dataset._slice_dataset_with_error_checks(
+                dataset._base_dataset, dataset._base_slice_fn(slice_obj), True)
+            with open('worker_fn_{}_{}_error.worker_log'.format(dataset.name, id(dataset)), 'a+') as f:
+                f.write(traceback.format_exc())
+            raise e
+
+    @staticmethod
     def _worker_fn(index_queue, output_queue, dataset, numpy_loading):
         while True:
             try:
@@ -131,12 +148,7 @@ class Dataset:
                 return
             if numpy_loading:
                 ivy.set_framework('numpy')
-            try:
-                item = dataset[slice_obj]
-            except Exception as e:
-                with open('worker_fn_{}_error.worker_log'.format(id(dataset)), 'a+') as f:
-                    f.write(traceback.format_exc())
-                raise e
+            item = Dataset._slice_dataset_with_error_checks(dataset, slice_obj)
             if numpy_loading:
                 ivy.unset_framework()
             if ivy.wrapped_mode():
@@ -175,9 +187,9 @@ class Dataset:
                 else:
                     so_step = Dataset._ensure_number_is_int(slice_obj.step)
                 slice_obj = slice(so_start, so_stop, so_step)
-            return dataset[slice_obj]
+            return Dataset._slice_dataset_with_error_checks(dataset, slice_obj)
         else:
-            return dataset[slice_obj]
+            return Dataset._slice_dataset_with_error_checks(dataset, slice_obj)
 
     @staticmethod
     def _default_base_slice_fn(slice_obj):
