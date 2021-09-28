@@ -286,9 +286,9 @@ class Trainer:
         self._init_checkpoint_manager()
         if not checkpoint_path:
             checkpoint_path = self._chkpt_manager.latest_checkpoint_fpath
-        if self._spec.ld_chkpt is True:
-            if checkpoint_path is None:
-                raise Exception('Unable to load checkpoint, no checkpoint files found.')
+        if self._spec.ld_chkpt is True and not ivy.exists(checkpoint_path):
+            raise Exception('Unable to load checkpoint, no checkpoint files found.')
+        elif self._spec.ld_chkpt in [True, 'try'] and ivy.exists(checkpoint_path):
             self._chkpt.restore(checkpoint_path)
             logging.info('loaded checkpoints from {}'.format(checkpoint_path))
             starting_iteration = int(checkpoint_path.split('-')[-1].split('.')[0])
