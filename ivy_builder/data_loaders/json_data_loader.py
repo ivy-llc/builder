@@ -418,8 +418,20 @@ class JSONDataLoader(DataLoader):
                 elif isinstance(sizes, (int, dict)):
                     self._raw_sizes = sizes
                     self._pruned_sizes = ivy.default(pruned_sizes, sizes)
-                    num_empty = 0 if isinstance(self._pruned_sizes, int) else \
-                        sum([ps == 0 for ps in self._pruned_sizes])
+                    if isinstance(self._pruned_sizes, int):
+                        pruned_dict = dict()
+                        for seq_idx, win_idx in conts_to_skip:
+                            if seq_idx not in pruned_dict:
+                                pruned_dict[seq_idx] = list()
+                            pruned_dict[seq_idx].append(win_idx)
+                        pruned_dict = dict([(k, len(set(v))) for k, v in pruned_dict.items()])
+                        pruned_sizes_dict = dict([(k, self._pruned_sizes - num_pruned)
+                                                  for k, num_pruned in pruned_dict.items()])
+                        num_empty = sum([size == 0 for size in pruned_sizes_dict.values()])
+                        pruned_sizes = collections.defaultdict(
+                            lambda: self._pruned_sizes, pruned_sizes_dict)
+                    else:
+                        num_empty = sum([ps == 0 for ps in self._pruned_sizes])
                 else:
                     raise Exception('Invalid type for sizes, expected one of int, dict, tuple or list,'
                                     'but found {} or type {}'.format(sizes, type(sizes)))
@@ -433,8 +445,7 @@ class JSONDataLoader(DataLoader):
                 if seq_idxs:
                     self._seq_idxs = seq_idxs
                 else:
-                    vals = [v for i, v in enumerate(range(start, end + 1 + num_empty))
-                            if isinstance(self._pruned_sizes, int) or pruned_sizes[i] > 0]
+                    vals = [v for i, v in enumerate(range(start, end + 1 + num_empty)) if pruned_sizes[i] > 0]
                     keys = range(0, min(end - start + 1 + num_empty, len(vals)))
                     self._seq_idxs = dict(zip(keys, vals))
 
