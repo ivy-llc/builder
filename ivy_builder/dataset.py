@@ -142,7 +142,8 @@ class Dataset:
                 logging.info('{} dataset {} is empty'.format(dataset_name, slice_obj))
                 raise EmptyDatasetException('{} dataset {} was empty'.format(dataset_name, slice_obj))
             logging.info('{} dataset {} succeeded, producing container:\n{}\n'.format(
-                dataset_name, slice_obj, ret[0]))
+                dataset_name, slice_obj, ret[0].remove_print_limit()))
+            ret.to_disk_as_json('{}_dataset_{}_success.json'.format(dataset_name, slice_obj))
         except LoggedDatasetException:
             sys.exit(1)
         except Exception as e:
