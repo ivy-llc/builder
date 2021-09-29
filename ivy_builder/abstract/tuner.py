@@ -374,7 +374,7 @@ class Tuner:
                 if self._trainer_global_step >= self._trainer_total_iterations:
                     if self._save_at_end:
                         self._trainer._save()
-                    if self._log_at_end:
+                    if self._log_at_end and ivy.exists(self._trainer._training_batch):
                         self._trainer._log_scalars()
                     if self._vis_at_end:
                         dl = self._trainer.spec.data_loader

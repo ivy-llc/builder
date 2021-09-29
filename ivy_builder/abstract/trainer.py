@@ -88,6 +88,9 @@ class Trainer:
         # timing
         self._start_time = time.perf_counter()
 
+        # batch
+        self._training_batch = None
+
         # network
         self._network = self._spec.network
         self._net_spec = self._network.spec
