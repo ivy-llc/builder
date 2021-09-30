@@ -178,7 +178,7 @@ class Trainer:
             raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
         if 'global_vector_norm' in spec:
             self._writer.add_scalar(name_hierarchy + '/global vector norm',
-                                    ivy.to_native(nest.vector_norm(global_norm=True)), global_step)
+                                    ivy.to_scalar(ivy.to_native(nest.vector_norm(global_norm=True))), global_step)
         for k, v in nest.items():
             new_name_hierarchy = name_hierarchy + '/' + k
             if isinstance(v, dict):
@@ -186,31 +186,31 @@ class Trainer:
             else:
                 if 'mean' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/mean',
-                                            ivy.to_native(ivy.reduce_mean(v))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.reduce_mean(v))), global_step)
                 if 'abs_mean' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/abs mean',
-                                            ivy.to_native(ivy.reduce_mean(ivy.abs(v)))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.reduce_mean(ivy.abs(v)))), global_step)
                 if 'var' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/var',
-                                            ivy.to_native(ivy.reduce_var(v))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.reduce_var(v))), global_step)
                 if 'abs_var' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/abs var',
-                                            ivy.to_native(ivy.reduce_var(ivy.abs(v)))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.reduce_var(ivy.abs(v)))), global_step)
                 if 'min' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/min',
-                                            ivy.to_native(ivy.reduce_min(v))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.reduce_min(v))), global_step)
                 if 'abs_min' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/abs min',
-                                            ivy.to_native(ivy.reduce_min(ivy.abs(v)))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.reduce_min(ivy.abs(v)))), global_step)
                 if 'max' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/max',
-                                            ivy.to_native(ivy.reduce_max(v))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.reduce_max(v))), global_step)
                 if 'abs_max' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/abs max',
-                                            ivy.to_native(ivy.reduce_max(ivy.abs(v)))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.reduce_max(ivy.abs(v)))), global_step)
                 if 'vector_norm' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/vector norm',
-                                            ivy.to_native(ivy.vector_norm(v))[0], global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.vector_norm(v))), global_step)
 
     def _log_gradients(self, grads, global_step):
         self._log_nested(grads, global_step, 'gradients', self._spec.log_gradients)
