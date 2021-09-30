@@ -8,10 +8,14 @@ import numbers
 import traceback
 import ivy.numpy
 import numpy as np
-try:
-    import torch.multiprocessing as multiprocessing
-except ModuleNotFoundError:
-    import multiprocessing
+
+
+def multiprocessing():
+    try:
+        import torch.multiprocessing as multiproc
+    except ModuleNotFoundError:
+        import multiprocessing as multiproc
+    return multiproc
 
 
 class LoggedDatasetException(Exception):
@@ -70,7 +74,7 @@ class Dataset:
         self._with_caching = with_caching
         self._cache_size = cache_size
         self._cache = Cache(cache_size)
-        self._num_processes = multiprocessing.cpu_count() if num_processes is None else num_processes
+        self._num_processes = multiprocessing().cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
         self._prefetching = prefetching
         self._queue_timeout = queue_timeout
@@ -117,9 +121,10 @@ class Dataset:
             self._output_queues = list()
             for i in range(self._num_processes):
                 dataset_copy = self._deep_copy(1)
-                index_queue = multiprocessing.Queue()
-                output_queue = multiprocessing.Queue()
-                worker = multiprocessing.Process(
+                multiproc = multiprocessing()
+                index_queue = multiproc.Queue()
+                output_queue = multiproc.Queue()
+                worker = multiproc.Process(
                     target=self._worker_fn, args=(index_queue, output_queue, dataset_copy, self._numpy_loading))
                 worker.start()
                 self._slice_queues.append(index_queue)

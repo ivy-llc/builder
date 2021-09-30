@@ -15,10 +15,6 @@ import datetime
 import nvidia_smi
 import numpy as np
 from datetime import datetime
-try:
-    from torch.utils.tensorboard import SummaryWriter
-except ModuleNotFoundError:
-    SummaryWriter = None
 
 # local
 from ivy_builder.abstract.network import Network
@@ -71,6 +67,10 @@ class Trainer:
         self._chkpt_manager = None
 
         # summary writer
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+        except ModuleNotFoundError:
+            SummaryWriter = None
         if SummaryWriter is not None:
             self._writer = SummaryWriter(os.path.join(self._spec.log_dir, 'tnsrbrd'))
         else:
