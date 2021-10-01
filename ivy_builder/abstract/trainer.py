@@ -76,6 +76,13 @@ class Trainer:
         else:
             self._writer = None
 
+        # profiler
+        self._profiling = self._spec.steps_to_profile > 0
+        if self._profiling:
+            self._profiler = ivy.Profiler(self._spec.log_dir)
+        else:
+            self._profiler = None
+
         # gpu memory logging
         # noinspection PyBroadException
         try:
@@ -364,6 +371,9 @@ class Trainer:
 
         while self._global_step < self._total_iterations or self._total_iterations == -1:
 
+            if self._profiling and local_counter == 5:
+                self._profiler.start()
+
             final_step = self._global_step == self._total_iterations - 1
             log_scalars = (self._global_step % self._spec.log_freq == 0 or (final_step and self._spec.log_at_end)) \
                           and self._spec.log_freq > 0 and not vis_mode
@@ -388,6 +398,9 @@ class Trainer:
 
             if vis_mode:
                 input('press enter to visualise another example')
+
+            if self._profiling and local_counter == 5 + self._spec.steps_to_profile:
+                self._profiler.stop()
 
         return self._global_step
 
