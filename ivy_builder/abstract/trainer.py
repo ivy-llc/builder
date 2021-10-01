@@ -438,7 +438,8 @@ class Trainer:
         run the trainer, returning the iteration step reached
         """
         self._start_time = time.perf_counter()
-        return self._train(False, starting_iteration, total_iterations)
+        train = ivy.compile_fn(self._train) if self._spec.compile else self._train
+        return train(False, starting_iteration, total_iterations)
 
     def visualize(self) -> None:
         """

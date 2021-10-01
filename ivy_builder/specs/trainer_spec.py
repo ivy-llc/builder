@@ -10,6 +10,7 @@ from ivy_builder.specs.spec import locals_to_kwargs
 
 class TrainerSpec(Spec, abc.ABC):
 
+    # noinspection PyShadowingBuiltins
     def __init__(self,
                  data_loader: None,
                  network: Network,
@@ -37,6 +38,7 @@ class TrainerSpec(Spec, abc.ABC):
                  log_optimizer_state: (tuple, str) = 'all',
                  profile_start_step: int = 5,
                  steps_to_profile: int = 0,
+                 compile: bool = False,
                  device: str = None,
                  **kwargs) -> None:
         """
@@ -78,6 +80,7 @@ class TrainerSpec(Spec, abc.ABC):
                          log_optimizer_state=log_optimizer_state,
                          profile_start_step=profile_start_step,
                          steps_to_profile=steps_to_profile,
+                         compile=compile,
                          device=ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
                          **kwargs)
         self._kwargs = kw
