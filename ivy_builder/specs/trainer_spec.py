@@ -35,6 +35,7 @@ class TrainerSpec(Spec, abc.ABC):
                  log_gradients: (tuple, str) = 'all',
                  log_variables: (tuple, str) = 'all',
                  log_optimizer_state: (tuple, str) = 'all',
+                 profile_start_step: int = 5,
                  steps_to_profile: int = 0,
                  device: str = None,
                  **kwargs) -> None:
@@ -75,6 +76,7 @@ class TrainerSpec(Spec, abc.ABC):
                          log_gradients=log_gradients,
                          log_variables=log_variables,
                          log_optimizer_state=log_optimizer_state,
+                         profile_start_step=profile_start_step,
                          steps_to_profile=steps_to_profile,
                          device=ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
                          **kwargs)

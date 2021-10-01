@@ -371,7 +371,7 @@ class Trainer:
 
         while self._global_step < self._total_iterations or self._total_iterations == -1:
 
-            if self._profiling and local_counter == 5:
+            if self._profiling and local_counter == self._spec.profile_start_step:
                 self._profiler.start()
 
             final_step = self._global_step == self._total_iterations - 1
@@ -399,7 +399,7 @@ class Trainer:
             if vis_mode:
                 input('press enter to visualise another example')
 
-            if self._profiling and local_counter == 5 + self._spec.steps_to_profile:
+            if self._profiling and local_counter == self._spec.profile_start_step + self._spec.steps_to_profile:
                 self._profiler.stop()
 
         return self._global_step
