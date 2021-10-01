@@ -61,10 +61,12 @@ class ExampleTrainer(Trainer):
         return self._sgd_optimizer
 
 
-def main(seed=0):
+# noinspection PyShadowingBuiltins
+def main(seed=0, compile=False):
     ivy.seed(seed)
     data_loader_spec_args = {'batch_size': 1}
-    trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'log_freq': 1, 'initial_learning_rate': 0.1}
+    trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'log_freq': 1, 'initial_learning_rate': 0.1,
+                         'compile': compile}
     trainer = trainer_builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
                                             data_loader_spec_args=data_loader_spec_args,
                                             trainer_spec_args=trainer_spec_args)

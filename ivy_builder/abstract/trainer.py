@@ -103,6 +103,10 @@ class Trainer:
         self._net_spec = self._network.spec
         self._partial_grad_updates = bool(self._net_spec.v_keychains)
 
+        # compile
+        if self._spec.compile:
+            self._train_step_from_batch = ivy.compile_fn(self._train_step_from_batch)
+
     # Abstract #
     # ---------#
 
@@ -316,7 +320,7 @@ class Trainer:
     # Training #
     # ---------#
 
-    def _train_step_from_batch(self, batch, with_output=False):
+    def _train_step_from_batch(self, batch):
         cost, self._gradients = ivy.execute_with_gradients(
             lambda v: self._compute_cost(batch, v=self._network.v.set_at_key_chains(v)),
             self._network.v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
@@ -330,6 +334,10 @@ class Trainer:
                 self._gradients = self._gradients * ratio
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
         new_v = self._optimizer.step(self._network.v, self._gradients, ignore_missing=self._partial_grad_updates)
+        return batch, cost, new_v
+
+    def _train_step(self, with_output=False):
+        batch, cost, new_v = self._train_step_from_batch(self._spec.data_loader.get_next_batch())
         if self._partial_grad_updates:
             self._network.v.set_at_key_chains(new_v)
         else:
@@ -337,9 +345,6 @@ class Trainer:
         if with_output:
             return batch, cost
         return cost
-
-    def _train_step(self, with_output=False):
-        return self._train_step_from_batch(self._spec.data_loader.get_next_batch(), with_output)
 
     def _data_load_and_train_step(self, vis_mode, log_scalars_on_this_it, log_viz_on_this_it):
         if vis_mode:
@@ -438,8 +443,7 @@ class Trainer:
         run the trainer, returning the iteration step reached
         """
         self._start_time = time.perf_counter()
-        train = ivy.compile_fn(self._train) if self._spec.compile else self._train
-        return train(False, starting_iteration, total_iterations)
+        return self._train(False, starting_iteration, total_iterations)
 
     def visualize(self) -> None:
         """
