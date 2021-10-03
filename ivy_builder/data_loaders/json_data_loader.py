@@ -590,8 +590,13 @@ class JSONDataLoader(DataLoader):
             dataset = dataset.prefetch('prefetch')
         # ToDo: find way to make pre-fetching to GPU actually pre-fetch, ideally using multi-processing.
         #  For example, swapping prefetch and to_gpu ops around would work if to_gpu could accept self._num_workers.
-        if self._spec.prefetch_to_gpu:
-            dataset = dataset.to_dev('to_gpu', 'gpu:0')
+        if self._spec.prefetch_to_devs:
+            if isinstance(self._spec.prefetch_to_devs, str):
+                dataset = dataset.to_dev('to_dev', self._spec.prefetch_to_devs)
+            elif len(self._spec.prefetch_to_devs) == 1:
+                dataset = dataset.to_dev('to_dev', self._spec.prefetch_to_devs[0])
+            else:
+                dataset = dataset.to_devs('to_devs', self._spec.prefetch_to_devs)
         return dataset
 
     # Public Methods #

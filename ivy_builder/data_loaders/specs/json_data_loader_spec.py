@@ -11,7 +11,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
     def __init__(self, dataset_spec, batch_size, starting_idx, num_sequences, window_size=1,
                  num_workers=1, cache_size=0, unused_key_chains=None, preload_containers=False, preshuffle_data=True,
                  shuffle_buffer_size=0, with_prefetching=True, queue_timeout=5.0, post_proc_fn=None,
-                 prefetch_to_gpu=True, single_pass=False, array_strs=None, float_strs=None, uint8_strs=None,
+                 prefetch_to_devs='gpu:0', single_pass=False, array_strs=None, float_strs=None, uint8_strs=None,
                  custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled',
                  load_gray_as_rgb=True, containers_to_skip=None, **kwargs):
 
@@ -26,7 +26,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
         custom_strs = ivy.default(custom_strs, [[]])
         custom_fns = ivy.default(custom_fns, [])
         containers_to_skip = ivy.default(containers_to_skip, [])
-        prefetch_to_gpu = prefetch_to_gpu if ivy.gpu_is_available() else False
+        prefetch_to_devs = prefetch_to_devs if ivy.gpu_is_available() else False
 
         super(JSONDataLoaderSpec, self).__init__(dataset_spec,
                                                  batch_size=batch_size,
@@ -41,7 +41,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  shuffle_buffer_size=shuffle_buffer_size,
                                                  with_prefetching=with_prefetching,
                                                  post_proc_fn=post_proc_fn,
-                                                 prefetch_to_gpu=prefetch_to_gpu,
+                                                 prefetch_to_devs=prefetch_to_devs,
                                                  single_pass=single_pass,
                                                  array_strs=array_strs,
                                                  float_strs=float_strs,
