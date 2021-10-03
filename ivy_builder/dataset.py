@@ -547,16 +547,28 @@ class Dataset:
 
     def to_dev(self, name, dev_str, num_processes=1):
 
-        def item_to_dev(x, _):
-            return ivy.to_dev(x, dev_str)
-
         def cont_to_dev(cont):
-            return cont.map(item_to_dev)
+            return cont.to_dev(dev_str)
 
         return Dataset(base_dataset=self,
                        name=name,
                        size=self._size,
                        trans_fn=cont_to_dev,
+                       with_caching=self._with_caching,
+                       cache_size=self._cache_size,
+                       num_processes=num_processes,
+                       numpy_loading=False,
+                       queue_timeout=self._queue_timeout)
+
+    def to_devs(self, name, dev_strs, axis=0, num_processes=1):
+
+        def cont_to_devs(cont):
+            return cont.to_multi_dev(dev_strs, axis)
+
+        return Dataset(base_dataset=self,
+                       name=name,
+                       size=self._size,
+                       trans_fn=cont_to_devs,
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
                        num_processes=num_processes,
