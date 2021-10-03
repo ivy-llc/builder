@@ -55,7 +55,7 @@ def pytest_generate_tests(metafunc):
     # wrapped_mode
     raw_value = metafunc.config.getoption('--wrapped_mode')
     if raw_value == 'both':
-        wrapped_modes = [True, False]
+        wrapped_modes = [False]
     elif raw_value == 'true':
         wrapped_modes = [True]
     else:
