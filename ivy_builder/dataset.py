@@ -545,18 +545,18 @@ class Dataset:
                        numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
                        queue_timeout=self._queue_timeout)
 
-    def to_gpu(self, name, num_processes=1, gpu_idx=0):
+    def to_dev(self, name, dev_str, num_processes=1):
 
-        def item_to_gpu(x, _):
-            return ivy.array(x, dev_str='gpu:' + str(gpu_idx))
+        def item_to_dev(x, _):
+            return ivy.to_dev(x, dev_str)
 
-        def cont_to_gpu(cont):
-            return cont.map(item_to_gpu)
+        def cont_to_dev(cont):
+            return cont.map(item_to_dev)
 
         return Dataset(base_dataset=self,
                        name=name,
                        size=self._size,
-                       trans_fn=cont_to_gpu,
+                       trans_fn=cont_to_dev,
                        with_caching=self._with_caching,
                        cache_size=self._cache_size,
                        num_processes=num_processes,
