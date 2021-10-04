@@ -345,7 +345,7 @@ class Trainer:
     # Training #
     # ---------#
 
-    def _execute_with_gradients(self, network, batch, dev_str, network_v):
+    def _execute_with_gradients(self, network, dev_str, batch, network_v):
         cost, gradients = ivy.execute_with_gradients(
             lambda v: self._compute_cost(network, batch, dev_str, v=network_v.set_at_key_chains(v)),
             network_v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
@@ -357,8 +357,8 @@ class Trainer:
         if ivy.exists(self._dev_mapper):
             if not isinstance(batch, ivy.MultiDevContainer):
                 batch = batch.to_multi_dev(self._spec.dev_strs)
-            return self._dev_mapper.map(batch, self._spec.dev_strs, network.v.clone(self._spec.dev_strs))
-        return self._execute_with_gradients(network, batch, self._spec.dev_strs[0], network.v)
+            return self._dev_mapper.map(batch, network.v.clone(self._spec.dev_strs))
+        return self._execute_with_gradients(network, self._spec.dev_strs[0], batch, network.v)
 
     def _train_step_from_batch(self, batch):
         cost, self._gradients = self._execute_with_gradients_multi_dev(self._network, batch)
