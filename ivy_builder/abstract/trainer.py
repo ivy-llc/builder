@@ -485,6 +485,8 @@ class Trainer:
         """
         Close this trainer, and destroy all child objects or processes which may not be garbage collected.
         """
+        if ivy.exists(self._dev_mapper):
+            self._dev_mapper.__del__()
         self._spec.data_loader.close()
 
     # Getters #
