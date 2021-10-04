@@ -3,21 +3,15 @@
 # Functions #
 # ----------#
 
-# remove existing non-default json files
-remove_existing_non_default_files() {
-  for json_fname in "$1"/*.json; do
-    if [ -f "$json_fname" ]; then
-      rm "$json_fname"
-    fi
-  done
-}
-
 # create json files for specification loading from their default files, replacing BASE_DIRs with the mount directories
 create_json_files() {
   for json_fname in "$1"/*.json.defaults; do
     if [ -f "$json_fname" ]; then
       # shellcheck disable=SC2001
       new_json_fname="$(echo "${json_fname}" |sed -e "s|.defaults||g")";
+      if [ -f "new_json_fname" ]; then
+        rm "new_json_fname"
+      fi
       cp "$json_fname" "$new_json_fname"
       sed -i "s|BASE_DATASET_DIR|$2|g" "$new_json_fname"
       sed -i "s|BASE_LOG_DIR|$3|g" "$new_json_fname"
@@ -42,8 +36,7 @@ recursive_update() {
       recursive_update "${file}" "$2" "$3"
     fi
   done
-  # remove existing json files and copy new ones for current directory
-  remove_existing_non_default_files "$1"
+  # copy new json files for current directory
   create_json_files "$1" "$2" "$3"
 }
 
@@ -97,7 +90,6 @@ if [ $# -eq 3 ]
     cd "$3" || exit
 fi
 
-remove_existing_non_default_files "$PWD"
 create_json_files "$PWD" "$1" "$2"
 
 # call the same script in all sub-directories if -r is specified
