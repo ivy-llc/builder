@@ -112,9 +112,18 @@ class Trainer:
             if self._network.built:
                 raise Exception('Network must use either explicit or on_call build modes if training on multiple'
                                 'devices, but the network was already built using on_init method.')
-            self._dev_mapper = ivy.DevMapperMultiProc(self._execute_with_gradients, self._spec.dev_strs, self._network)
+            ret_fn = lambda ret: ivy.unify_iter(ret, self._spec.dev_strs[0], 'mean')
+            self._dev_mapper = ivy.DevMapperMultiProc(
+                self._execute_with_gradients, ret_fn, self._spec.dev_strs, self._network)
         else:
             self._dev_mapper = None
+
+    def __getstate__(self):
+        # prevent already running processes from being pickled as sent to new processes
+        state = self.__dict__.copy()
+        state['_writer'] = None
+        state['_profiler'] = None
+        return state
 
     # Abstract #
     # ---------#
