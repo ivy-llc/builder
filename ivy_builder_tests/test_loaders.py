@@ -11,6 +11,59 @@ from ivy_builder.data_loaders.json_data_loader import JSONDataLoader
 from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderSpec
 
 
+def test_json_loader_multi_dev(dev_str, f, call):
+
+    # seed
+    f.seed(0)
+    np.random.seed(0)
+
+    # devices
+    dev_str0 = dev_str
+    if 'gpu' in dev_str:
+        idx = min(ivy.num_gpus() - 1, 1)
+        dev_str1 = dev_str[:-1] + str(idx)
+    else:
+        dev_str1 = dev_str
+    dev_strs = [dev_str0, dev_str1]
+
+    # dataset dir
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    ds_dir = os.path.join(current_dir, 'dataset')
+    dataset_dirs = DatasetDirs(dataset_dir=ds_dir, containers_dir=os.path.join(ds_dir, 'containers'))
+
+    dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=2, cont_fname_template='%06d_%06d.json')
+    data_loader_spec = JSONDataLoaderSpec(dataset_spec, batch_size=2, window_size=1, starting_idx=0,
+                                          num_sequences=1, preload_containers=True, array_mode='hdf5',
+                                          array_strs=['array'], float_strs=['depth'], uint8_strs=['rgb'],
+                                          with_prefetching=False, shuffle_buffer_size=0,
+                                          prefetch_to_devs=dev_strs, preshuffle_data=False)
+
+    # data loader
+    data_loader = JSONDataLoader(data_loader_spec)
+
+    # testing
+    for i in range(5):
+
+        # get training batch
+        batch = data_loader.get_next_batch()
+
+        # test cardinality
+        assert batch.actions.shape == (2, 1, 6)
+        assert batch.observations.image.ego.ego_cam_px.rgb.shape == (2, 1, 32, 32, 3)
+        assert batch.observations.image.ego.ego_cam_px.rgb.shape == (2, 1, 32, 32, 3)
+        assert batch.array.data.shape == (2, 1, 3)
+
+        # test values
+        assert batch.seq_info.length[0][0][0] == 2
+        assert batch.seq_info.length[1][0][0] == 2
+        assert batch.seq_info.idx[0][0][0] == 0
+        assert batch.seq_info.idx[1][0][0] == 1
+
+    # delete
+    data_loader.close()
+    del data_loader
+
+
 @pytest.mark.parametrize(
     "preload_containers", [True, False])
 @pytest.mark.parametrize(

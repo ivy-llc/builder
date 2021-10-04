@@ -26,7 +26,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
         custom_strs = ivy.default(custom_strs, [[]])
         custom_fns = ivy.default(custom_fns, [])
         containers_to_skip = ivy.default(containers_to_skip, [])
-        prefetch_to_devs = prefetch_to_devs if ivy.gpu_is_available() else False
+        prefetch_to_devs = prefetch_to_devs if ivy.gpu_is_available() or isinstance(prefetch_to_devs, list) else False
 
         super(JSONDataLoaderSpec, self).__init__(dataset_spec,
                                                  batch_size=batch_size,
