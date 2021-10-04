@@ -123,6 +123,7 @@ class Trainer:
         state = self.__dict__.copy()
         state['_writer'] = None
         state['_profiler'] = None
+        state['_gpu_handles'] = None
         return state
 
     # Abstract #

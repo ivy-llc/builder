@@ -30,10 +30,12 @@ class ExampleDataLoader(DataLoader):
         super().__init__(data_loader_spec)
 
     def get_next_batch(self, dataset_key=None):
-        return ivy.Container(x=ivy.array([[1.]]*self._spec.batch_size))
+        return ivy.Container(x=ivy.array([[1.]]*self._spec.batch_size, dev_str=self._spec.device),
+                             target=ivy.array([[0.]]*self._spec.batch_size, dev_str=self._spec.device))
 
     def get_first_batch(self, dataset_key=None):
-        return ivy.Container(x=ivy.array([[1.]]*self._spec.batch_size))
+        return ivy.Container(x=ivy.array([[1.]]*self._spec.batch_size, dev_str=self._spec.device),
+                             target=ivy.array([[0.]]*self._spec.batch_size, dev_str=self._spec.device))
 
 
 class ExampleTrainer(Trainer):
@@ -44,8 +46,7 @@ class ExampleTrainer(Trainer):
 
     def _compute_cost(self, network, batch, v=None):
         network_output = network(batch.x, v=v)
-        target = ivy.array([[0.]])
-        return ivy.reduce_mean((target - network_output)**2)[0]
+        return ivy.reduce_mean((batch.target - network_output)**2)[0]
 
     def _learning_rate_func(self, global_step):
         return self._spec.initial_learning_rate
@@ -64,7 +65,7 @@ class ExampleTrainer(Trainer):
 # noinspection PyShadowingBuiltins
 def main(seed=0, compile=False, dev_strs=None):
     ivy.seed(seed)
-    data_loader_spec_args = {'batch_size': 2}
+    data_loader_spec_args = {'batch_size': 2, 'device': ivy.default(lambda: dev_strs[0], None, True)}
     trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'log_freq': 1, 'initial_learning_rate': 0.1,
                          'compile': compile, 'dev_strs': dev_strs}
     trainer = trainer_builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
