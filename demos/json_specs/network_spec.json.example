@@ -1,4 +1,4 @@
 {
   "num_layers": 1,
-  "device": "cpu:0"
+  "dev_strs": ["cpu:0"]
 }

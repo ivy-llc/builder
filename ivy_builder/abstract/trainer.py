@@ -135,7 +135,8 @@ class Trainer:
     # Private Methods #
 
     @abc.abstractmethod
-    def _compute_cost(self, network: ivy.Module, batch: ivy.Array, v: ivy.Container = None) -> ivy.Array:
+    def _compute_cost(self, network: ivy.Module, batch: ivy.Array, dev_str: ivy.Device = None,
+                      v: ivy.Container = None) -> ivy.Array:
         """
         compute training cost from input batch
         """
@@ -315,7 +316,8 @@ class Trainer:
         self._pre_init()
         if self._net_spec.build_mode == 'explicit':
             self._network.build()
-        self._compute_cost(self._network, self._spec.data_loader.get_first_batch())  # for on_call builds
+        # for on_call builds
+        self._compute_cost(self._network, self._spec.data_loader.get_first_batch(), self._spec.dev_strs[0])
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
@@ -342,9 +344,9 @@ class Trainer:
     # Training #
     # ---------#
 
-    def _execute_with_gradients(self, network, batch, network_v):
+    def _execute_with_gradients(self, network, batch, dev_str, network_v):
         cost, gradients = ivy.execute_with_gradients(
-            lambda v: self._compute_cost(network, batch, v=network_v.set_at_key_chains(v)),
+            lambda v: self._compute_cost(network, batch, dev_str, v=network_v.set_at_key_chains(v)),
             network_v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
             self._net_spec.keep_v_keychains else
             network_v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
@@ -354,8 +356,8 @@ class Trainer:
         if ivy.exists(self._dev_mapper):
             if not isinstance(batch, ivy.MultiDevContainer):
                 batch = batch.to_multi_dev(self._spec.dev_strs)
-            return self._dev_mapper.map(batch, network.v.clone(self._spec.dev_strs))
-        return self._execute_with_gradients(network, batch, network.v)
+            return self._dev_mapper.map(batch, self._spec.dev_strs, network.v.clone(self._spec.dev_strs))
+        return self._execute_with_gradients(network, batch, self._spec.dev_strs[0], network.v)
 
     def _train_step_from_batch(self, batch):
         cost, self._gradients = self._execute_with_gradients_multi_dev(self._network, batch)

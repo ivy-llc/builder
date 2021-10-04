@@ -52,9 +52,9 @@ class ExampleDataLoaderSpec(DataLoaderSpec):
 # noinspection PyAbstractClass
 class ExampleNetworkSpec(NetworkSpec):
 
-    def __init__(self, dataset_spec, device, num_layers):
+    def __init__(self, dataset_spec, dev_strs, num_layers):
         super().__init__(dataset_spec,
-                         device,
+                         dev_strs,
                          num_layers=num_layers)
 
 
@@ -128,7 +128,7 @@ class ExampleTrainer(Trainer):
         super().__init__(trainer_spec)
         self._sgd_optimizer = ivy.SGD(self._spec.initial_learning_rate)
 
-    def _compute_cost(self, network, batch, v=None):
+    def _compute_cost(self, network, batch, dev_str, v=None):
         target = batch[1]
         network_output = network(batch[0], v=v)
         return ivy.reduce_mean((network_output - target) ** 2)[0]

@@ -87,7 +87,7 @@ def test_visualizing(dev_str, call):
         pytest.skip()
 
     builder_helpers.remove_dirs()
-    data_loader_spec_args = {'batch_size': 1, 'device': dev_str}
+    data_loader_spec_args = {'batch_size': 1, 'dev_strs': [dev_str]}
     trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
@@ -107,7 +107,7 @@ def test_checkpoint_loading(dev_str, call):
         pytest.skip()
 
     builder_helpers.remove_dirs()
-    data_loader_spec_args = {'batch_size': 1, 'device': dev_str}
+    data_loader_spec_args = {'batch_size': 1, 'dev_strs': [dev_str]}
     trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
@@ -208,7 +208,7 @@ def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, call):
         pytest.skip()
 
     builder_helpers.remove_dirs()
-    data_loader_spec_args = {'batch_size': 1, 'device': dev_str}
+    data_loader_spec_args = {'batch_size': 1, 'dev_strs': [dev_str]}
     trainer_spec_args = {'total_iterations': 0, 'ld_chkpt': False}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
@@ -223,7 +223,7 @@ def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, call):
     trainer.close()
     assert os.path.exists(chkpt1_path)
 
-    data_loader_spec_args = {'batch_size': 1, 'device': dev_str}
+    data_loader_spec_args = {'batch_size': 1, 'dev_strs': [dev_str]}
     trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,

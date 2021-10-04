@@ -82,6 +82,6 @@ class TrainerSpec(Spec, abc.ABC):
                          profile_start_step=profile_start_step,
                          steps_to_profile=steps_to_profile,
                          compile=compile,
-                         dev_strs=ivy.default(dev_strs, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
+                         dev_strs=ivy.default(dev_strs, ['gpu:0'] if ivy.gpu_is_available() else ['cpu']),
                          **kwargs)
         self._kwargs = kw

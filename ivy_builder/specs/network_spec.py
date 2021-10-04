@@ -2,6 +2,7 @@
 import ivy
 import abc
 import importlib
+from typing import List
 
 # local
 from ivy_builder.specs.spec import Spec
@@ -18,14 +19,14 @@ def load_class_from_str(full_str):
 
 class NetworkSpec(Spec, abc.ABC):
 
-    def __init__(self, dataset_spec: DatasetSpec = None, device: str = 'cpu:0', v_keychains=None,
+    def __init__(self, dataset_spec: DatasetSpec = None, dev_strs: List[str] = ['cpu:0'], v_keychains=None,
                  keep_v_keychains=False, build_mode='explicit', **kwargs) -> None:
         """
         base class for storing general specifications of the neural network
         """
         kw = locals_to_kwargs(locals())
         super().__init__(dataset_spec=dataset_spec,
-                         device=device,
+                         dev_strs=dev_strs,
                          v_keychains=v_keychains,
                          keep_v_keychains=keep_v_keychains,
                          build_mode=build_mode,
@@ -41,7 +42,7 @@ class NetworkSpec(Spec, abc.ABC):
                         subet_spec = kwargs['subnets'][k]
                     else:
                         subet_spec = spec_class(**{**kwargs['subnets'][k],
-                                                   **dict(dataset_spec=dataset_spec, device=device)})
+                                                   **dict(dataset_spec=dataset_spec, dev_strs=dev_strs)})
                     self.subnets[k] = subet_spec
                 if isinstance(subet_spec.network_class, str):
                     self.subnets[k].network_class = load_class_from_str(subet_spec.network_class)
@@ -50,5 +51,5 @@ class NetworkSpec(Spec, abc.ABC):
                 self.subnets[k].store_vars = ivy.default(self.subnets[k].if_exists('store_vars'), True)
                 self.subnets[k].build_mode = ivy.default(self.subnets[k].if_exists('build_mode'), self.build_mode)
                 self.subnets[k].dataset_spec = dataset_spec
-                self.subnets[k].device = device
+                self.subnets[k].dev_strs = dev_strs
         self._kwargs = kw

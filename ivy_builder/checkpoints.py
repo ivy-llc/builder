@@ -11,12 +11,12 @@ class Checkpoint:
 
     def restore(self, checkpoint_path):
         checkpoint = ivy.Container.from_disk_as_hdf5(checkpoint_path)
-        loaded_v = checkpoint.network.map(lambda x, kc: ivy.variable(ivy.to_dev(x, self._net.spec.device)))
+        loaded_v = checkpoint.network.map(lambda x, kc: ivy.variable(ivy.to_dev(x, self._net.spec.dev_strs[0])))
         if ivy.exists(self._net.v):
             # if build_mode is 'on_call', the network variables will not have been built yet
             assert (self._net.v.shapes == loaded_v.shapes).all_true(assert_is_bool=True)
         self._net.v = loaded_v
-        self._optimizer.set_state(checkpoint.optimizer.map(lambda x, kc: ivy.to_dev(x, self._net.spec.device)))
+        self._optimizer.set_state(checkpoint.optimizer.map(lambda x, kc: ivy.to_dev(x, self._net.spec.dev_strs[0])))
 
     @property
     def optimizer(self):
