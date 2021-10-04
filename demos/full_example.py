@@ -128,9 +128,9 @@ class ExampleTrainer(Trainer):
         super().__init__(trainer_spec)
         self._sgd_optimizer = ivy.SGD(self._spec.initial_learning_rate)
 
-    def _compute_cost(self, batch, v=None):
+    def _compute_cost(self, network, batch, v=None):
         target = batch[1]
-        network_output = self._spec.network(batch[0], v=v)
+        network_output = network(batch[0], v=v)
         return ivy.reduce_mean((network_output - target) ** 2)[0]
 
     def _learning_rate_func(self, global_step):

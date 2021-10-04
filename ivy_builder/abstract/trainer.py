@@ -107,13 +107,22 @@ class Trainer:
         if self._spec.compile:
             self._train_step_from_batch = ivy.compile_fn(self._train_step_from_batch)
 
+        # multi-dev
+        if isinstance(self._spec.dev_strs, list) and len(self._spec.dev_strs) > 1:
+            if self._network.built:
+                raise Exception('Network must use either explicit or on_call build modes if training on multiple'
+                                'devices, but the network was already built using on_init method.')
+            self._dev_mapper = ivy.DevMapperMultiProc(self._execute_with_gradients, self._spec.dev_strs, self._network)
+        else:
+            self._dev_mapper = None
+
     # Abstract #
     # ---------#
 
     # Private Methods #
 
     @abc.abstractmethod
-    def _compute_cost(self, batch: ivy.Array, v: ivy.Container = None) -> ivy.Array:
+    def _compute_cost(self, network: ivy.Module, batch: ivy.Array, v: ivy.Container = None) -> ivy.Array:
         """
         compute training cost from input batch
         """
@@ -293,7 +302,7 @@ class Trainer:
         self._pre_init()
         if self._net_spec.build_mode == 'explicit':
             self._network.build()
-        self._compute_cost(self._spec.data_loader.get_first_batch())  # for on_call variable creation
+        self._compute_cost(self._network, self._spec.data_loader.get_first_batch())  # for on_call builds
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
@@ -320,12 +329,23 @@ class Trainer:
     # Training #
     # ---------#
 
-    def _train_step_from_batch(self, batch):
-        cost, self._gradients = ivy.execute_with_gradients(
-            lambda v: self._compute_cost(batch, v=self._network.v.set_at_key_chains(v)),
-            self._network.v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
+    def _execute_with_gradients(self, network, batch, network_v):
+        cost, gradients = ivy.execute_with_gradients(
+            lambda v: self._compute_cost(network, batch, v=network_v.set_at_key_chains(v)),
+            network_v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
             self._net_spec.keep_v_keychains else
-            self._network.v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
+            network_v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
+        return cost, gradients
+
+    def _execute_with_gradients_multi_dev(self, network, batch):
+        if ivy.exists(self._dev_mapper):
+            if not isinstance(batch, ivy.MultiDevContainer):
+                batch = batch.to_multi_dev(self._spec.dev_strs)
+            return self._dev_mapper.map(batch, network.v.clone(self._spec.dev_strs))
+        return self._execute_with_gradients(network, batch, network.v)
+
+    def _train_step_from_batch(self, batch):
+        cost, self._gradients = self._execute_with_gradients_multi_dev(self._network, batch)
         if 'max_grad_val' in self._spec:
             grads = self._gradients.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
         if 'max_grad_vector_norm' in self._spec:

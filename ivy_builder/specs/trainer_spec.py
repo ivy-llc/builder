@@ -1,6 +1,7 @@
 # global
 import ivy
 import abc
+from typing import Union, List
 
 # local
 from ivy_builder.specs.spec import Spec
@@ -39,7 +40,7 @@ class TrainerSpec(Spec, abc.ABC):
                  profile_start_step: int = 5,
                  steps_to_profile: int = 0,
                  compile: bool = False,
-                 device: str = None,
+                 dev_strs: Union[str, List[str]] = None,
                  **kwargs) -> None:
         """
         parameters which define the training procedure
@@ -81,6 +82,6 @@ class TrainerSpec(Spec, abc.ABC):
                          profile_start_step=profile_start_step,
                          steps_to_profile=steps_to_profile,
                          compile=compile,
-                         device=ivy.default(device, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
+                         dev_strs=ivy.default(dev_strs, 'gpu:0' if ivy.gpu_is_available() else 'cpu'),
                          **kwargs)
         self._kwargs = kw
