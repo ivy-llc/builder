@@ -108,7 +108,8 @@ class Trainer:
             self._train_step_from_batch = ivy.compile_fn(self._train_step_from_batch)
 
         # multi-dev
-        if isinstance(self._spec.dev_strs, list) and len(self._spec.dev_strs) > 1:
+        self._dev_str = ivy.default(lambda: self._spec.dev_strs[0], ivy.default_device(), True)
+        if len(self._spec.dev_strs) > 1:
             if self._network.built:
                 raise Exception('Network must use either explicit or on_call build modes if training on multiple'
                                 'devices, but the network was already built using on_init method.')
