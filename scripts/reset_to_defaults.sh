@@ -23,6 +23,15 @@ create_json_files() {
       sed -i "s|BASE_LOG_DIR|$3|g" "$new_json_fname"
     fi
   done
+  for json_fname in "$1"/*.json.example; do
+      # shellcheck disable=SC2001
+    new_json_fname="$(echo "${json_fname}" |sed -e "s|.example||g")";
+    if [ -f "$json_fname" ] && ! [ -f "$new_json_fname" ]; then
+      cp "$json_fname" "$new_json_fname"
+      sed -i "s|BASE_DATASET_DIR|$2|g" "$new_json_fname"
+      sed -i "s|BASE_LOG_DIR|$3|g" "$new_json_fname"
+    fi
+  done
 }
 
 # recursively create json files in all sub-directories
