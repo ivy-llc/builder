@@ -38,6 +38,10 @@ def test_simple_multi_dev_trainers(dev_str, call):
         # numpy does not support gradients, required for training
         pytest.skip()
 
+    if call is not helpers.torch_call:
+        # ToDo: add multi-dev support for all backends, not just torch
+        pytest.skip()
+
     # devices
     dev_str0 = dev_str
     if 'gpu' in dev_str:
