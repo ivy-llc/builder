@@ -124,6 +124,9 @@ class Trainer:
         state['_writer'] = None
         state['_profiler'] = None
         state['_gpu_handles'] = None
+        state['_network'] = None
+        state['_spec'] = None
+        state['spec'] = None
         return state
 
     # Abstract #
