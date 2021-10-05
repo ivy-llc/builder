@@ -54,10 +54,10 @@ def test_json_loader_multi_dev(dev_str, f, call):
         assert batch.array.data.shape == (2, 1, 3)
 
         # test values
-        assert batch.seq_info.length[0][0][0] == 2
-        assert batch.seq_info.length[1][0][0] == 2
-        assert batch.seq_info.idx[0][0][0] == 0
-        assert batch.seq_info.idx[1][0][0] == 1
+        assert batch.seq_info.length.at_dev(0)[0][0] == 2
+        assert batch.seq_info.length.at_dev(1)[0][0] == 2
+        assert batch.seq_info.idx.at_dev(0)[0][0] == 0
+        assert batch.seq_info.idx.at_dev(1)[0][0] == 1
 
     # delete
     data_loader.close()
