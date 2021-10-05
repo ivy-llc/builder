@@ -22,6 +22,7 @@ def test_tune_numeric_spec(dev_str, call):
         pytest.skip()
 
     builder_helpers.remove_dirs()
+    data_loader_spec_args = {'batch_size': 1}
     trainer_spec_args = {'total_iterations': 10,
                          'ld_chkpt': False,
                          'log_freq': 1,
@@ -41,7 +42,8 @@ def test_tune_numeric_spec(dev_str, call):
                        'grace_period': 1,
                        'checkpoint_freq': 0}
     tuner = builder.build_tuner(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
-                                trainer_spec_args=trainer_spec_args, tuner_spec_args=tuner_spec_args)
+                                data_loader_spec_args=data_loader_spec_args, trainer_spec_args=trainer_spec_args,
+                                tuner_spec_args=tuner_spec_args)
     tuner.tune()
     builder_helpers.remove_dirs()
 
@@ -53,6 +55,7 @@ def test_tune_general_spec(dev_str, call):
         pytest.skip()
 
     builder_helpers.remove_dirs()
+    data_loader_spec_args = {'batch_size': 1}
     trainer_spec_args = {'total_iterations': 2,
                          'ld_chkpt': False,
                          'log_freq': 1,
@@ -90,7 +93,8 @@ def test_tune_general_spec(dev_str, call):
                        'grace_period': 1,
                        'checkpoint_freq': 0}
     tuner = builder.build_tuner(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
-                                trainer_spec_args=trainer_spec_args, tuner_spec_args=tuner_spec_args)
+                                data_loader_spec_args=data_loader_spec_args, trainer_spec_args=trainer_spec_args,
+                                tuner_spec_args=tuner_spec_args)
     tuner.tune()
     builder_helpers.remove_dirs()
 
@@ -108,6 +112,7 @@ def test_tune_resume_training(dev_str, call):
 
     # tuner spec args
     train_steps_per_tune_step = 2
+    data_loader_spec_args = {'batch_size': 1}
     tuner_spec_args = {'framework': ivy.current_framework_str(),
                        'train_steps_per_tune_step': train_steps_per_tune_step,
                        'trainer_spec':
@@ -132,7 +137,8 @@ def test_tune_resume_training(dev_str, call):
                          'log_dir': os.path.join(THIS_DIR, 'log'),
                          'save_freq': 1}
     tuner = builder.build_tuner(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
-                                trainer_spec_args=trainer_spec_args, tuner_spec_args=tuner_spec_args)
+                                data_loader_spec_args=data_loader_spec_args, trainer_spec_args=trainer_spec_args,
+                                tuner_spec_args=tuner_spec_args)
     first_results = ivy.Container(tuner.tune().results)
     first_losses = first_results.at_keys('cost').to_flat_list()
 
@@ -143,7 +149,8 @@ def test_tune_resume_training(dev_str, call):
                          'log_dir': os.path.join(THIS_DIR, 'log'),
                          'save_freq': 1}
     tuner = builder.build_tuner(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
-                                trainer_spec_args=trainer_spec_args, tuner_spec_args=tuner_spec_args)
+                                data_loader_spec_args=data_loader_spec_args, trainer_spec_args=trainer_spec_args,
+                                tuner_spec_args=tuner_spec_args)
     second_results = ivy.Container(tuner.tune().results)
     second_losses = second_results.at_keys('cost').to_flat_list()
 
