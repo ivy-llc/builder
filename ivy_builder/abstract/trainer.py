@@ -115,7 +115,7 @@ class Trainer:
                                 'devices, but the network was already built using on_init method.')
             ret_fn = lambda ret: ivy.unify_iter(ret, self._spec.dev_strs[0], 'mean')
             self._dev_mapper = ivy.DevMapperMultiProc(
-                self._execute_with_gradients, ret_fn, self._spec.dev_strs, self._network)
+                self._execute_with_gradients, ret_fn, self._spec.dev_strs, constant={'network': self._network})
         else:
             self._dev_mapper = None
 
@@ -357,7 +357,7 @@ class Trainer:
         if ivy.exists(self._dev_mapper):
             if not isinstance(batch, ivy.MultiDevContainer):
                 batch = batch.to_multi_dev(self._spec.dev_strs)
-            return self._dev_mapper.map(batch, network.v.clone(self._spec.dev_strs))
+            return self._dev_mapper.map(batch=batch, network_v=network.v.clone(self._spec.dev_strs))
         return self._execute_with_gradients(network, self._spec.dev_strs[0], batch, network.v)
 
     def _train_step_from_batch(self, batch):
