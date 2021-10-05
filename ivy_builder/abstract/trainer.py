@@ -115,7 +115,8 @@ class Trainer:
                                 'devices, but the network was already built using on_init method.')
             ret_fn = lambda ret: ivy.unify_iter(ret, self._spec.dev_strs[0], 'mean')
             self._dev_mapper = ivy.DevMapperMultiProc(
-                self._execute_with_gradients, ret_fn, self._spec.dev_strs, constant={'network': self._network})
+                self.__getattribute__(self._spec.dev_map_fn), ret_fn, self._spec.dev_strs,
+                constant={'network': self._network})
         else:
             self._dev_mapper = None
 
