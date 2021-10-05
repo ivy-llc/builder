@@ -358,19 +358,20 @@ class Trainer:
         if ivy.exists(self._dev_mapper):
             if not isinstance(batch, ivy.MultiDevContainer):
                 batch = batch.to_multi_dev(self._spec.dev_strs)
-            return self._dev_mapper.map(batch=batch, network_v=network.v.clone(self._spec.dev_strs))
+            return self._dev_mapper.map(batch=batch.at_devs(), network_v=network.v.clone(self._spec.dev_strs).at_devs())
         return self._execute_with_gradients(network, self._spec.dev_strs[0], batch, network.v)
 
     def _train_step_from_batch(self, batch):
         cost, self._gradients = self._execute_with_gradients_multi_dev(self._network, batch)
+        grads = self._gradients
         if 'max_grad_val' in self._spec:
-            grads = self._gradients.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
+            grads = grads.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
         if 'max_grad_vector_norm' in self._spec:
-            ratio = self._spec.max_grad_vector_norm/(self._gradients.vector_norm(global_norm=True) + MIN_DENOMINATOR)
+            ratio = self._spec.max_grad_vector_norm/(grads.vector_norm(global_norm=True) + MIN_DENOMINATOR)
             if ratio < 1:
-                self._gradients = self._gradients * ratio
+                grads = grads * ratio
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
-        new_v = self._optimizer.step(self._network.v, self._gradients, ignore_missing=self._partial_grad_updates)
+        new_v = self._optimizer.step(self._network.v, grads, ignore_missing=self._partial_grad_updates)
         return batch, cost, new_v
 
     def _train_step(self, with_output=False):
