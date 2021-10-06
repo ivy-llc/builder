@@ -9,9 +9,10 @@ class Checkpoint:
         self._optimizer = optimizer
         self._net = net
 
+    # noinspection PyProtectedMember
     def restore(self, checkpoint_path):
         checkpoint = ivy.Container.from_disk_as_hdf5(checkpoint_path)
-        loaded_v = checkpoint.network.map(lambda x, kc: ivy.variable(ivy.to_dev(x, self._net.spec.dev_strs[0])))
+        loaded_v = checkpoint.network.map(lambda x, kc: ivy.variable(ivy.to_dev(x, self._net._dev_str)))
         if ivy.exists(self._net.v):
             # if build_mode is 'on_call', the network variables will not have been built yet
             assert (self._net.v.shapes == loaded_v.shapes).all_true(assert_is_bool=True)

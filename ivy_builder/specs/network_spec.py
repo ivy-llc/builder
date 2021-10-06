@@ -19,8 +19,8 @@ def load_class_from_str(full_str):
 
 class NetworkSpec(Spec, abc.ABC):
 
-    def __init__(self, dataset_spec: DatasetSpec = None, dev_strs: List[str] = ['cpu:0'], v_keychains=None,
-                 keep_v_keychains=False, build_mode='explicit', **kwargs) -> None:
+    def __init__(self, dataset_spec: DatasetSpec = None, dev_strs: List[str] = None,
+                 v_keychains=None, keep_v_keychains=False, build_mode='explicit', **kwargs) -> None:
         """
         base class for storing general specifications of the neural network
         """
