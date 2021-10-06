@@ -10,7 +10,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
 
     def __init__(self, dataset_spec, batch_size, starting_idx, num_sequences, window_size=1,
                  num_workers=1, cache_size=0, unused_key_chains=None, preload_containers=False, preshuffle_data=True,
-                 shuffle_buffer_size=0, with_prefetching=True, queue_timeout=5.0, post_proc_fn=None,
+                 shuffle_buffer_size=0, with_prefetching=True, queue_timeout=None, post_proc_fn=None,
                  prefetch_to_devs='gpu:0', single_pass=False, array_strs=None, float_strs=None, uint8_strs=None,
                  custom_img_strs=None, custom_img_fns=None, custom_strs=None, custom_fns=None, array_mode='pickled',
                  load_gray_as_rgb=True, containers_to_skip=None, **kwargs):
@@ -54,7 +54,7 @@ class JSONDataLoaderSpec(DataLoaderSpec):
                                                  load_gray_as_rgb=load_gray_as_rgb,
                                                  containers_to_skip=containers_to_skip,
                                                  **kwargs)
-        self.queue_timeout = queue_timeout  # conflicts with ivy.Container argument
+        self.queue_timeout = ivy.default(queue_timeout, ivy.queue_timeout())  # conflicts with ivy.Container argument
 
         self._kwargs = kw
 

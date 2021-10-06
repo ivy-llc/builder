@@ -56,7 +56,7 @@ class Dataset:
 
     def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
                  elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
-                 prefetching=False, queue_timeout=5.0, subprocess_depth=0):
+                 prefetching=False, queue_timeout=None, subprocess_depth=0):
         self._name = name
         self._size = size
         self._base_slice_fn_arg = base_slice_fn
@@ -77,7 +77,7 @@ class Dataset:
         self._num_processes = multiprocessing().cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
         self._prefetching = prefetching
-        self._queue_timeout = queue_timeout
+        self._queue_timeout = ivy.default(queue_timeout, ivy.queue_timeout())
         self._subprocess_depth = subprocess_depth
         self._is_subprocess = bool(subprocess_depth)
         self._first_pass = True
