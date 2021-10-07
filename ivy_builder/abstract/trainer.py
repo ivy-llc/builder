@@ -319,7 +319,7 @@ class Trainer:
         if self._net_spec.build_mode == 'explicit':
             self._network.build()
         # for on_call builds
-        self._compute_cost(self._network, self._spec.data_loader.get_first_batch(), self._spec.dev_strs[0])
+        self._compute_cost(self._network, self._spec.data_loader.get_first_batch()[0], self._spec.dev_strs[0])
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
