@@ -83,15 +83,6 @@ class Trainer:
         else:
             self._profiler = None
 
-        # gpu memory logging
-        # noinspection PyBroadException
-        try:
-            nvidia_smi.nvmlInit()
-            self._gpu_handles = [nvidia_smi.nvmlDeviceGetHandleByIndex(i)
-                                 for i in range(nvidia_smi.nvmlDeviceGetCount())]
-        except Exception:
-            self._gpu_handles = list()
-
         # timing
         self._start_time = time.perf_counter()
 
@@ -260,24 +251,25 @@ class Trainer:
     def _log_memory(self, global_step):
         if not ivy.exists(self._writer):
             raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
-        vm = psutil.virtual_memory()
-        self._writer.add_scalar('memory/RAM/global/percent_used', (1-(vm.available/vm.total))*100, global_step)
-        this_process = psutil.Process(os.getpid())
+        self._writer.add_scalar('memory/RAM/global/percent_used', ivy.percent_used_mem_on_dev('cpu'), global_step)
         self._writer.add_scalar('memory/RAM/local/percent_used',
-                                (this_process.memory_info().rss/vm.total)*100, global_step)
-        for i, handle in enumerate(self._gpu_handles):
-            info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
-            self._writer.add_scalar('memory/GPU_{}/global/percent_used'.format(i),
-                                    (info.used/info.total)*100, global_step)
+                                ivy.percent_used_mem_on_dev('cpu', process_specific=True), global_step)
+        for ds in self._spec.dev_strs:
+            if 'gpu' not in ds:
+                continue
+            ds_formatted = ds.replace(':', '_').capitalize()
+            self._writer.add_scalar('memory/{}/global/percent_used'.format(ds_formatted),
+                                    ivy.percent_used_mem_on_dev(ds), global_step)
 
     def _log_device_utilization(self, global_step):
         if not ivy.exists(self._writer):
             raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
-        cpu_util = psutil.cpu_percent()
-        self._writer.add_scalar('dev_util/CPU', cpu_util, global_step)
-        for i, handle in enumerate(self._gpu_handles):
-            info = nvidia_smi.nvmlDeviceGetUtilizationRates(handle)
-            self._writer.add_scalar('dev_util/GPU_{}'.format(i), info.gpu, global_step)
+        self._writer.add_scalar('dev_util/CPU', ivy.dev_util('cpu'), global_step)
+        for ds in self._spec.dev_strs:
+            if 'gpu' not in ds:
+                continue
+            ds_formatted = ds.replace(':', '_').capitalize()
+            self._writer.add_scalar('dev_util/{}'.format(ds_formatted), ivy.dev_util(ds), global_step)
 
     def _save(self):
         self._chkpt_manager.save(self._global_step)
