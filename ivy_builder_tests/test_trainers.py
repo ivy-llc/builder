@@ -43,13 +43,13 @@ def test_simple_multi_dev_trainers(dev_str, call):
         pytest.skip()
 
     # devices
+    dev_strs = list()
     dev_str0 = dev_str
+    dev_strs.append(dev_str0)
     if 'gpu' in dev_str:
         idx = ivy.num_gpus() - 1
         dev_str1 = dev_str[:-1] + str(idx)
-    else:
-        dev_str1 = dev_str
-    dev_strs = [dev_str0, dev_str1]
+        dev_strs.append(dev_str1)
 
     # test
     builder_helpers.remove_dirs()
