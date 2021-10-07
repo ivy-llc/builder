@@ -424,9 +424,9 @@ class JSONDataLoader(DataLoader):
                             if seq_idx not in pruned_dict:
                                 pruned_dict[seq_idx] = list()
                             pruned_dict[seq_idx].append(win_idx)
-                        pruned_dict = dict([(k, len(set(v))) for k, v in pruned_dict.items()])
-                        pruned_sizes_dict = dict([(k, self._pruned_sizes - num_pruned)
-                                                  for k, num_pruned in pruned_dict.items()])
+                        pruned_dict = {k: len(set(v)) for k, v in pruned_dict.items()}
+                        pruned_sizes_dict = {k: self._pruned_sizes - num_pruned
+                                             for k, num_pruned in pruned_dict.items()}
                         num_empty = sum([size == 0 for size in pruned_sizes_dict.values()])
                         pruned_sizes = collections.defaultdict(
                             lambda: self._pruned_sizes, pruned_sizes_dict)
@@ -462,8 +462,8 @@ class JSONDataLoader(DataLoader):
                 if self._constant_size:
                     sizes = self._raw_sizes
                 else:
-                    sizes = collections.OrderedDict([(seq_idx, self._raw_sizes[seq_idx])
-                                                     for seq_idx in seq_idxs.values()])
+                    sizes = collections.OrderedDict({seq_idx: self._raw_sizes[seq_idx]
+                                                     for seq_idx in seq_idxs.values()})
                 return ContainerIdxMap(sizes, self._fpath_template, seq_idxs, max_seq_len=self._max_seq_len,
                                        conts_to_skip=self._conts_to_skip, pruned_sizes=self._pruned_sizes)
 
