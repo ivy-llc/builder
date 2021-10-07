@@ -270,6 +270,15 @@ class Trainer:
             self._writer.add_scalar('memory/GPU_{}/global/percent_used'.format(i),
                                     (info.used/info.total)*100, global_step)
 
+    def _log_device_utilization(self, global_step):
+        if not ivy.exists(self._writer):
+            raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
+        cpu_util = psutil.cpu_percent()
+        self._writer.add_scalar('dev_util/CPU', cpu_util, global_step)
+        for i, handle in enumerate(self._gpu_handles):
+            info = nvidia_smi.nvmlDeviceGetUtilizationRates(handle)
+            self._writer.add_scalar('dev_util/GPU_{}'.format(i), info.gpu, global_step)
+
     def _save(self):
         self._chkpt_manager.save(self._global_step)
         logging.info('network checkpoint saved @ step ' + str(self._global_step))
