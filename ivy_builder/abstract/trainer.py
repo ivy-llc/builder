@@ -102,7 +102,7 @@ class Trainer:
             if self._network.built:
                 raise Exception('Network must use either explicit or on_call build modes if training on multiple'
                                 'devices, but the network was already built using on_init method.')
-            ret_fn = lambda ret: ivy.unify_iter(ret, self._spec.dev_strs[0], 'mean')
+            ret_fn = lambda ret: ivy.unify_iter(ret, self._spec.dev_strs[0], 'mean', transpose=True)
             dev_mapper = ivy.DevMapperMultiProc(
                 self.__getattribute__(self._spec.dev_map_fn), ret_fn, self._spec.dev_strs,
                 constant={'network': self._network})
@@ -297,7 +297,7 @@ class Trainer:
             self._writer.add_scalar('dev_tuning/device_alloc/step_time',
                                     self._dev_manager._da_step_time, global_step)
             for ds, split in self._dev_manager._dev_strs_da.items():
-                self._writer.add_scalar('dev_tuning/device_alloc/splits/{}'.format(ds), split, global_step)
+                self._writer.add_scalar('dev_tuning/device_alloc/split_sizes/{}'.format(ds), split, global_step)
 
         # per-device splitting
         # ToDo: log more useful tuning metrics here
@@ -307,7 +307,7 @@ class Trainer:
             self._writer.add_scalar('dev_tuning/splitting/step_time',
                                     self._dev_manager._ds_step_time, global_step)
             for ds, split in self._dev_manager._dev_strs_ds.items():
-                self._writer.add_scalar('dev_tuning/splitting/splits/{}'.format(ds), split, global_step)
+                self._writer.add_scalar('dev_tuning/splitting/split_factors/{}'.format(ds), split, global_step)
 
     def _save(self):
         self._chkpt_manager.save(self._global_step)
@@ -402,7 +402,7 @@ class Trainer:
             if self._multi_dev:
                 if not isinstance(batch, ivy.MultiDevContainer):
                     batch = batch.to_multi_dev(self._spec.dev_strs)
-                return self._dev_manager.map(to_distribute={"batch": batch},
+                return self._dev_manager.map(distributed={"batch": batch.at_devs()},
                                              to_clone={"network_v": network.v})
             ret = self._raw_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
             self._dev_manager.tune_step()
