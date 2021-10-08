@@ -90,11 +90,11 @@ class ExampleDataLoader(DataLoader):
             self._i = np.random.randint(0, self._num_examples)
         else:
             self._i = (self._i + 1) % self._num_examples
-        return data.input[self._i], data.targets[self._i]
+        return ivy.Container(input=data.input[self._i], target=data.targets[self._i])
 
     def get_first_batch(self, dataset_key='training'):
         data = self._data[dataset_key]
-        return data.input[0], data.targets[0]
+        return ivy.Container(input=data.input[0], target=data.targets[0])
 
 
 # Custom Network #
@@ -129,9 +129,8 @@ class ExampleTrainer(Trainer):
         self._sgd_optimizer = ivy.SGD(self._spec.initial_learning_rate)
 
     def _compute_cost(self, network, batch, dev_str, v=None):
-        target = batch[1]
-        network_output = network(batch[0], v=v)
-        return ivy.reduce_mean((network_output - target) ** 2)[0]
+        network_output = network(batch.input, v=v)
+        return ivy.reduce_mean((network_output - batch.target) ** 2)[0]
 
     def _learning_rate_func(self, global_step):
         if global_step < self._spec.total_iterations/2:

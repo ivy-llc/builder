@@ -8,11 +8,9 @@ except ModuleNotFoundError:
 import abc
 import time
 import shutil
-import psutil
 import pathlib
 import logging
 import datetime
-import nvidia_smi
 import numpy as np
 from datetime import datetime
 
@@ -105,11 +103,21 @@ class Trainer:
                 raise Exception('Network must use either explicit or on_call build modes if training on multiple'
                                 'devices, but the network was already built using on_init method.')
             ret_fn = lambda ret: ivy.unify_iter(ret, self._spec.dev_strs[0], 'mean')
-            self._dev_mapper = ivy.DevMapperMultiProc(
+            dev_mapper = ivy.DevMapperMultiProc(
                 self.__getattribute__(self._spec.dev_map_fn), ret_fn, self._spec.dev_strs,
                 constant={'network': self._network})
+            self._multi_dev = True
         else:
-            self._dev_mapper = None
+            dev_mapper = None
+            self._multi_dev = False
+
+        # device manager
+        if (self._multi_dev and self._spec.tune_device_allocation) or self._spec.tune_splitting:
+            self._dev_manager = ivy.DevManager(
+                dev_mapper, self._spec.dev_strs, tune_dev_alloc=(self._multi_dev and self._spec.tune_device_allocation),
+                tune_dev_splits=self._spec.tune_splitting)
+        else:
+            self._dev_manager = None
 
     def __getstate__(self):
         # prevent already running processes from being pickled as sent to new processes
@@ -319,8 +327,11 @@ class Trainer:
         self._pre_init()
         if self._net_spec.build_mode == 'explicit':
             self._network.build()
+        first_batch = self._spec.data_loader.get_first_batch()
+        if ivy.exists(self._dev_manager):
+            self._dev_manager.dim_size = first_batch.shape[0]
         # for on_call builds
-        self._compute_cost(self._network, self._spec.data_loader.get_first_batch()[0], self._spec.dev_strs[0])
+        self._compute_cost(self._network, first_batch[0], self._spec.dev_strs[0])
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
@@ -347,7 +358,7 @@ class Trainer:
     # Training #
     # ---------#
 
-    def _execute_with_gradients(self, network, dev_str, batch, network_v):
+    def _raw_execute_with_grads(self, network, dev_str, batch, network_v):
         cost, gradients = ivy.execute_with_gradients(
             lambda v: self._compute_cost(network, batch, dev_str, v=network_v.set_at_key_chains(v)),
             network_v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
@@ -355,15 +366,21 @@ class Trainer:
             network_v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
         return cost, gradients
 
-    def _execute_with_gradients_multi_dev(self, network, batch):
-        if ivy.exists(self._dev_mapper):
-            if not isinstance(batch, ivy.MultiDevContainer):
-                batch = batch.to_multi_dev(self._spec.dev_strs)
-            return self._dev_mapper.map(batch=batch.at_devs(), network_v=network.v.clone(self._spec.dev_strs).at_devs())
-        return self._execute_with_gradients(network, self._spec.dev_strs[0], batch, network.v)
+    def _dev_manager_execute_with_grads(self, network, batch):
+        # ToDo: assign this function in constructor rather than performing checks on each training step
+        if ivy.exists(self._dev_manager):
+            if self._multi_dev:
+                if not isinstance(batch, ivy.MultiDevContainer):
+                    batch = batch.to_multi_dev(self._spec.dev_strs)
+                return self._dev_manager.map(to_distribute={"batch": batch},
+                                             to_clone={"network_v": network.v})
+            ret = self._raw_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
+            self._dev_manager.tune_step()
+            return ret
+        return self._raw_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
 
     def _train_step_from_batch(self, batch):
-        cost, self._gradients = self._execute_with_gradients_multi_dev(self._network, batch)
+        cost, self._gradients = self._dev_manager_execute_with_grads(self._network, batch)
         grads = self._gradients
         if 'max_grad_val' in self._spec:
             grads = grads.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
@@ -494,8 +511,8 @@ class Trainer:
         """
         Close this trainer, and destroy all child objects or processes which may not be garbage collected.
         """
-        if ivy.exists(self._dev_mapper):
-            self._dev_mapper.__del__()
+        if ivy.exists(self._dev_manager):
+            self._dev_manager.__del__()
         self._spec.data_loader.close()
 
     # Getters #

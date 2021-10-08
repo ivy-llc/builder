@@ -41,7 +41,9 @@ class TrainerSpec(Spec, abc.ABC):
                  steps_to_profile: int = 0,
                  compile: bool = False,
                  dev_strs: Union[str, List[str]] = None,
-                 dev_map_fn: str = '_execute_with_gradients',
+                 dev_map_fn: str = '_raw_execute_with_gradients',
+                 tune_device_allocation: bool = True,
+                 tune_splitting: bool = True,
                  **kwargs) -> None:
         """
         parameters which define the training procedure
@@ -85,5 +87,7 @@ class TrainerSpec(Spec, abc.ABC):
                          compile=compile,
                          dev_strs=ivy.default(dev_strs, ['gpu:0'] if ivy.gpu_is_available() else ['cpu']),
                          dev_map_fn=dev_map_fn,
+                         tune_device_allocation=tune_device_allocation,
+                         tune_splitting=tune_splitting,
                          **kwargs)
         self._kwargs = kw
