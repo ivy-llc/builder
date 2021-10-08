@@ -18,13 +18,13 @@ def test_json_loader_multi_dev(dev_str, f, call):
     np.random.seed(0)
 
     # devices
+    dev_strs = list()
     dev_str0 = dev_str
-    if 'gpu' in dev_str:
-        idx = min(ivy.num_gpus() - 1, 1)
+    dev_strs.append(dev_str0)
+    if 'gpu' in dev_str and ivy.num_gpus() > 1:
+        idx = ivy.num_gpus() - 1
         dev_str1 = dev_str[:-1] + str(idx)
-    else:
-        dev_str1 = dev_str
-    dev_strs = [dev_str0, dev_str1]
+        dev_strs.append(dev_str1)
 
     # dataset dir
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -54,10 +54,13 @@ def test_json_loader_multi_dev(dev_str, f, call):
         assert batch.array.data.shape == (2, 1, 3)
 
         # test values
-        assert batch.seq_info.length.at_dev(0)[0][0] == 2
-        assert batch.seq_info.length.at_dev(1)[0][0] == 2
-        assert batch.seq_info.idx.at_dev(0)[0][0] == 0
-        assert batch.seq_info.idx.at_dev(1)[0][0] == 1
+        if len(dev_strs) == 1:
+            assert batch.seq_info.length[0][0] == 2
+            assert batch.seq_info.idx[0][0] == 0
+            continue
+        for j, ds in enumerate(dev_str):
+            assert batch.seq_info.length[ds][0][0] == 2
+            assert batch.seq_info.idx[ds][0][0] == j
 
     # delete
     data_loader.close()
