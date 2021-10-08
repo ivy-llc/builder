@@ -279,6 +279,36 @@ class Trainer:
             ds_formatted = ds.replace(':', '_').capitalize()
             self._writer.add_scalar('dev_util/{}'.format(ds_formatted), ivy.dev_util(ds), global_step)
 
+    # noinspection PyProtectedMember
+    def _log_device_tuning(self, global_step):
+        if not ivy.exists(self._writer):
+            raise Exception('torch must be installed in order to use the file writer for tensorboard logging.')
+        if not ivy.exists(self._dev_manager):
+            raise Exception('Cannot log device manager tuning if the device manager does not exist.'
+                            'Please set either of the params: tune_device_allocation=True or tune_splitting=True')
+
+        # device allocation
+        # ToDo: log more useful tuning metrics here
+        if self._multi_dev and self._spec.tune_device_allocation:
+            self._writer.add_scalar('dev_tuning/device_alloc/tune_count',
+                                    self._dev_manager._da_tune_count, global_step)
+            self._writer.add_scalar('dev_tuning/device_alloc/unit_tune_count',
+                                    self._dev_manager._unit_da_tune_count, global_step)
+            self._writer.add_scalar('dev_tuning/device_alloc/step_time',
+                                    self._dev_manager._da_step_time, global_step)
+            for ds, split in self._dev_manager._dev_strs_da.items():
+                self._writer.add_scalar('dev_tuning/device_alloc/splits/{}'.format(ds), split, global_step)
+
+        # per-device splitting
+        # ToDo: log more useful tuning metrics here
+        if self._spec.tune_splitting:
+            self._writer.add_scalar('dev_tuning/splitting/tune_count',
+                                    self._dev_manager._ds_tune_count, global_step)
+            self._writer.add_scalar('dev_tuning/splitting/step_time',
+                                    self._dev_manager._ds_step_time, global_step)
+            for ds, split in self._dev_manager._dev_strs_ds.items():
+                self._writer.add_scalar('dev_tuning/splitting/splits/{}'.format(ds), split, global_step)
+
     def _save(self):
         self._chkpt_manager.save(self._global_step)
         logging.info('network checkpoint saved @ step ' + str(self._global_step))
