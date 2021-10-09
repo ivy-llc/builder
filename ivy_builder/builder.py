@@ -40,11 +40,15 @@ def parse_json_to_cont(json_filepath):
         if k == 'parents':
             rel_fpaths = v
             for rel_fpath in rel_fpaths:
-                if rel_fpath[-5:] != '.json':
-                    rel_fpath = os.path.join(rel_fpath, json_filepath.split('/')[-1])
+                if rel_fpath[-5:] == '.json':
+                    parent_json_fname = rel_fpath.split('/')[-1]
+                else:
+                    parent_json_fname = json_filepath.split('/')[-1]
+                    rel_fpath = os.path.join(rel_fpath, parent_json_fname)
                 rel_fpath = os.path.normpath(rel_fpath)
                 fpath = os.path.normpath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
-                return_cont = ivy.Container.combine(return_cont, parse_json_to_cont(fpath))
+                fdir = '/'.join(fpath.split('/')[:-1])
+                return_cont = ivy.Container.combine(return_cont, json_spec_from_fpath(fdir, parent_json_fname))
     return ivy.Container.combine(return_cont, loaded_dict)
 
 
