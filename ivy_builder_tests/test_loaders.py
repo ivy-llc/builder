@@ -71,7 +71,7 @@ def test_seq_loader_multi_dev(dev_str, f, call):
 @pytest.mark.parametrize(
     "container_load_mode", ['preload', 'dynamic'])
 @pytest.mark.parametrize(
-    "array_mode", ['hdf5', 'pickledqq'])
+    "array_mode", ['hdf5', 'pickled'])
 @pytest.mark.parametrize(
     "with_prefetching", [True, False])
 @pytest.mark.parametrize(

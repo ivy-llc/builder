@@ -24,6 +24,6 @@ def remove_dirs(base_dir=None):
     elif os.path.isfile(serialized_model_path):
         os.remove(serialized_model_path)
     if tune_present:
-        time.sleep(1)
+        time.sleep(2)
         if os.path.isdir(tune_path):
             remove_dirs(base_dir)
