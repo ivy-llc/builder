@@ -14,14 +14,14 @@ import multiprocessing
 from ivy_builder.dataset import Dataset
 from ivy.core.container import Container
 from ivy_builder.abstract.data_loader import DataLoader
-from ivy_builder.data_loaders.specs.json_data_loader_spec import JSONDataLoaderSpec
+from ivy_builder.data_loaders.specs.seq_data_loader_spec import SeqDataLoaderSpec
 
 
 # noinspection PyUnresolvedReferences
-class JSONDataLoader(DataLoader):
+class SeqDataLoader(DataLoader):
 
-    def __init__(self, data_loader_spec: JSONDataLoaderSpec):
-        super(JSONDataLoader, self).__init__(data_loader_spec)
+    def __init__(self, data_loader_spec: SeqDataLoaderSpec):
+        super(SeqDataLoader, self).__init__(data_loader_spec)
 
         # cpus
         if 'num_workers' in data_loader_spec:
@@ -69,6 +69,11 @@ class JSONDataLoader(DataLoader):
 
         # compute num workers for each component
         self._compute_num_workers()
+
+        # custom init
+        self._custom_init_fn = self._spec.custom_init_fn
+        if ivy.exists(self._custom_init_fn):
+            self._custom_init_fn(self)
 
         # dataset
         self._dataset = self._get_dataset(start_idx, end_idx)
@@ -403,11 +408,11 @@ class JSONDataLoader(DataLoader):
 
         class ContainerIdxMap:
 
-            def __init__(self, sizes, fpath_template, seq_idxs=None, start=None, end=None, max_seq_len=None,
+            def __init__(self, sizes, fpath_template=None, seq_idxs=None, start=None, end=None, max_seq_len=None,
                          conts_to_skip=None, pruned_sizes=None):
                 if isinstance(sizes, (tuple, list)):
                     pruned_sizes = ivy.default(
-                        pruned_sizes, [JSONDataLoader._compute_seq_len(i, sl, conts_to_skip)
+                        pruned_sizes, [SeqDataLoader._compute_seq_len(i, sl, conts_to_skip)
                                        for i, sl in enumerate(sizes)])
                     num_empty = sum([ps == 0 for ps in pruned_sizes])
                     self._raw_sizes = dict(zip(range(start, end + 1 + num_empty),
@@ -474,11 +479,22 @@ class JSONDataLoader(DataLoader):
                 np.random.shuffle(mapped_idxs)
                 self._seq_idxs = collections.OrderedDict(zip(self._seq_idxs.keys(), mapped_idxs))
 
+            def to_idxs(self):
+                seq_idxs = self._seq_idxs.values()
+                sizes = [self._raw_sizes if self._constant_size else self._raw_sizes[seq_idx] for seq_idx in seq_idxs]
+                rets = [[(seq_idx, win_idx) for win_idx in
+                         range(size) if not SeqDataLoader._skip_cont(seq_idx, win_idx, self._conts_to_skip)]
+                        for seq_idx, size in zip(seq_idxs, sizes)]
+                return [r + [(None, None)] * (self._max_seq_len - len(r)) for r in rets if list(set(r)) != [None]]
+
             def to_filepaths(self):
+                if not ivy.exists(self._fpath_template):
+                    raise Exception('to_filepaths method is not valid if fpath_template has not been specified'
+                                    'in the constructor.')
                 seq_idxs = self._seq_idxs.values()
                 sizes = [self._raw_sizes if self._constant_size else self._raw_sizes[seq_idx] for seq_idx in seq_idxs]
                 rets = [[self._fpath_template % (seq_idx, win_idx) for win_idx in
-                         range(size) if not JSONDataLoader._skip_cont(seq_idx, win_idx, self._conts_to_skip)]
+                         range(size) if not SeqDataLoader._skip_cont(seq_idx, win_idx, self._conts_to_skip)]
                         for seq_idx, size in zip(seq_idxs, sizes)]
                 return [r + [''] * (self._max_seq_len - len(r)) for r in rets if ''.join(r) != '']
 
@@ -487,10 +503,13 @@ class JSONDataLoader(DataLoader):
                 return self._pruned_sizes
 
         # container filepaths
+        if self._spec.container_load_mode in ['preload', 'dynamic']:
+            fpath_template = os.path.join(self._container_data_dir, self._spec.dataset_spec.cont_fname_template)
+        else:
+            fpath_template = None
         container_idx_map = ContainerIdxMap(
-            self._spec.dataset_spec.unpruned_sequence_lengths,
-            os.path.join(self._container_data_dir, self._spec.dataset_spec.cont_fname_template),
-            start=starting_example, end=ending_example, conts_to_skip=self._spec.containers_to_skip)
+            self._spec.dataset_spec.unpruned_sequence_lengths, fpath_template, start=starting_example,
+            end=ending_example, conts_to_skip=self._spec.containers_to_skip)
 
         if self._spec.num_sequences != -1:
             container_idx_map = container_idx_map[0:self._spec.num_sequences]
@@ -517,7 +536,7 @@ class JSONDataLoader(DataLoader):
             self._sequence_lengths = container_idx_map.sizes
 
         # maybe pre-load containers
-        if self._spec.preload_containers:
+        if self._spec.container_load_mode == 'preload':
             # load containers with vector data and image filepath entries
             container_slices = self._get_containers_w_filepath_img_entries_as_tensor_slices(
                 container_idx_map.to_filepaths())
@@ -537,21 +556,31 @@ class JSONDataLoader(DataLoader):
                 cache_size=self._base_cache_size,
                 queue_timeout=self._spec.queue_timeout)
         else:
-            # load containers with filepath entries
-            dataset = Dataset(ivy.Container({'fpaths': container_idx_map}),
-                              'base',
-                              len(container_idx_map),
-                              trans_fn=lambda cont: cont.map(lambda x_, kc: x_.to_filepaths()),
-                              elementwise_query_fn=False,
-                              numpy_loading=True,
-                              cache_size=self._base_cache_size,
-                              queue_timeout=self._spec.queue_timeout)
-            dataset = dataset.map('loaded_json',
-                                  self._load_json_files,
-                                  self._num_workers.loaded_json)
-            dataset = dataset.map('parsed_json',
-                                  self._parse_json_strings,
-                                  self._num_workers.parsed_json)
+            if self._spec.container_load_mode == 'dynamic':
+                # load containers with filepath entries
+                dataset = Dataset(ivy.Container({'fpaths': container_idx_map}),
+                                  'base',
+                                  len(container_idx_map),
+                                  trans_fn=lambda cont: cont.map(lambda x_, kc: x_.to_filepaths()),
+                                  elementwise_query_fn=False,
+                                  numpy_loading=True,
+                                  cache_size=self._base_cache_size,
+                                  queue_timeout=self._spec.queue_timeout)
+                dataset = dataset.map('loaded_json',
+                                      self._load_json_files,
+                                      self._num_workers.loaded_json)
+                dataset = dataset.map('parsed_json',
+                                      self._parse_json_strings,
+                                      self._num_workers.parsed_json)
+            else:
+                dataset = Dataset(ivy.Container({'idx_map': container_idx_map}),
+                                  'base',
+                                  len(container_idx_map),
+                                  trans_fn=lambda cont: self._spec.custom_container_load_fn(self, cont),
+                                  elementwise_query_fn=False,
+                                  numpy_loading=True,
+                                  cache_size=self._base_cache_size,
+                                  queue_timeout=self._spec.queue_timeout)
             if 'unused_key_chains' in self._spec:
                 dataset = dataset.map('keychain_pruned',
                                       self._prune_unused_key_chains,

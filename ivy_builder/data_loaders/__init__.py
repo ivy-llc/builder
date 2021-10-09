@@ -1,4 +1,4 @@
 from . import specs
 from .specs import *
-from . import json_data_loader
-from .json_data_loader import *
+from . import seq_data_loader
+from .seq_data_loader import *
