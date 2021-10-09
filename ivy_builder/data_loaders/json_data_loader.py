@@ -300,8 +300,7 @@ class JSONDataLoader(DataLoader):
     # container pruning
 
     def _prune_unused_key_chains(self, container):
-        for unused_key_chain in self._spec.unused_key_chains:
-            container = container.prune_key_chain(unused_key_chain)
+        container = container.prune_key_chains(self._spec.unused_key_chains)
         return container
 
     # arrays
