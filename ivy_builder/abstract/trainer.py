@@ -361,7 +361,7 @@ class Trainer:
         if ivy.exists(self._dev_manager):
             self._dev_manager.dim_size = first_batch.shape[0]
         # for on_call builds
-        self._compute_cost(self._network, first_batch[0], self._spec.dev_strs[0])
+        self._compute_cost(self._network, first_batch[0:1], self._spec.dev_strs[0])
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
