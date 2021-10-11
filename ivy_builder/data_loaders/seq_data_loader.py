@@ -331,7 +331,7 @@ class SeqDataLoader(DataLoader):
         imgs = list()
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
-            full_path = os.path.join(self._container_data_dir, str_path)
+            full_path = os.path.abspath(os.path.join(self._container_data_dir, str_path))
             if not ivy.exists(cv2):
                 raise Exception('in order to use _uint8_img_fn, opencv for python must be installed.'
                                 'To install opencv, run pip install opencv-python.')
@@ -349,7 +349,7 @@ class SeqDataLoader(DataLoader):
         imgs = list()
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
-            full_path = os.path.join(self._container_data_dir, str_path)
+            full_path = os.path.abspath(os.path.join(self._container_data_dir, str_path))
             if not ivy.exists(cv2):
                 raise Exception('in order to use _float_img_fn, opencv for python must be installed.'
                                 'To install opencv, run pip install opencv-python.')
@@ -362,7 +362,7 @@ class SeqDataLoader(DataLoader):
         imgs = list()
         for filepath in filepaths_in_window:
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
-            full_path = os.path.join(self._container_data_dir, str_path)
+            full_path = os.path.abspath(os.path.join(self._container_data_dir, str_path))
             if not ivy.exists(cv2):
                 raise Exception('in order to use _custom_img_fn, opencv for python must be installed.'
                                 'To install opencv, run pip install opencv-python.')
