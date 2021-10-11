@@ -589,13 +589,16 @@ class SeqDataLoader(DataLoader):
                 dataset = dataset.map('valid_first_frames',
                                       lambda x_: self._first_frame_validity_fn(x_, None),
                                       self._num_workers.valid_first_frames)
-        dataset = dataset.map('windowed',
-                              self._group_container_into_windowed_container,
-                              self._num_workers.windowed)
-        dataset = dataset.unbatch('unbatched',
-                                  self._num_workers.unbatched,
-                                  batch_sizes=[max(seq_len, self._window_size) - self._window_size + 1
-                                               for seq_len in self._sequence_lengths.values() if seq_len > 0])
+        if not (self._spec.dataset_spec.sequence_lengths == 1 and self._window_size == 1):
+            # ToDo: add other conditionals which make the loading more efficient if only one of the
+            #  above two conditions is True
+            dataset = dataset.map('windowed',
+                                  self._group_container_into_windowed_container,
+                                  self._num_workers.windowed)
+            dataset = dataset.unbatch('unbatched',
+                                      self._num_workers.unbatched,
+                                      batch_sizes=[max(seq_len, self._window_size) - self._window_size + 1
+                                                   for seq_len in self._sequence_lengths.values() if seq_len > 0])
         if self._spec.shuffle_buffer_size > 0:
             dataset = dataset.shuffle('shuffled',
                                       self._spec.shuffle_buffer_size,

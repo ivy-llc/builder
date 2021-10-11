@@ -75,9 +75,11 @@ def test_seq_loader_multi_dev(dev_str, f, call):
 @pytest.mark.parametrize(
     "with_prefetching", [True, False])
 @pytest.mark.parametrize(
-    "shuffle_buffer_size", [0, 2])
+    "sequence_lengths", [1, 2])
+@pytest.mark.parametrize(
+    "num_sequences", [1, 2, 3])
 def test_seq_loader_fixed_seq_len(dev_str, f, call, container_load_mode, array_mode, with_prefetching,
-                                   shuffle_buffer_size):
+                                  sequence_lengths, num_sequences):
 
     # seed
     f.seed(0)
@@ -88,12 +90,12 @@ def test_seq_loader_fixed_seq_len(dev_str, f, call, container_load_mode, array_m
     ds_dir = os.path.join(current_dir, 'dataset')
     dataset_dirs = DatasetDirs(dataset_dir=ds_dir, containers_dir=os.path.join(ds_dir, 'containers'))
 
-    dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=2, cont_fname_template='%06d_%06d.json')
+    dataset_spec = DatasetSpec(dataset_dirs, sequence_lengths=sequence_lengths, cont_fname_template='%06d_%06d.json')
     data_loader_spec = SeqDataLoaderSpec(dataset_spec, batch_size=1, window_size=1, starting_idx=0,
-                                         num_sequences=1, container_load_mode=container_load_mode,
+                                         num_sequences=num_sequences, container_load_mode=container_load_mode,
                                          array_mode=array_mode, array_strs=['array'], float_strs=['depth'],
                                          uint8_strs=['rgb'], with_prefetching=with_prefetching,
-                                         shuffle_buffer_size=shuffle_buffer_size, preshuffle_data=False)
+                                         shuffle_buffer_size=0, preshuffle_data=False)
 
     # data loader
     data_loader = SeqDataLoader(data_loader_spec)
@@ -111,12 +113,9 @@ def test_seq_loader_fixed_seq_len(dev_str, f, call, container_load_mode, array_m
         assert batch.array.data.shape == (1, 1, 3)
 
         # test values
-        assert batch.seq_info.length[0, 0] == 2
-        if shuffle_buffer_size == 0:
+        if sequence_lengths == 2 and num_sequences == 1:
+            assert batch.seq_info.length[0, 0] == 2
             assert batch.seq_info.idx[0, 0] == i % 2
-        else:
-            idx = batch.seq_info.idx[0, 0]
-            assert idx in [0, 1]
 
     # delete
     data_loader.close()
