@@ -41,7 +41,7 @@ class TrainerSpec(Spec, abc.ABC):
                  steps_to_profile: int = 0,
                  compile: bool = False,
                  dev_strs: Union[str, List[str]] = None,
-                 dev_map_fn: str = '_raw_execute_with_gradients',
+                 dev_map_fn: str = '_raw_execute_with_grads',
                  tune_device_allocation: bool = True,
                  tune_splitting: bool = True,
                  **kwargs) -> None:
