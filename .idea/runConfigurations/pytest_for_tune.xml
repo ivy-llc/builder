@@ -40,6 +40,12 @@
             <option name="hostPath" value="$PROJECT_DIR$/../ivy/ivy" />
             <option name="readOnly" value="false" />
           </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/ivy/ivy_tests" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/../ivy/ivy_tests" />
+            <option name="readOnly" value="false" />
+          </DockerVolumeBindingImpl>
         </list>
       </option>
     </EXTENSION>

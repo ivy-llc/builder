@@ -94,7 +94,7 @@ class Trainer:
 
         # compile
         if self._spec.compile:
-            self._train_step_from_batch = ivy.compile_fn(self._train_step_from_batch)
+            self._train_step_from_batch = ivy.compile(self._train_step_from_batch)
 
         # multi-dev
         self._dev_str = ivy.default(lambda: self._spec.dev_strs[0], ivy.default_device(), True)

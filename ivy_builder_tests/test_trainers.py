@@ -69,18 +69,6 @@ def test_full_trainers(dev_str, call):
     builder_helpers.remove_dirs()
 
 
-def test_trainer_compiling(dev_str, call):
-    if call is helpers.np_call:
-        # numpy does not support gradients, required for training
-        pytest.skip()
-    if call is not helpers.jnp_call:
-        # ToDo: add compilation support for other frameworks
-        pytest.skip()
-    builder_helpers.remove_dirs()
-    simple_example.main(compile=True)
-    builder_helpers.remove_dirs()
-
-
 def test_visualizing(dev_str, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
