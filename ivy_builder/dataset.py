@@ -6,7 +6,6 @@ import queue
 import logging
 import numbers
 import traceback
-import ivy.numpy
 import numpy as np
 
 
