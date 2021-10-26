@@ -118,7 +118,7 @@ def test_checkpoint_loading(dev_str, compile_graph, call):
     trainer.setup()
     trainer.train()
     trainer.close()
-    trainer_spec_args = {'total_iterations': 20, 'ld_chkpt': True, 'save_freq': 1}
+    trainer_spec_args = {'total_iterations': 20, 'ld_chkpt': True, 'save_freq': 1, 'compile_graph': compile_graph}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
                                     trainer_spec_args=trainer_spec_args)
