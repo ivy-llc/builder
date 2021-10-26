@@ -39,7 +39,7 @@ class TrainerSpec(Spec, abc.ABC):
                  log_optimizer_state: (tuple, str) = 'all',
                  profile_start_step: int = 5,
                  steps_to_profile: int = 0,
-                 compile_graph: bool = False,
+                 compile_graph: bool = True,
                  dev_strs: Union[str, List[str]] = None,
                  dev_map_fn: str = '_raw_execute_with_grads',
                  tune_device_allocation: bool = True,
