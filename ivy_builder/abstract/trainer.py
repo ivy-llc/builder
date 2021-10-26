@@ -92,10 +92,6 @@ class Trainer:
         self._net_spec = self._network.spec
         self._partial_grad_updates = bool(self._net_spec.v_keychains)
 
-        # compile
-        if self._spec.compile:
-            self._train_step_from_batch = ivy.compile(self._train_step_from_batch)
-
         # multi-dev
         self._dev_str = ivy.default(lambda: self._spec.dev_strs[0], ivy.default_device(), True)
         if len(self._spec.dev_strs) > 1:
@@ -362,6 +358,11 @@ class Trainer:
             self._dev_manager.dim_size = first_batch.shape[0]
         # for on_call builds
         self._compute_cost(self._network, first_batch[0:1], self._spec.dev_strs[0])
+        # compile
+        if self._spec.compile_graph:
+            self._network._compile_on_first_call = True
+            self._optimizer_step = ivy.compile_graph(
+                self._optimizer_step, self._network.v, self._network.v.deep_copy())
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
@@ -409,18 +410,20 @@ class Trainer:
             return ret
         return self._raw_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
 
-    def _train_step_from_batch(self, batch):
-        cost, self._gradients = self._dev_manager_execute_with_grads(self._network, batch)
-        grads = self._gradients
+    def _optimizer_step(self, v, grads):
+        # ToDo: consider moving this code to the ivy.Optimizer class
         if 'max_grad_val' in self._spec:
             grads = grads.clip(-self._spec.max_grad_val, self._spec.max_grad_val)
         if 'max_grad_vector_norm' in self._spec:
             ratio = self._spec.max_grad_vector_norm/(grads.vector_norm(global_norm=True) + MIN_DENOMINATOR)
             if ratio < 1:
                 grads = grads * ratio
+        return self._optimizer.step(v, grads, ignore_missing=self._partial_grad_updates)
+
+    def _train_step_from_batch(self, batch):
+        cost, self._gradients = self._dev_manager_execute_with_grads(self._network, batch)
         self._moving_average_loss = (cost + self._global_step * self._moving_average_loss) / (self._global_step + 1)
-        new_v = self._optimizer.step(self._network.v, grads, ignore_missing=self._partial_grad_updates)
-        return batch, cost, new_v
+        return batch, cost, self._optimizer_step(self._network.v, self._gradients)
 
     def _train_step(self, with_output=False):
         batch, cost, new_v = self._train_step_from_batch(self._spec.data_loader.get_next_batch())

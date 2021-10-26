@@ -24,16 +24,19 @@ from demos.full_example import ExampleDatasetDirs, ExampleDatasetSpec,\
 # Tests #
 # ------#
 
-def test_simple_trainers(dev_str, call):
+def test_simple_trainers(dev_str, compile_graph, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
         pytest.skip()
+    # currently only PyTorch supports graph compilation
+    compile_graph = compile_graph if ivy.current_framework_str() == 'torch' else False
+    # test
     builder_helpers.remove_dirs()
-    simple_example.main()
+    simple_example.main(compile_graph=compile_graph)
     builder_helpers.remove_dirs()
 
 
-def test_simple_multi_dev_trainers(dev_str, call):
+def test_simple_multi_dev_trainers(dev_str, compile_graph, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
         pytest.skip()
@@ -41,6 +44,9 @@ def test_simple_multi_dev_trainers(dev_str, call):
     if call is not helpers.torch_call:
         # ToDo: add multi-dev support for all backends, not just torch
         pytest.skip()
+
+    # currently only PyTorch supports graph compilation
+    compile_graph = compile_graph if ivy.current_framework_str() == 'torch' else False
 
     # devices
     dev_strs = list()
@@ -53,30 +59,36 @@ def test_simple_multi_dev_trainers(dev_str, call):
 
     # test
     builder_helpers.remove_dirs()
-    simple_example.main(dev_strs=dev_strs)
+    simple_example.main(compile_graph=compile_graph, dev_strs=dev_strs)
     builder_helpers.remove_dirs()
 
 
-def test_full_trainers(dev_str, call):
+def test_full_trainers(dev_str, compile_graph, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
         pytest.skip()
     if call is helpers.jnp_call and ivy.wrapped_mode():
         # Jax does not support ivy.Array instances when calling _jax.grad()
         pytest.skip()
+    # currently only PyTorch supports graph compilation
+    compile_graph = compile_graph if ivy.current_framework_str() == 'torch' else False
+    # test
     builder_helpers.remove_dirs()
-    full_example.main()
+    full_example.main(compile_graph=compile_graph)
     builder_helpers.remove_dirs()
 
 
-def test_visualizing(dev_str, call):
+def test_visualizing(dev_str, compile_graph, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
         pytest.skip()
 
+    # currently only PyTorch supports graph compilation
+    compile_graph = compile_graph if ivy.current_framework_str() == 'torch' else False
+
     builder_helpers.remove_dirs()
     data_loader_spec_args = {'batch_size': 1, 'dev_strs': [dev_str]}
-    trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1}
+    trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1, 'compile_graph': compile_graph}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
                                     trainer_spec_args=trainer_spec_args)
@@ -89,14 +101,17 @@ def test_visualizing(dev_str, call):
     builder_helpers.remove_dirs()
 
 
-def test_checkpoint_loading(dev_str, call):
+def test_checkpoint_loading(dev_str, compile_graph, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
         pytest.skip()
 
+    # currently only PyTorch supports graph compilation
+    compile_graph = compile_graph if ivy.current_framework_str() == 'torch' else False
+
     builder_helpers.remove_dirs()
     data_loader_spec_args = {'batch_size': 1, 'dev_strs': [dev_str]}
-    trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1}
+    trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1, 'compile_graph': compile_graph}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
                                     trainer_spec_args=trainer_spec_args)
@@ -115,7 +130,7 @@ def test_checkpoint_loading(dev_str, call):
     builder_helpers.remove_dirs()
 
 
-def test_reduced_cost_after_checkpoint_load(dev_str, call):
+def test_reduced_cost_after_checkpoint_load(dev_str, compile_graph, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
         pytest.skip()
@@ -125,6 +140,9 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
 
     example_dir = os.path.relpath(os.path.join(
         os.path.dirname(os.path.abspath(__file__)), '../demos'))
+
+    # currently only PyTorch supports graph compilation
+    compile_graph = compile_graph if ivy.current_framework_str() == 'torch' else False
 
     # dataset dirs specification
     dataset_dirs_args = dict()
@@ -144,7 +162,7 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     builder_helpers.remove_dirs()
 
     ivy.seed(0)
-    trainer_spec_args = {'total_iterations': 1, 'ld_chkpt': False, 'save_freq': 1}
+    trainer_spec_args = {'total_iterations': 1, 'ld_chkpt': False, 'save_freq': 1, 'compile_graph': compile_graph}
     trainer = builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
                                     dataset_dirs_args=dataset_dirs_args, dataset_dirs_class=ExampleDatasetDirs,
                                     dataset_spec_args=dataset_spec_args, dataset_spec_class=ExampleDatasetSpec,
@@ -159,7 +177,8 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
 
     ivy.seed(0)
     steps_to_take_first = 10
-    trainer_spec_args = {'total_iterations': steps_to_take_first, 'ld_chkpt': False, 'save_freq': 1}
+    trainer_spec_args = {'total_iterations': steps_to_take_first, 'ld_chkpt': False, 'save_freq': 1,
+                         'compile_graph': compile_graph}
     trainer = builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
                                     dataset_dirs_args=dataset_dirs_args, dataset_dirs_class=ExampleDatasetDirs,
                                     dataset_spec_args=dataset_spec_args, dataset_spec_class=ExampleDatasetSpec,
@@ -174,7 +193,8 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     assert initial_cost > ten_step_cost
 
     steps_to_take_second = 20
-    trainer_spec_args = {'total_iterations': steps_to_take_second, 'ld_chkpt': True, 'save_freq': 1}
+    trainer_spec_args = {'total_iterations': steps_to_take_second, 'ld_chkpt': True, 'save_freq': 1,
+                         'compile_graph': compile_graph}
     trainer = builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
                                     dataset_dirs_args=dataset_dirs_args, dataset_dirs_class=ExampleDatasetDirs,
                                     dataset_spec_args=dataset_spec_args, dataset_spec_class=ExampleDatasetSpec,
@@ -190,14 +210,17 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call):
     builder_helpers.remove_dirs()
 
 
-def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, call):
+def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, compile_graph, call):
     if call is helpers.np_call:
         # numpy does not support gradients, required for training
         pytest.skip()
 
+    # currently only PyTorch supports graph compilation
+    compile_graph = compile_graph if ivy.current_framework_str() == 'torch' else False
+
     builder_helpers.remove_dirs()
     data_loader_spec_args = {'batch_size': 1, 'dev_strs': [dev_str]}
-    trainer_spec_args = {'total_iterations': 0, 'ld_chkpt': False}
+    trainer_spec_args = {'total_iterations': 0, 'ld_chkpt': False, 'compile_graph': compile_graph}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
                                     trainer_spec_args=trainer_spec_args)
@@ -212,7 +235,7 @@ def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, call):
     assert os.path.exists(chkpt1_path)
 
     data_loader_spec_args = {'batch_size': 1, 'dev_strs': [dev_str]}
-    trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1}
+    trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'save_freq': 1, 'compile_graph': compile_graph}
     trainer = builder.build_trainer(ExampleDataLoaderMin, ExampleNetworkMin, ExampleTrainerMin,
                                     data_loader_spec_args=data_loader_spec_args,
                                     trainer_spec_args=trainer_spec_args)
