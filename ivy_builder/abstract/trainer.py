@@ -360,9 +360,14 @@ class Trainer:
         self._compute_cost(self._network, first_batch[0:1], self._spec.dev_strs[0])
         # compile
         if self._spec.compile_graph:
-            self._network._compile_on_first_call = True
-            self._optimizer_step = ivy.compile_graph(
-                self._optimizer_step, self._network.v, self._network.v.deep_copy())
+            valid_modes = ['network', 'optimizer', 'all']
+            assert self._spec.compile_graph in ['network', 'optimizer', 'all'], 'invalid value for compile_graph, ' \
+                                                                                'must be one of {}'.format(valid_modes)
+            if self._spec.compile_graph in ['network', 'all']:
+                self._network._compile_on_first_call = True
+            if self._spec.compile_graph in ['optimizer', 'all']:
+                self._optimizer_step = ivy.compile_graph(
+                    self._optimizer_step, self._network.v, self._network.v.deep_copy())
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()

@@ -64,11 +64,9 @@ def pytest_generate_tests(metafunc):
     # compile_graph
     raw_value = metafunc.config.getoption('--compile_graph')
     if raw_value == 'both':
-        compile_modes = [True, False]
-    elif raw_value == 'true':
-        compile_modes = [True]
+        compile_modes = ['all', False]
     else:
-        compile_modes = [False]
+        compile_modes = [raw_value]
 
     # create test configs
     configs = list()
@@ -85,4 +83,4 @@ def pytest_addoption(parser):
     parser.addoption('--dev_str', action="store", default="cpu")
     parser.addoption('--framework', action="store", default="numpy,jax,torch,mxnet")
     parser.addoption('--wrapped_mode', action="store", default="both")
-    parser.addoption('--compile_graph', action="store", default="true")
+    parser.addoption('--compile_graph', action="store", default="all")
