@@ -366,8 +366,8 @@ class Trainer:
             if self._spec.compile_graph in ['network', 'all']:
                 self._network._compile_on_first_call = True
             if self._spec.compile_graph in ['optimizer', 'all']:
-                self._optimizer_step = ivy.compile_graph(
-                    self._optimizer_step, self._network.v, self._network.v.deep_copy())
+                self._optimizer._init_on_first_step = True
+                self._optimizer.compile_graph(self._network.v)
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
