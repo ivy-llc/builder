@@ -115,6 +115,10 @@ class Trainer:
         else:
             self._dev_manager = None
 
+        # compilation
+        self._compile_network_once_tuned = False
+        self._compile_optimizer_once_tuned = False
+
     def __getstate__(self):
         # prevent already running processes from being pickled as sent to new processes
         state = self.__dict__.copy()
@@ -364,10 +368,9 @@ class Trainer:
             assert self._spec.compile_graph in ['network', 'optimizer', 'all'], 'invalid value for compile_graph, ' \
                                                                                 'must be one of {}'.format(valid_modes)
             if self._spec.compile_graph in ['network', 'all']:
-                self._network._compile_on_first_call = True
+                self._compile_network_once_tuned = True
             if self._spec.compile_graph in ['optimizer', 'all']:
-                self._optimizer._init_on_first_step = True
-                self._optimizer.compile_graph(self._network.v)
+                self._compile_optimizer_once_tuned = True
         if self._spec.save_spec:
             self._save_spec_to_disk()
         self._save_info_to_disk()
@@ -410,6 +413,12 @@ class Trainer:
                     batch = batch.to_multi_dev(self._spec.dev_strs)
                 return self._dev_manager.map(distributed={"batch": batch.at_devs()},
                                              to_clone={"network_v": network.v})
+            if self._compile_network_once_tuned and self._dev_manager.tuned:
+                network.compile_on_next_step()
+                self._compile_network_once_tuned = False
+            if self._compile_optimizer_once_tuned and self._dev_manager.tuned:
+                self._optimizer.compile_on_next_step()
+                self._compile_optimizer_once_tuned = False
             ret = self._raw_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
             self._dev_manager.tune_step()
             return ret
