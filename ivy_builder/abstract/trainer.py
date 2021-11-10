@@ -495,10 +495,14 @@ class Trainer:
             self._data_load_and_train_step(vis_mode, log_scalars, log_viz)
 
             if log_scalars:
+                ivy.try_use_compiled = False
                 self._log_scalars()
+                ivy.try_use_compiled = True
             if log_viz or vis_mode:
+                ivy.try_use_compiled = False
                 self._write_image_summaries(self._spec.data_loader, self._network, self._training_batch,
                                             self._global_step)
+                ivy.try_use_compiled = True
             if save:
                 self._save()
 
