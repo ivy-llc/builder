@@ -407,18 +407,20 @@ class Trainer:
 
     def _dev_manager_execute_with_grads(self, network, batch):
         # ToDo: assign this function in constructor rather than performing checks on each training step
+        dev_manager_exists = ivy.exists(self._dev_manager)
+        tuned = not dev_manager_exists or self._dev_manager.tuned
+        if self._compile_network_once_tuned and tuned:
+            network.compile_on_next_step()
+            self._compile_network_once_tuned = False
+        if self._compile_optimizer_once_tuned and tuned:
+            self._optimizer.compile_on_next_step()
+            self._compile_optimizer_once_tuned = False
         if ivy.exists(self._dev_manager):
             if self._multi_dev:
                 if not isinstance(batch, ivy.MultiDevContainer):
                     batch = batch.to_multi_dev(self._spec.dev_strs)
                 return self._dev_manager.map(distributed={"batch": batch.at_devs()},
                                              to_clone={"network_v": network.v})
-            if self._compile_network_once_tuned and self._dev_manager.tuned:
-                network.compile_on_next_step()
-                self._compile_network_once_tuned = False
-            if self._compile_optimizer_once_tuned and self._dev_manager.tuned:
-                self._optimizer.compile_on_next_step()
-                self._compile_optimizer_once_tuned = False
             ret = self._raw_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
             self._dev_manager.tune_step()
             return ret
