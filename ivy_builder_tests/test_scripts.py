@@ -26,7 +26,7 @@ def test_format_dataset_containers(dev_str, call):
     for new_cont_fname in new_cont_fnames:
         new_cont_fpath = os.path.join(cont_to_format_dir, new_cont_fname)
         new_cont = ivy.Container.from_disk_as_json(new_cont_fpath)
-        assert ivy.Container.identical_structure([new_cont, new_cont_format], check_types=False)
+        assert ivy.Container.identical([new_cont, new_cont_format], check_types=False)
     shutil.rmtree(cont_to_format_dir)
     shutil.copytree(orig_cont_dir, cont_to_format_dir)
 
@@ -38,6 +38,6 @@ def test_format_dataset_containers(dev_str, call):
     for new_cont_fname in new_cont_fnames:
         new_cont_fpath = os.path.join(cont_to_format_dir, new_cont_fname)
         new_cont = ivy.Container.from_disk_as_json(new_cont_fpath)
-        assert ivy.Container.identical_structure([new_cont, new_cont_format], check_types=False)
+        assert ivy.Container.identical([new_cont, new_cont_format], check_types=False)
     shutil.rmtree(cont_to_format_dir)
     shutil.copytree(orig_cont_dir, cont_to_format_dir)
