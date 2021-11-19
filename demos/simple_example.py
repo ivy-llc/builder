@@ -2,7 +2,6 @@
 import ivy
 import logging
 import argparse
-from ivy_demo_utils.framework_utils import get_framework_from_str, choose_random_framework
 
 # local
 import ivy_builder.builder as trainer_builder
@@ -81,8 +80,7 @@ if __name__ == '__main__':
     parser.add_argument('--framework', type=str, default=None,
                         help='which framework to use. Chooses a random framework if unspecified.')
     parsed_args = parser.parse_args()
-    f = None if parsed_args.framework is None else get_framework_from_str(parsed_args.framework)
-    f = choose_random_framework() if f is None else f
+    f = ivy.default(parsed_args.framework, ivy.choose_random_framework())
     ivy.set_framework(f)
     main()
     ivy.unset_framework()

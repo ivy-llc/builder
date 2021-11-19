@@ -8,11 +8,6 @@ RUN rm -rf ivy && \
     cat optional.txt | grep -v "ivy-" | pip3 install --no-cache-dir -r /dev/stdin && \
     python3 setup.py develop --no-deps
 
-# Install Ivy Demo Utils
-RUN git clone https://github.com/ivy-dl/demo-utils && \
-    cd demo-utils && \
-    python3 setup.py develop
-
 RUN mkdir ivy_builder
 WORKDIR /ivy_builder
 
