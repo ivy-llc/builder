@@ -188,7 +188,7 @@ class SeqDataLoader(DataLoader):
         self._num_workers.post_processed = 1
 
         # from numpy
-        self._num_workers.from_numpy = 1
+        self._num_workers.from_np = 1
 
         # batched
         self._num_workers.batched = 1
@@ -609,9 +609,9 @@ class SeqDataLoader(DataLoader):
         dataset = dataset.batch('batched',
                                 self._batch_size,
                                 self._num_workers.batched)
-        dataset = dataset.map('from_numpy',
+        dataset = dataset.map('from_np',
                               lambda cont: cont.map(lambda x_, kc: ivy.array(x_)),
-                              self._num_workers.from_numpy,
+                              self._num_workers.from_np,
                               numpy_loading=False)
         if ivy.exists(self._spec.post_proc_fn):
             dataset = dataset.map('post_processed',
