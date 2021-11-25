@@ -1,4 +1,4 @@
 torch
-gitpython
-ray[tune]
-opencv-python
+gitpython # mod_name=git
+ray[tune] # mod_name=ray
+opencv-python # mod_name=cv2
