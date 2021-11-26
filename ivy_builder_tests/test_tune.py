@@ -9,7 +9,7 @@ import pytest
 import ivy_tests.helpers as helpers
 import ivy_builder.builder as builder
 import ivy_builder_tests.helpers as builder_helpers
-from demos.simple_example import ExampleDataLoader, ExampleNetwork, ExampleTrainer
+from ivy_builder_demos.simple_example import ExampleDataLoader, ExampleNetwork, ExampleTrainer
 
 ray.init()
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))

@@ -10,14 +10,14 @@ import ivy_builder_tests.helpers as builder_helpers
 
 # Simple Example #
 
-from demos import full_example, simple_example
-from demos.simple_example import ExampleDataLoader as ExampleDataLoaderMin
-from demos.simple_example import ExampleNetwork as ExampleNetworkMin
-from demos.simple_example import ExampleTrainer as ExampleTrainerMin
+from ivy_builder_demos import full_example, simple_example
+from ivy_builder_demos.simple_example import ExampleDataLoader as ExampleDataLoaderMin
+from ivy_builder_demos.simple_example import ExampleNetwork as ExampleNetworkMin
+from ivy_builder_demos.simple_example import ExampleTrainer as ExampleTrainerMin
 
 # Full Example #
 
-from demos.full_example import ExampleDatasetDirs, ExampleDatasetSpec,\
+from ivy_builder_demos.full_example import ExampleDatasetDirs, ExampleDatasetSpec,\
     ExampleDataLoaderSpec, ExampleDataLoader, ExampleNetworkSpec, ExampleNetwork, ExampleTrainer
 
 
@@ -139,7 +139,7 @@ def test_reduced_cost_after_checkpoint_load(dev_str, compile_graph, call):
         pytest.skip()
 
     example_dir = os.path.relpath(os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), '../demos'))
+        os.path.dirname(os.path.abspath(__file__)), '../ivy_builder_demos'))
 
     # currently only PyTorch supports graph compilation
     compile_graph = compile_graph if ivy.current_framework_str() == 'torch' else False
