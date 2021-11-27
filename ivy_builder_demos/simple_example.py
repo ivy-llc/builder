@@ -62,11 +62,11 @@ class ExampleTrainer(Trainer):
 
 
 # noinspection PyShadowingBuiltins
-def main(seed=0, compile_graph=False, dev_strs=None):
+def main(seed=0, compile_mode=False, dev_strs=None):
     ivy.seed(seed)
     data_loader_spec_args = {'batch_size': 2, 'dev_strs': [ivy.default(lambda: dev_strs[0], None, True)]}
     trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'log_freq': 1, 'initial_learning_rate': 0.1,
-                         'compile_graph': compile_graph, 'dev_strs': dev_strs}
+                         'compile_mode': compile_mode, 'dev_strs': dev_strs}
     trainer = trainer_builder.build_trainer(ExampleDataLoader, ExampleNetwork, ExampleTrainer,
                                             data_loader_spec_args=data_loader_spec_args,
                                             trainer_spec_args=trainer_spec_args)

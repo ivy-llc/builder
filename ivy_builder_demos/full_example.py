@@ -150,7 +150,7 @@ class ExampleTrainer(Trainer):
 # Training Job #
 # -------------#
 
-def main(compile_graph=False):
+def main(compile_mode=False):
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
     # dataset dirs specification
@@ -181,7 +181,7 @@ def main(compile_graph=False):
                                     data_loader_spec_args=data_loader_spec_args,
                                     data_loader_spec_class=ExampleDataLoaderSpec, network_spec_args=network_spec_args,
                                     network_spec_class=ExampleNetworkSpec, trainer_spec_args=trainer_spec_args,
-                                    spec_cont=ivy.Container({'trainer': {'compile_graph': compile_graph}}))
+                                    spec_cont=ivy.Container({'trainer': {'compile_mode': compile_mode}}))
     trainer.setup()
     print("Finished complete example!")
     trainer.train()
