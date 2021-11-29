@@ -18,12 +18,18 @@ import setuptools
 
 setup(name='ivy-builder',
       version='1.1.5',
-      description='Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n'
-                  'Tested with Ivy 1.1.3',
       author='Ivy Team',
       author_email='ivydl.team@gmail.com',
+      description='Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n',
+      long_description="""Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n""",
+      long_description_content_type='text/markdown',
+      url='https://ivy-dl.org/ivy',
+      project_urls={
+            'Docs': 'https://ivy-dl.org/builder/',
+            'Source': 'https://github.com/ivy-dl/builder',
+      },
       packages=setuptools.find_packages(),
-      install_requires=['h5py', 'numpy', 'termcolor'],
+      install_requires=['ivy-core'],
       scripts=['scripts/print_json_args.py', 'scripts/remove_checkpoints.py', 'scripts/reset_to_defaults.sh',
                'scripts/format_dataset_containers.py'],
       classifiers=['License :: OSI Approved :: Apache Software License'],
