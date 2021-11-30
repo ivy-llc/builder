@@ -40,7 +40,7 @@ lines = [line for line in lines if not (is_html(line) or is_raw_block(line))]
 long_description = '\n'.join(lines)
 
 setup(name='ivy-builder',
-      version='1.1.6',
+      version='1.1.7',
       author='Ivy Team',
       author_email='ivydl.team@gmail.com',
       description='Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n',
