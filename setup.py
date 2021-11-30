@@ -13,17 +13,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License..
 # ==============================================================================
-from distutils.core import setup
 import setuptools
+from pathlib import Path
+from distutils.core import setup
+
+def is_html(line):
+    line_squashed = line.replace(' ', '')
+    if not line_squashed:
+        return False
+    if line_squashed[0] == '<' and line_squashed[-1] == '>':
+        return True
+    return False
+
+def is_raw_block(line):
+    line_squashed = line.replace(' ', '')
+    if len(line_squashed) < 11:
+        return False
+    if line_squashed[-11:] == '..raw::html':
+        return True
+    return False
+
+
+this_directory = Path(__file__).parent
+lines = (this_directory / "README.rst").read_text().split('\n')
+lines = [line for line in lines if not (is_html(line) or is_raw_block(line))]
+long_description = '\n'.join(lines)
 
 setup(name='ivy-builder',
       version='1.1.6',
       author='Ivy Team',
       author_email='ivydl.team@gmail.com',
       description='Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n',
-      long_description="""Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n""",
-      long_description_content_type='text/markdown',
-      url='https://ivy-dl.org/ivy',
+      long_description_content_type='text/x-rst',
+      long_description=long_description,
+      url='https://ivy-dl.org/builder',
       project_urls={
             'Docs': 'https://ivy-dl.org/builder/',
             'Source': 'https://github.com/ivy-dl/builder',
