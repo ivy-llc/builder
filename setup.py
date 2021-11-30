@@ -17,6 +17,10 @@ import setuptools
 from pathlib import Path
 from distutils.core import setup
 
+
+def _strip(line):
+    return line.split(' ')[0].split('#')[0].split(',')[0]
+
 def is_html(line):
     line_squashed = line.replace(' ', '')
     if not line_squashed:
@@ -52,7 +56,7 @@ setup(name='ivy-builder',
             'Source': 'https://github.com/ivy-dl/builder',
       },
       packages=setuptools.find_packages(),
-      install_requires=['ivy-core'],
+      install_requires=[_strip(line) for line in open('requirements.txt', 'r')],
       scripts=['scripts/print_json_args.py', 'scripts/remove_checkpoints.py', 'scripts/reset_to_defaults.sh',
                'scripts/format_dataset_containers.py'],
       classifiers=['License :: OSI Approved :: Apache Software License'],
