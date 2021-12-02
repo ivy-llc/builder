@@ -46,7 +46,7 @@ def test_sequential_scheduler_with_dynamic_schedule_file_edit(dev_str, call):
             json.dump(new_schedule_dict, schedule_file, indent=2, separators=(',', ': '))
 
     def run_scheduler(success_list):
-        time.sleep(0.1)
+        time.sleep(0.2)
         num_completed_tasks = len(scheduler.run())
         print('found length: {}'.format(num_completed_tasks))
         if num_completed_tasks == 3:
