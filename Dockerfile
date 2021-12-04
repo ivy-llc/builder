@@ -25,5 +25,4 @@ RUN python3 test_dependencies.py -fp requirements.txt,optional.txt && \
     rm -rf requirements.txt && \
     rm -rf optional.txt
 
-RUN mkdir ivy_builder
-WORKDIR /ivy_builder
+WORKDIR /builder

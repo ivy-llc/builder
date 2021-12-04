@@ -7,9 +7,9 @@ jobs:
       - name: Checkout 🛎️Ivy Builder
         uses: actions/checkout@v2
         with:
-          path: ivy_builder
+          path: builder
           persist-credentials: false
 
       - name: Run Tests
         run: |
-          docker run --rm -v `pwd`/ivy_builder:/ivy_builder ivydl/ivy-builder:latest python3 -m pytest ivy_builder_tests/
+          docker run --rm -v `pwd`/builder:/builder ivydl/ivy-builder:latest python3 -m pytest ivy_builder_tests/
