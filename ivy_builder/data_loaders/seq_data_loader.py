@@ -610,7 +610,7 @@ class SeqDataLoader(DataLoader):
                                 self._batch_size,
                                 self._num_workers.batched)
         dataset = dataset.map('from_np',
-                              lambda cont: cont.map(lambda x_, kc: ivy.array(x_)),
+                              lambda cont: cont.map(lambda x_, kc: ivy.array(x_, dev_str='cpu')),
                               self._num_workers.from_np,
                               numpy_loading=False)
         if ivy.exists(self._spec.post_proc_fn):
