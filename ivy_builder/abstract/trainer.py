@@ -115,6 +115,12 @@ class Trainer:
         else:
             self._dev_manager = None
 
+        # cost function with splitting along the batch
+        if ivy.exists(self._dev_manager):
+            self._compute_cost_raw = self._compute_cost
+            self._compute_cost = lambda network, batch, dev_str, v=None: ivy.split_func_call(
+                lambda b: self._compute_cost_raw(network, b, dev_str, v=v), [batch], 'mean')
+
         # compilation
         self._compile_network_once_tuned = False
         self._compile_optimizer_once_tuned = False

@@ -89,11 +89,11 @@ class ExampleDataLoader(DataLoader):
             self._i = np.random.randint(0, self._num_examples)
         else:
             self._i = (self._i + 1) % self._num_examples
-        return ivy.Container(input=data.input[self._i], target=data.targets[self._i])
+        return ivy.Container(input=data.input[self._i:self._i+1], target=data.targets[self._i:self._i+1])
 
     def get_first_batch(self, dataset_key='training'):
         data = self._data[dataset_key]
-        return ivy.Container(input=data.input[0], target=data.targets[0])
+        return ivy.Container(input=data.input[0:1], target=data.targets[0:1])
 
 
 # Custom Network #
