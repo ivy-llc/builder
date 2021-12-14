@@ -115,12 +115,6 @@ class Trainer:
         else:
             self._dev_manager = None
 
-        # cost function with splitting along the batch
-        if ivy.exists(self._dev_manager):
-            self._compute_cost_raw = self._compute_cost
-            self._compute_cost = lambda network, batch, dev_str, v=None: ivy.split_func_call(
-                lambda b: self._compute_cost_raw(network, b, dev_str, v=v), [batch], 'mean')
-
         # compilation
         self._compile_network_once_tuned = False
         self._compile_optimizer_once_tuned = False
@@ -411,6 +405,10 @@ class Trainer:
             network_v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
         return cost, gradients
 
+    def _split_execute_with_grads(self, network, dev_str, batch, network_v):
+        return ivy.split_func_call(
+            lambda b: self._raw_execute_with_grads(network, dev_str, b, network_v), [batch], 'mean')
+
     def _dev_manager_execute_with_grads(self, network, batch):
         # ToDo: assign this function in constructor rather than performing checks on each training step
         dev_manager_exists = ivy.exists(self._dev_manager)
@@ -427,10 +425,10 @@ class Trainer:
                     batch = batch.to_multi_dev(self._spec.dev_strs)
                 return self._dev_manager.map(distributed={"batch": batch.at_devs()},
                                              to_clone={"network_v": network.v})
-            ret = self._raw_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
+            ret = self._split_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
             self._dev_manager.tune_step()
             return ret
-        return self._raw_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
+        return self._split_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
 
     def _optimizer_step(self, v, grads):
         # ToDo: consider moving this code to the ivy.Optimizer class
