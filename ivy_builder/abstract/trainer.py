@@ -425,8 +425,16 @@ class Trainer:
                     batch = batch.to_multi_dev(self._spec.dev_strs)
                 return self._dev_manager.map(distributed={"batch": batch.at_devs()},
                                              to_clone={"network_v": network.v})
-            ret = self._split_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
-            self._dev_manager.tune_step()
+            ret = None
+            oom = False
+            while ret is None:
+                try:
+                    ret = self._split_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
+                except RuntimeError as e:
+                    if oom:
+                        raise Exception('Out of Memory Error raise twice consecutively {}'.format(e))
+                    oom = True
+                self._dev_manager.tune_step(oom)
             return ret
         return self._split_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
 
