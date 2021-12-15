@@ -117,7 +117,7 @@ class Trainer:
 
         # cost function with splitting along the batch
         self._compute_cost_with_splitting = lambda network, batch, dev_str, v=None: ivy.split_func_call(
-            lambda b: self._compute_cost(network, b, dev_str, v=v), [batch], 'mean')
+            lambda b: self._compute_cost(network, b, dev_str, v=v), [batch], 'mean', stop_gradients=True)
 
         # compilation
         self._compile_network_once_tuned = False
