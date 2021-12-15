@@ -115,10 +115,6 @@ class Trainer:
         else:
             self._dev_manager = None
 
-        # cost function with splitting along the batch
-        self._compute_cost_with_splitting = lambda network, batch, dev_str, v=None: ivy.split_func_call(
-            lambda b: self._compute_cost(network, b, dev_str, v=v), [batch], 'mean', stop_gradients=True)
-
         # compilation
         self._compile_network_once_tuned = False
         self._compile_optimizer_once_tuned = False
@@ -133,6 +129,11 @@ class Trainer:
         state['_spec'] = None
         state['spec'] = None
         return state
+
+    def _compute_cost_with_splitting(self, network, batch, dev_str, v=None, with_grads=False):
+        with ivy.GradientTracking(with_grads):
+            return ivy.split_func_call(
+                lambda b: self._compute_cost(network, b, dev_str, v=v), [batch], 'mean', stop_gradients=not with_grads)
 
     # Abstract #
     # ---------#
