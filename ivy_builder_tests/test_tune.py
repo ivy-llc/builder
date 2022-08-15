@@ -6,7 +6,7 @@ import math
 import pytest
 
 # local
-import ivy_tests.helpers as helpers
+from ivy_tests.test_ivy import helpers
 import ivy_builder.builder as builder
 import ivy_builder_tests.helpers as builder_helpers
 from ivy_builder_demos.simple_example import ExampleDataLoader, ExampleNetwork, ExampleTrainer
@@ -27,7 +27,7 @@ def test_tune_numeric_spec(dev_str, call):
                          'ld_chkpt': False,
                          'log_freq': 1,
                          'log_dir': os.path.join(THIS_DIR, 'log')}
-    tuner_spec_args = {'framework': ivy.current_framework_str(),
+    tuner_spec_args = {'framework': ivy.current_backend_str(),
                        'train_steps_per_tune_step': 2,
                        'trainer_spec':
                            {'initial_learning_rate':
@@ -60,7 +60,7 @@ def test_tune_general_spec(dev_str, call):
                          'ld_chkpt': False,
                          'log_freq': 1,
                          'log_dir': os.path.join(THIS_DIR, 'log')}
-    tuner_spec_args = {'framework': ivy.current_framework_str(),
+    tuner_spec_args = {'framework': ivy.current_backend_str(),
                        'train_steps_per_tune_step': 1,
                        'network_spec':
                            {'spec_a':
@@ -104,7 +104,7 @@ def test_tune_resume_training(dev_str, call):
         # ToDo: work out why the backend framework is fixed for tune after the first call,
         #  and include other frameworks in test once this is fixed
         pytest.skip()
-    if ivy.wrapped_mode():
+    if ivy.wrapped_mode(): # to check!
         # this test fails when running all tests for some reason, need to further investigate
         pytest.skip()
 
@@ -113,7 +113,7 @@ def test_tune_resume_training(dev_str, call):
     # tuner spec args
     train_steps_per_tune_step = 2
     data_loader_spec_args = {'batch_size': 1}
-    tuner_spec_args = {'framework': ivy.current_framework_str(),
+    tuner_spec_args = {'framework': ivy.current_backend_str(),
                        'train_steps_per_tune_step': train_steps_per_tune_step,
                        'trainer_spec':
                            {'initial_learning_rate':
