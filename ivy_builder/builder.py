@@ -111,7 +111,7 @@ def get_json_args(json_spec_path, keys_to_ignore, keychains_to_ignore, keychain_
 def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None):
     if not ivy.exists(base_dir):
         base_dir = os.getcwd()
-    ivy.set_framework('numpy')
+    ivy.set_backend('numpy')
     parser = argparse.ArgumentParser()
     parser.add_argument('-sd', '--sub_directory', type=str,
                         help='A sub-directory to print the json args for, default is base_dir passed in.')
@@ -189,7 +189,7 @@ def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None
         print(ivy.Container(diff_json_args, keyword_color_dict=keyword_color_dict))
     else:
         print(ivy.Container(these_json_args, keyword_color_dict={'duplicated': 'magenta'}))
-    ivy.unset_framework()
+    ivy.unset_backend()
 
 
 def save_dict_as_json(dict_to_save, json_filepath):
@@ -772,7 +772,7 @@ def build_tuner_spec(data_loader_class=None,
         TunerSpec)
 
     # set framework
-    ivy.set_framework(tuner_spec_class(None, **tuner_spec_args).framework)
+    ivy.set_backend(tuner_spec_class(None, **tuner_spec_args).framework) # change to backend?
 
     # build trainer
     trainer = ivy.default(
