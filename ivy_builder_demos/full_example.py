@@ -113,7 +113,7 @@ class ExampleNetwork(Network, ivy.Module):
     def _forward(self, x):
         for layer in self._layers:
             x = layer(x)
-        return ivy.expand_dims(x, 0)
+        return ivy.expand_dims(x, axis=0)
 
 
 # Custom Trainer #
@@ -129,7 +129,7 @@ class ExampleTrainer(Trainer):
 
     def _compute_cost(self, network, batch, dev_str, v=None):
         network_output = network(batch.input, v=v)
-        return ivy.reduce_mean((network_output - batch.target) ** 2)[0]
+        return ivy.mean((network_output - batch.target) ** 2)[0]
 
     def _learning_rate_func(self, global_step):
         if global_step < self._spec.total_iterations/2:
@@ -190,10 +190,10 @@ def main(compile_mode=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--framework', type=str, default=None,
-                        help='which framework to use. Chooses a random framework if unspecified.')
+    parser.add_argument('--backend', type=str, default=None,
+                        help='which backend to use. Chooses a random backend if unspecified.')
     parsed_args = parser.parse_args()
-    f = ivy.default(parsed_args.framework, ivy.choose_random_framework())
-    ivy.set_framework(f)
+    f = ivy.default(parsed_args.backend, ivy.choose_random_backend())
+    ivy.set_backendframework(f)
     main()
-    ivy.unset_framework()
+    ivy.unset_backend()
