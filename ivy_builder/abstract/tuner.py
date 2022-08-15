@@ -15,7 +15,6 @@ except ModuleNotFoundError:
     tune = None
 
 # local
-from ivy.core.container import Container
 from ivy_builder import builder as builder_module
 from ivy_builder.specs.dataset_dirs import DatasetDirs
 from ivy_builder.specs.dataset_spec import DatasetSpec
@@ -34,7 +33,7 @@ FIXED_CONFIG_KEYS = ['train_steps_per_tune_step', 'framework']
 
 
 def _is_numeric_leaf(val):
-    if not isinstance(val, Container):
+    if not isinstance(val, ivy.Container):
         return False
     if val.if_exists('min') and val.if_exists('max'):
         return True
@@ -42,7 +41,7 @@ def _is_numeric_leaf(val):
 
 
 def _is_config_leaf(val):
-    if not isinstance(val, Container):
+    if not isinstance(val, ivy.Container):
         return False
     if val.if_exists('configs'):
         return True
@@ -139,7 +138,7 @@ def _convert_config_leaf(val):
 
 
 def _convert_multi_config_leaf(keys, val):
-    new_config = Container()
+    new_config = ivy.Container()
     new_config.grid = val.if_exists('grid')
     new_config.configs = [dict(zip(keys, v)) for v in val.configs]
     return _convert_config_leaf(new_config)
@@ -147,7 +146,7 @@ def _convert_multi_config_leaf(keys, val):
 
 # noinspection PyUnboundLocalVariable
 def _convert_tuner_spec(spec, key_chain=''):
-    new_spec = Container()
+    new_spec = ivy.Container()
     for i, (key, val) in enumerate(spec.items()):
         key_chain = (key_chain + '/' + key) if key_chain != '' else key
         spec_key = [sk for sk in SPEC_KEYS if sk in key_chain]
@@ -155,7 +154,7 @@ def _convert_tuner_spec(spec, key_chain=''):
             new_spec[key] = val
             continue
         if not _is_leaf(val):
-            if not isinstance(val, Container):
+            if not isinstance(val, ivy.Container):
                 new_spec[key] = val
             else:
                 new_spec[key] = _convert_tuner_spec(val, key_chain)
@@ -239,10 +238,10 @@ class Tuner:
         self._trainer = None
 
         # builder
-        while len(ivy.framework_stack) > 0:
+        while len(ivy.backend_stack) > 0:
             logging.info('unsetting framework {}, framework stack must be empty when'
-                         'initializing tuner class.'.format(ivy.framework_stack[-1]))
-            ivy.unset_framework()
+                         'initializing tuner class.'.format(ivy.backend_stack[-1]))
+            ivy.unset_backend()
         self._builder = builder_module
 
         # tuner spec
@@ -311,9 +310,9 @@ class Tuner:
         class TuneTrainable(tune.Trainable):
 
             def setup(self, _):
-                ivy.set_framework(self.config['framework'])
+                ivy.set_backend(self.config['framework']) # to check!
                 self._train_steps_per_tune_step = self.config['train_steps_per_tune_step']
-                config_cont = Container(self.config)
+                config_cont = ivy.Container(self.config)
                 self._config_str = '_'.join(
                     [str(SHORT_SPEC_KEYS_DICT[kc.split('/')[0]]) + '_' + kc.split('/')[-1] + '_' +
                      ("%.2g" % val if isinstance(val, float) else str(val)) for kc, val in config_cont.to_iterator()
@@ -323,7 +322,7 @@ class Tuner:
                 for class_key, args in zip(SPEC_KEYS, [dataset_dirs_args, dataset_spec_args, data_loader_spec_args,
                                                        network_spec_args, trainer_spec_args]):
                     new_args[class_key] =\
-                        Container({**args, **(self.config[class_key] if
+                        ivy.Container({**args, **(self.config[class_key] if
                                               class_key in self.config else {})}).prune_key_from_key_chains(
                             containing='_AND_')
 
@@ -399,7 +398,7 @@ class Tuner:
 
             def cleanup(self):
                 self._trainer.close()
-                ivy.unset_framework()
+                ivy.unset_backend()
 
         # Run this trainable class #
         # -------------------------#
@@ -430,7 +429,7 @@ class Tuner:
         else:
             raise Exception('device_priority must be one of [ cpu | gpu ], but found {}'.format(
                 self._spec.device_priority))
-        ivy.unset_framework()
+        ivy.unset_backend()
 
         reporter = CLIReporter(['cost'])
 
