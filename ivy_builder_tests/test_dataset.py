@@ -5,7 +5,7 @@ import time
 import ivy
 import pytest
 import numpy as np
-import ivy_tests.helpers as helpers
+from ivy_tests.test_ivy import helpers
 
 # local
 from ivy_builder.dataset import Dataset
@@ -430,7 +430,7 @@ class TestShuffle:
         if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
-        ivy.seed(0)
+        ivy.seed(seed_value=0)
         np.random.seed(0)
         self._init(array_shape, num_processes)
 
@@ -463,7 +463,7 @@ class TestShuffle:
         if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
-        ivy.seed(0)
+        ivy.seed(seed_value=0)
         np.random.seed(0)
         self._init(array_shape, num_processes)
 
@@ -492,7 +492,7 @@ class TestShuffle:
         if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
-        ivy.seed(0)
+        ivy.seed(seed_value=0)
         np.random.seed(0)
         self._init(array_shape, num_processes)
 
@@ -523,7 +523,7 @@ class TestShuffle:
         if call is helpers.mx_call and num_processes == 2:
             pytest.skip()
 
-        ivy.seed(0)
+        ivy.seed(seed_value=0)
         np.random.seed(0)
         self._init(array_shape, num_processes)
 
