@@ -173,10 +173,10 @@ class Dataset:
                 dataset.close()
                 return
             if numpy_loading:
-                ivy.set_framework('numpy')
+                ivy.set_backend('numpy')
             item = Dataset._slice_dataset_with_error_checks(dataset, slice_obj)
             if numpy_loading:
-                ivy.unset_framework()
+                ivy.unset_backend()
             if ivy.wrapped_mode():
                 item = item.to_native(nested=True)
             output_queue.put(item.to_dict())
@@ -346,11 +346,11 @@ class Dataset:
         if not self._workers_initialized:
             self._initialize_all_workers()
         if self._numpy_loading:
-            ivy.set_framework('numpy')
+            ivy.set_backend('numpy')
         if self._num_processes < 2 or isinstance(slice_obj, numbers.Number):
             ret = self._get_item(slice_obj)
             if self._numpy_loading:
-                ivy.unset_framework()
+                ivy.unset_backend()
             self._first_pass = False
             return ret
         slice_size = int(round(slice_obj.stop - slice_obj.start))
@@ -373,7 +373,7 @@ class Dataset:
             else:
                 slice_queues[-1].put(sub_slices[-1])
             if self._numpy_loading:
-                ivy.unset_framework()
+                ivy.unset_backend()
             self._first_pass = False
             return ivy.Container(queues=output_queues, queue_load_sizes=slice_sizes, queue_timeout=self._queue_timeout)
         else:
@@ -385,7 +385,7 @@ class Dataset:
                 items_as_lists = [ivy.Container(output_queue.get(timeout=self._queue_timeout))
                                   for output_queue in output_queues]
             if self._numpy_loading:
-                ivy.unset_framework()
+                ivy.unset_backend()
             self._first_pass = False
             return ivy.Container.list_join(items_as_lists)
 
@@ -403,7 +403,7 @@ class Dataset:
 
     def batch(self, name, batch_size, num_processes=1, numpy_loading=None):
         def batch_array(x, _):
-            return [ivy.concatenate([ivy.expand_dims(item, 0) for item in x[i*batch_size:i*batch_size+batch_size]], 0)
+            return [ivy.concat([ivy.expand_dims(item, axis=0) for item in x[i*batch_size:i*batch_size+batch_size]], axis=0)
                     for i in range(int(len(x)/batch_size))]
 
         def batch_cont(cont):
