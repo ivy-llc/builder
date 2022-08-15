@@ -58,7 +58,7 @@ class Trainer:
 
         # set seed
         np.random.seed(self._spec.seed)
-        ivy.seed(self._spec.seed)
+        ivy.seed(seed_value=self._spec.seed)
 
         # uninitialized variables
         self._chkpt = None
@@ -92,7 +92,7 @@ class Trainer:
         self._net_spec = self._network.spec
         self._partial_grad_updates = bool(self._net_spec.v_keychains)
 
-        # multi-dev
+        # multi-dev - to check!
         self._dev_str = ivy.default(lambda: self._spec.dev_strs[0], ivy.default_device(), True)
         if len(self._spec.dev_strs) > 1:
             if self._network.built:
@@ -107,7 +107,7 @@ class Trainer:
             dev_mapper = None
             self._multi_dev = False
 
-        # device manager
+        # device manager - to check!
         if (self._multi_dev and self._spec.tune_device_allocation) or self._spec.tune_splitting:
             self._dev_manager = ivy.DevManager(
                 dev_mapper, self._spec.dev_strs, tune_dev_alloc=(self._multi_dev and self._spec.tune_device_allocation),
@@ -226,28 +226,28 @@ class Trainer:
             else:
                 if 'mean' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/mean',
-                                            ivy.to_scalar(ivy.to_native(ivy.reduce_mean(v))), global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.mean(v))), global_step)
                 if 'abs_mean' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/abs mean',
-                                            ivy.to_scalar(ivy.to_native(ivy.reduce_mean(ivy.abs(v)))), global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.mean(ivy.abs(v)))), global_step)
                 if 'var' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/var',
-                                            ivy.to_scalar(ivy.to_native(ivy.reduce_var(v))), global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.var(v))), global_step)
                 if 'abs_var' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/abs var',
-                                            ivy.to_scalar(ivy.to_native(ivy.reduce_var(ivy.abs(v)))), global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.var(ivy.abs(v)))), global_step)
                 if 'min' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/min',
-                                            ivy.to_scalar(ivy.to_native(ivy.reduce_min(v))), global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.min(v))), global_step)
                 if 'abs_min' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/abs min',
-                                            ivy.to_scalar(ivy.to_native(ivy.reduce_min(ivy.abs(v)))), global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.min(ivy.abs(v)))), global_step)
                 if 'max' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/max',
-                                            ivy.to_scalar(ivy.to_native(ivy.reduce_max(v))), global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.max(v))), global_step)
                 if 'abs_max' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/abs max',
-                                            ivy.to_scalar(ivy.to_native(ivy.reduce_max(ivy.abs(v)))), global_step)
+                                            ivy.to_scalar(ivy.to_native(ivy.max(ivy.abs(v)))), global_step)
                 if 'vector_norm' in spec:
                     self._writer.add_scalar(new_name_hierarchy + '/vector norm',
                                             ivy.to_scalar(ivy.to_native(ivy.vector_norm(v))), global_step)
@@ -426,7 +426,7 @@ class Trainer:
             self._compile_optimizer_once_tuned = False
         if ivy.exists(self._dev_manager):
             if self._multi_dev:
-                if not isinstance(batch, ivy.MultiDevContainer):
+                if not isinstance(batch, ivy.MultiDevContainer): # to check!
                     batch = batch.to_multi_dev(self._spec.dev_strs)
                 return self._dev_manager.map(distributed={"batch": batch.at_devs()},
                                              to_clone={"network_v": network.v})
