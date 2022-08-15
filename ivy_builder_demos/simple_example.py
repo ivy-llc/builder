@@ -29,12 +29,12 @@ class ExampleDataLoader(DataLoader):
         super().__init__(data_loader_spec)
 
     def get_next_batch(self, dataset_key=None):
-        return ivy.Container(x=ivy.array([[1.]]*self._spec.batch_size, dev_str=self._spec.dev_strs[0]),
-                             target=ivy.array([[0.]]*self._spec.batch_size, dev_str=self._spec.dev_strs[0]))
+        return ivy.Container(x=ivy.array([[1.]]*self._spec.batch_size, device=self._spec.dev_strs[0]),
+                             target=ivy.array([[0.]]*self._spec.batch_size, device=self._spec.dev_strs[0]))
 
     def get_first_batch(self, dataset_key=None):
-        return ivy.Container(x=ivy.array([[1.]]*self._spec.batch_size, dev_str=self._spec.dev_strs[0]),
-                             target=ivy.array([[0.]]*self._spec.batch_size, dev_str=self._spec.dev_strs[0]))
+        return ivy.Container(x=ivy.array([[1.]]*self._spec.batch_size, device=self._spec.dev_strs[0]),
+                             target=ivy.array([[0.]]*self._spec.batch_size, device=self._spec.dev_strs[0]))
 
 
 class ExampleTrainer(Trainer):
@@ -45,7 +45,7 @@ class ExampleTrainer(Trainer):
 
     def _compute_cost(self, network, batch, dev_str, v=None):
         network_output = network(batch.x, v=v)
-        return ivy.reduce_mean((batch.target - network_output)**2)[0]
+        return ivy.mean((batch.target - network_output)**2)[0]
 
     def _learning_rate_func(self, global_step):
         return self._spec.initial_learning_rate
@@ -63,7 +63,7 @@ class ExampleTrainer(Trainer):
 
 # noinspection PyShadowingBuiltins
 def main(seed=0, compile_mode=False, dev_strs=None):
-    ivy.seed(seed)
+    ivy.seed(seed_value=seed)
     data_loader_spec_args = {'batch_size': 2, 'dev_strs': [ivy.default(lambda: dev_strs[0], None, True)]}
     trainer_spec_args = {'total_iterations': 10, 'ld_chkpt': False, 'log_freq': 1, 'initial_learning_rate': 0.1,
                          'compile_mode': compile_mode, 'dev_strs': dev_strs}
@@ -77,10 +77,10 @@ def main(seed=0, compile_mode=False, dev_strs=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--framework', type=str, default=None,
-                        help='which framework to use. Chooses a random framework if unspecified.')
+    parser.add_argument('--backend', type=str, default=None,
+                        help='which backend to use. Chooses a random backend if unspecified.')
     parsed_args = parser.parse_args()
-    f = ivy.default(parsed_args.framework, ivy.choose_random_framework())
-    ivy.set_framework(f)
+    f = ivy.default(parsed_args.backend, ivy.choose_random_framework())
+    ivy.set_backend(f)
     main()
-    ivy.unset_framework()
+    ivy.unset_backend()
