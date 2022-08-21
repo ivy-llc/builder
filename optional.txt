@@ -1,5 +1,7 @@
-torch
-pytest
 gitpython # mod_name=git
-ray[tune] # mod_name=ray
+matplotlib==3.5.2
+numpy==1.23.0
 opencv-python # mod_name=cv2
+pytest
+ray[tune] # mod_name=ray
+torch
