@@ -1,4 +1,5 @@
 gitpython # mod_name=git
+markupsafe==2.0.1
 matplotlib==3.5.2
 numpy==1.23.0
 opencv-python # mod_name=cv2
