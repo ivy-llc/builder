@@ -48,8 +48,8 @@ def parse_json_to_cont(json_filepath):
                 rel_fpath = os.path.normpath(rel_fpath)
                 fpath = os.path.normpath(os.path.join('/'.join(json_filepath.split('/')[:-1]), rel_fpath))
                 fdir = '/'.join(fpath.split('/')[:-1])
-                return_cont = ivy.Container.combine(return_cont, json_spec_from_fpath(fdir, parent_json_fname))
-    return ivy.Container.combine(return_cont, loaded_dict)
+                return_cont = ivy.Container.cont_combine(return_cont, json_spec_from_fpath(fdir, parent_json_fname))
+    return ivy.Container.cont_combine(return_cont, loaded_dict)
 
 
 def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
@@ -72,10 +72,10 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
                         return x
 
                 parsed_json_cont = parsed_json_cont.map(map_fn)
-                json_spec = ivy.Container.combine(parsed_json_cont,
+                json_spec = ivy.Container.cont_combine(parsed_json_cont,
                                                   json_spec.prune_key_chains(duplicate_key_chains))
             else:
-                json_spec = ivy.Container.combine(ivy.Container(parse_json_to_cont(fpath)), json_spec)
+                json_spec = ivy.Container.cont_combine(ivy.Container(parse_json_to_cont(fpath)), json_spec)
         if base_dir.split('/')[-1] == 'json_args':
             return json_spec
         base_dir = os.path.normpath(os.path.join(base_dir, '..'))
@@ -181,7 +181,7 @@ def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None
             mode = 'same_only'
         else:
             mode = 'all'
-        diff_json_args = ivy.Container.diff(these_json_args, other_json_args, mode=mode, diff_keys=diff_keys)
+        diff_json_args = ivy.Container.cont_diff(these_json_args, other_json_args, mode=mode, diff_keys=diff_keys)
         keyword_color_dict = {'duplicated': 'magenta'}
         if isinstance(diff_keys, list):
             diff_keys_dict = dict(zip(diff_keys, ['red'] * 2))
@@ -290,7 +290,7 @@ def build_dataset_dirs(dataset_dirs_args=None,
             else ivy.Container()
 
     # combine args
-    dataset_dirs_args = ivy.Container.combine(json_spec, this_spec_cont, dataset_dirs_args)
+    dataset_dirs_args = ivy.Container.cont_combine(json_spec, this_spec_cont, dataset_dirs_args)
 
     # override dataset_dirs_class if specified in dataset_dirs_args
     dataset_dirs_class = ivy.default(ivy.default(
@@ -327,7 +327,7 @@ def build_dataset_spec(dataset_dirs_args=None,
     if dataset_spec_args is None:
         dataset_spec_args = dict()
     dataset_spec_args = ivy.Container(dataset_spec_args)
-    dataset_spec_args = ivy.Container.combine(dataset_spec_args, ivy.Container(dirs=dataset_dirs))
+    dataset_spec_args = ivy.Container.cont_combine(dataset_spec_args, ivy.Container(dirs=dataset_dirs))
 
     # load json file
     if isinstance(json_spec_path, str):
@@ -341,7 +341,7 @@ def build_dataset_spec(dataset_dirs_args=None,
             else ivy.Container()
 
     # combine args
-    dataset_spec_args = ivy.Container.combine(json_spec, this_spec_cont, dataset_spec_args)
+    dataset_spec_args = ivy.Container.cont_combine(json_spec, this_spec_cont, dataset_spec_args)
 
     # override dataset_spec_class if specified in dataset_spec_args
     dataset_spec_class = ivy.default(ivy.default(
@@ -384,7 +384,7 @@ def build_network_specification(dataset_dirs_args=None,
     if network_spec_args is None:
         network_spec_args = dict()
     network_spec_args = ivy.Container(network_spec_args)
-    network_spec_args = ivy.Container.combine(network_spec_args, ivy.Container(dataset_spec=dataset_spec))
+    network_spec_args = ivy.Container.cont_combine(network_spec_args, ivy.Container(dataset_spec=dataset_spec))
 
     # load json file
     if isinstance(json_spec_path, str):
@@ -398,7 +398,7 @@ def build_network_specification(dataset_dirs_args=None,
             else ivy.Container()
 
     # combine args
-    network_spec_args = ivy.Container.combine(json_spec, this_spec_cont, network_spec_args)
+    network_spec_args = ivy.Container.cont_combine(json_spec, this_spec_cont, network_spec_args)
 
     # override network_spec_class if specified in network_spec_args
     network_spec_class = ivy.default(ivy.default(
@@ -488,7 +488,7 @@ def build_data_loader_spec(dataset_dirs_args=None,
     if data_loader_spec_args is None:
         data_loader_spec_args = dict()
     data_loader_spec_args = ivy.Container(data_loader_spec_args)
-    data_loader_spec_args = ivy.Container.combine(data_loader_spec_args, ivy.Container(dataset_spec=dataset_spec))
+    data_loader_spec_args = ivy.Container.cont_combine(data_loader_spec_args, ivy.Container(dataset_spec=dataset_spec))
 
     # load json file
     if isinstance(json_spec_path, str):
@@ -502,7 +502,7 @@ def build_data_loader_spec(dataset_dirs_args=None,
             else ivy.Container()
 
     # combine args
-    data_loader_spec_args = ivy.Container.combine(json_spec, this_spec_cont, data_loader_spec_args)
+    data_loader_spec_args = ivy.Container.cont_combine(json_spec, this_spec_cont, data_loader_spec_args)
 
     # override data_loader_spec_class if specified in data_loader_spec_args
     data_loader_spec_class = ivy.default(ivy.default(
@@ -622,7 +622,7 @@ def build_trainer_spec(data_loader_class=None,
     if trainer_spec_args is None:
         trainer_spec_args = dict()
     trainer_spec_args = ivy.Container(trainer_spec_args)
-    trainer_spec_args = ivy.Container.combine(trainer_spec_args,
+    trainer_spec_args = ivy.Container.cont_combine(trainer_spec_args,
                                               ivy.Container(data_loader=data_loader,
                                                             network=network))
 
@@ -638,7 +638,7 @@ def build_trainer_spec(data_loader_class=None,
             else ivy.Container()
 
     # combine args
-    trainer_spec_args = ivy.Container.combine(json_spec, this_spec_cont, trainer_spec_args)
+    trainer_spec_args = ivy.Container.cont_combine(json_spec, this_spec_cont, trainer_spec_args)
 
     # override trainer_spec_class if specified in trainer_spec_args
     trainer_spec_class = ivy.default(ivy.default(
@@ -763,7 +763,7 @@ def build_tuner_spec(data_loader_class=None,
         ivy.Container(spec_cont['tuner']) if isinstance(spec_cont, dict) and 'tuner' in spec_cont else ivy.Container()
 
     # combine args
-    tuner_spec_args = ivy.Container.combine(json_spec, this_spec_cont, tuner_spec_args)
+    tuner_spec_args = ivy.Container.cont_combine(json_spec, this_spec_cont, tuner_spec_args)
 
     # override tuner_spec_class if specified in tuner_spec_args
     tuner_spec_class = ivy.default(ivy.default(

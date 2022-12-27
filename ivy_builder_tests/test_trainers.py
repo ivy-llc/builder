@@ -26,9 +26,8 @@ from ivy_builder_demos.full_example import ExampleDatasetDirs, ExampleDatasetSpe
 
 @pytest.mark.parametrize(
     "compile_mode", ['all', False])
-def test_simple_trainers(dev_str, call, compile_mode):
-    if call is helpers.np_call:
-        # numpy does not support gradients, required for training
+def test_simple_trainers(dev_str, compile_mode, fw):
+    if fw == "numpy":
         pytest.skip()
     # currently only PyTorch supports graph compilation
     compile_mode = compile_mode if ivy.current_backend_str() == 'torch' else False
@@ -40,13 +39,8 @@ def test_simple_trainers(dev_str, call, compile_mode):
 
 @pytest.mark.parametrize(
     "compile_mode", ['all', False])
-def test_simple_multi_dev_trainers(dev_str, call, compile_mode):
-    if call is helpers.np_call:
-        # numpy does not support gradients, required for training
-        pytest.skip()
-
-    if call is not helpers.torch_call:
-        # ToDo: add multi-dev support for all backends, not just torch
+def test_simple_multi_dev_trainers(dev_str, compile_mode, fw):
+    if fw in ["numpy", "torch"]:
         pytest.skip()
 
     # currently only PyTorch supports graph compilation
@@ -69,13 +63,12 @@ def test_simple_multi_dev_trainers(dev_str, call, compile_mode):
 
 @pytest.mark.parametrize(
     "compile_mode", ['all', False])
-def test_full_trainers(dev_str, call, compile_mode):
-    if call is helpers.np_call:
-        # numpy does not support gradients, required for training
+def test_full_trainers(dev_str, compile_mode, fw):
+    if fw == "numpy":
         pytest.skip()
-    if call is helpers.jnp_call and ivy.wrapped_mode(): # to check!
-        # Jax does not support ivy.Array instances when calling _jax.grad()
-        pytest.skip()
+    # if fw in "jax" and ivy.wrapped_mode(): # to check!
+    #     # Jax does not support ivy.Array instances when calling _jax.grad()
+    #     pytest.skip()
     # currently only PyTorch supports graph compilation
     compile_mode = compile_mode if ivy.current_backend_str() == 'torch' else False
     # test
@@ -86,9 +79,8 @@ def test_full_trainers(dev_str, call, compile_mode):
 
 @pytest.mark.parametrize(
     "compile_mode", ['all', False])
-def test_visualizing(dev_str, call, compile_mode):
-    if call is helpers.np_call:
-        # numpy does not support gradients, required for training
+def test_visualizing(dev_str, compile_mode, fw):
+    if fw == "numpy":
         pytest.skip()
 
     # currently only PyTorch supports graph compilation
@@ -111,9 +103,8 @@ def test_visualizing(dev_str, call, compile_mode):
 
 @pytest.mark.parametrize(
     "compile_mode", ['all', False])
-def test_checkpoint_loading(dev_str, call, compile_mode):
-    if call is helpers.np_call:
-        # numpy does not support gradients, required for training
+def test_checkpoint_loading(dev_str, compile_mode, fw):
+    if fw == "numpy":
         pytest.skip()
 
     # currently only PyTorch supports graph compilation
@@ -142,13 +133,12 @@ def test_checkpoint_loading(dev_str, call, compile_mode):
 
 @pytest.mark.parametrize(
     "compile_mode", ['all', False])
-def test_reduced_cost_after_checkpoint_load(dev_str, call, compile_mode):
-    if call is helpers.np_call:
-        # numpy does not support gradients, required for training
+def test_reduced_cost_after_checkpoint_load(dev_str, compile_mode, fw):
+    if fw == "numpy":
         pytest.skip()
-    if call is helpers.jnp_call and ivy.wrapped_mode(): # to check!
-        # Jax does not support ivy.Array instances when calling _jax.grad()
-        pytest.skip()
+    # if fw == "jax" and ivy.wrapped_mode(): # to check!
+    #     # Jax does not support ivy.Array instances when calling _jax.grad()
+    #     pytest.skip()
 
     example_dir = os.path.relpath(os.path.join(
         os.path.dirname(os.path.abspath(__file__)), '../ivy_builder_demos'))
@@ -224,9 +214,8 @@ def test_reduced_cost_after_checkpoint_load(dev_str, call, compile_mode):
 
 @pytest.mark.parametrize(
     "compile_mode", ['all', False])
-def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, call, compile_mode):
-    if call is helpers.np_call:
-        # numpy does not support gradients, required for training
+def test_checkpoint_save_and_restore_via_public_trainer_methods(dev_str, compile_mode, fw):
+    if fw == "numpy":
         pytest.skip()
 
     # currently only PyTorch supports graph compilation

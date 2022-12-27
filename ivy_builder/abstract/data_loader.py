@@ -13,7 +13,7 @@ class DataLoader(abc.ABC):
         base class for loading data from disk for training
         """
         self._spec = data_loader_spec
-        self._dev_str = ivy.default(lambda: data_loader_spec.dev_strs[0], ivy.default_device(), True)
+        self._dev_str = ivy.default(lambda: data_loader_spec.dev_strs[0], ivy.default_device(), catch_exceptions=True)
 
     @abc.abstractmethod
     def get_next_batch(self, dataset_key: str = None):
