@@ -15,10 +15,8 @@ ray.init()
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-def test_tune_numeric_spec(dev_str, call):
-    if call is not helpers.torch_call:
-        # ToDo: work out why the backend framework is fixed for tune after the first call,
-        #  and include other frameworks in test once this is fixed
+def test_tune_numeric_spec(dev_str, fw):
+    if fw != "torch":
         pytest.skip()
 
     builder_helpers.remove_dirs()
@@ -48,10 +46,8 @@ def test_tune_numeric_spec(dev_str, call):
     builder_helpers.remove_dirs()
 
 
-def test_tune_general_spec(dev_str, call):
-    if call is not helpers.torch_call:
-        # ToDo: work out why the backend framework is fixed for tune after the first call,
-        #  and include other frameworks in test once this is fixed
+def test_tune_general_spec(dev_str, fw):
+    if fw != "torch":
         pytest.skip()
 
     builder_helpers.remove_dirs()
@@ -99,14 +95,12 @@ def test_tune_general_spec(dev_str, call):
     builder_helpers.remove_dirs()
 
 
-def test_tune_resume_training(dev_str, call):
-    if call is not helpers.torch_call:
-        # ToDo: work out why the backend framework is fixed for tune after the first call,
-        #  and include other frameworks in test once this is fixed
+def test_tune_resume_training(dev_str, fw):
+    if fw != "torch":
         pytest.skip()
-    if ivy.wrapped_mode(): # to check!
-        # this test fails when running all tests for some reason, need to further investigate
-        pytest.skip()
+    # if ivy.wrapped_mode(): # to check!
+    #     # this test fails when running all tests for some reason, need to further investigate
+    #     pytest.skip()
 
     builder_helpers.remove_dirs()
 
