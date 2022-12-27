@@ -12,10 +12,10 @@ from ivy_builder.data_loaders.seq_data_loader import SeqDataLoader
 from ivy_builder.data_loaders.specs.seq_data_loader_spec import SeqDataLoaderSpec
 
 
-def test_seq_loader_multi_dev(dev_str, f, call):
+def test_seq_loader_multi_dev(dev_str, f):
 
     # seed
-    f.seed(0)
+    ivy.seed(seed_value=0)
     np.random.seed(0)
 
     # devices
@@ -78,11 +78,11 @@ def test_seq_loader_multi_dev(dev_str, f, call):
     "sequence_lengths", [1, 2])
 @pytest.mark.parametrize(
     "num_sequences", [1, 2, 3])
-def test_seq_loader_fixed_seq_len(dev_str, f, call, container_load_mode, array_mode, with_prefetching,
+def test_seq_loader_fixed_seq_len(dev_str, f, container_load_mode, array_mode, with_prefetching,
                                   sequence_lengths, num_sequences):
 
     # seed
-    f.seed(0)
+    ivy.seed(seed_value=0)
     np.random.seed(0)
 
     # dataset dir
@@ -130,10 +130,10 @@ def test_seq_loader_fixed_seq_len(dev_str, f, call, container_load_mode, array_m
     "with_prefetching", [True, False])
 @pytest.mark.parametrize(
     "shuffle_buffer_size", [0, 2])
-def test_seq_loader(dev_str, f, call, container_load_mode, array_mode, with_prefetching, shuffle_buffer_size):
+def test_seq_loader(dev_str, f, container_load_mode, array_mode, with_prefetching, shuffle_buffer_size):
 
     # seed
-    f.seed(0)
+    ivy.seed(seed_value=0)
     np.random.seed(0)
 
     # config
@@ -275,11 +275,11 @@ def test_seq_loader(dev_str, f, call, container_load_mode, array_mode, with_pref
                            [(0, 0), (2, 1), (1, 2), (3, 1)],
                            [(1, None), (3, None), (4, 0)],
                            [(None, 0), (None, 2), (3, 1)]])
-def test_seq_loader_containers_to_skip(dev_str, f, call, container_load_mode, array_mode, with_prefetching, batch_size,
+def test_seq_loader_containers_to_skip(dev_str, f, container_load_mode, array_mode, with_prefetching, batch_size,
                                         containers_to_skip):
 
     # seed
-    f.seed(0)
+    ivy.seed(seed_value=0)
     np.random.seed(0)
 
     # dataset dir
@@ -352,10 +352,10 @@ def test_seq_loader_containers_to_skip(dev_str, f, call, container_load_mode, ar
     "with_prefetching", [True, False])
 @pytest.mark.parametrize(
     "shuffle_buffer_size", [0, 2])
-def test_seq_loader_wo_cont_load(dev_str, f, call, with_prefetching, shuffle_buffer_size):
+def test_seq_loader_wo_cont_load(dev_str, f, with_prefetching, shuffle_buffer_size):
 
     # seed
-    f.seed(0)
+    ivy.seed(seed_value=0)
     np.random.seed(0)
 
     # config

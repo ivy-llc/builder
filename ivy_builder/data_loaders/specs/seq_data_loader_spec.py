@@ -62,7 +62,7 @@ class SeqDataLoaderSpec(DataLoaderSpec):
                                                 load_gray_as_rgb=load_gray_as_rgb,
                                                 containers_to_skip=containers_to_skip,
                                                 **kwargs)
-        self.queue_timeout = ivy.default(queue_timeout, ivy.queue_timeout())  # conflicts with ivy.Container argument
+        self.queue_timeout = ivy.default(queue_timeout, ivy.get_queue_timeout())  # conflicts with ivy.Container argument
 
         self._kwargs = kw
 

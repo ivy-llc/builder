@@ -91,7 +91,7 @@ class Dataset:
                 else:
                     return x
 
-            base_dataset = base_dataset.map(to_numpy)
+            base_dataset = base_dataset.cont_map(to_numpy)
         self._base_dataset = base_dataset
         self._workers_initialized = False
         self._has_workers = False
