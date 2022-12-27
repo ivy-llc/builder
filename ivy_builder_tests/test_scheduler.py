@@ -11,7 +11,7 @@ from ivy_builder.scheduler import SequentialScheduler
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-def test_sequential_scheduler(dev_str, call):
+def test_sequential_scheduler(dev_str):
     schedule_filepath = os.path.join(THIS_DIR, 'schedule.json')
     scheduler = SequentialScheduler(schedule_filepath)
     helpers.remove_dirs()
@@ -20,7 +20,7 @@ def test_sequential_scheduler(dev_str, call):
     assert scheduler_len == 2
 
 
-def test_sequential_scheduler_with_exception(dev_str, call):
+def test_sequential_scheduler_with_exception(dev_str):
     schedule_filepath = os.path.join(THIS_DIR, 'schedule_with_exception.json')
     scheduler = SequentialScheduler(schedule_filepath, num_attempts=2)
     helpers.remove_dirs()
@@ -29,7 +29,7 @@ def test_sequential_scheduler_with_exception(dev_str, call):
     assert scheduler_len == 1
 
 
-def test_sequential_scheduler_with_dynamic_schedule_file_edit(dev_str, call):
+def test_sequential_scheduler_with_dynamic_schedule_file_edit(dev_str):
     schedule_filepath = os.path.join(THIS_DIR, 'schedule.json')
     scheduler = SequentialScheduler(schedule_filepath)
     helpers.remove_dirs()
