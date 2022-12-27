@@ -76,7 +76,7 @@ class Dataset:
         self._num_processes = multiprocessing().cpu_count() if num_processes is None else num_processes
         self._numpy_loading = numpy_loading
         self._prefetching = prefetching
-        self._queue_timeout = ivy.default(queue_timeout, ivy.queue_timeout())
+        self._queue_timeout = ivy.default(queue_timeout, ivy.get_queue_timeout())
         self._subprocess_depth = subprocess_depth
         self._is_subprocess = bool(subprocess_depth)
         self._first_pass = True
@@ -142,11 +142,11 @@ class Dataset:
             dataset_name = 'cont' if is_cont else dataset.name
             if is_cont and trans_fn:
                 ret = trans_fn(ret)
-            if not ret.shape or not ret.shape[0] > 0:
+            if not ret.cont_shape or not ret.cont_shape[0] > 0:
                 logging.info('{} dataset {} is empty'.format(dataset_name, slice_obj))
                 raise EmptyDatasetException('{} dataset {} was empty'.format(dataset_name, slice_obj))
             logging.info('{} dataset {} succeeded, producing container:\n{}\n'.format(
-                dataset_name, slice_obj, ret[0].remove_print_limit()))
+                dataset_name, slice_obj, ret[0].cont_remove_print_limit()))
         except LoggedDatasetException:
             sys.exit(1)
         except Exception as e:
@@ -179,7 +179,7 @@ class Dataset:
                 ivy.unset_backend()
             # if ivy.wrapped_mode():
             #     item = item.to_native(nested=True)
-            output_queue.put(item.to_dict())
+            output_queue.put(item.cont_to_dict())
 
     @staticmethod
     def _empty_queue(queue_in):
@@ -240,14 +240,14 @@ class Dataset:
         base_dataset = Dataset._slice_dataset(base_slice_obj, self._base_dataset)
         if self._trans_fn is not None:
             if self._elementwise_query_fn:
-                vals = [self._trans_fn(base_dataset[i]) for i in range(base_dataset.shape[0])]
-                return ivy.Container.list_stack(vals, 0)
+                vals = [self._trans_fn(base_dataset[i]) for i in range(base_dataset.cont_shape[0])]
+                return ivy.Container.cont_list_stack(vals, 0)
             return self._trans_fn(base_dataset)
         return base_dataset
 
     def _get_item_from_slice_objs(self, base_slice_obj, slice_obj):
         if isinstance(base_slice_obj, tuple):
-            item = ivy.Container.list_join((self._get_base_item(base_slice_obj[0]),
+            item = ivy.Container.cont_list_join((self._get_base_item(base_slice_obj[0]),
                                             self._get_base_item(base_slice_obj[1])))
         else:
             item = self._get_base_item(base_slice_obj)
@@ -335,9 +335,9 @@ class Dataset:
         if len(items) == 1:
             if isinstance(slice_obj, numbers.Number):
                 return items[0]
-            return items[0].map(lambda x, kc: x if isinstance(x, list) else [x])
-        items_as_lists = [item.map(lambda x, kc: x if isinstance(x, list) else [x]) for item in items]
-        return ivy.Container.list_join(items_as_lists)
+            return items[0].cont_map(lambda x, kc: x if isinstance(x, list) else [x])
+        items_as_lists = [item.cont_map(lambda x, kc: x if isinstance(x, list) else [x]) for item in items]
+        return ivy.Container.cont_list_join(items_as_lists)
 
     # Public #
     # -------#
@@ -387,7 +387,7 @@ class Dataset:
             if self._numpy_loading:
                 ivy.unset_backend()
             self._first_pass = False
-            return ivy.Container.list_join(items_as_lists)
+            return ivy.Container.cont_list_join(items_as_lists)
 
     def map(self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None):
         return Dataset(base_dataset=self,
@@ -407,7 +407,7 @@ class Dataset:
                     for i in range(int(len(x)/batch_size))]
 
         def batch_cont(cont):
-            return cont.map(batch_array)
+            return cont.cont_map(batch_array)
 
         def base_slice_fn(slc_obj):
             if isinstance(slc_obj, numbers.Number):
@@ -442,7 +442,7 @@ class Dataset:
         for i in range(size):
             if batch_sizes is None:
                 data = self._get_item(i)
-                data_size = data.shape[0]
+                data_size = data.cont_shape[0]
             else:
                 data_size = batch_sizes[i]
             if i == size - 1 and self._size % 1 != 0:
@@ -462,7 +462,7 @@ class Dataset:
             return slice(so_start, so_stop, 1)
 
         def unbatch_fn(cont):
-            return cont.map(lambda x, kc: [c for o in [ivy.unstack(item, 0) for item in x] for c in o])
+            return cont.cont_map(lambda x, kc: [c for o in [ivy.unstack(item, axis=0) for item in x] for c in o])
 
         def slice_fn(slice_obj, sliced_dataset, dataset_size):
             if isinstance(slice_obj, numbers.Number):

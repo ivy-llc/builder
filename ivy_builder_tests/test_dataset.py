@@ -21,16 +21,13 @@ class TestQueries:
              ivy.array(6), ivy.array(7), ivy.array(8)]
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': self._x})
-        self._dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes)
+        self._dataset = Dataset(dataset_container, 'base', dataset_container.cont_shape[0], num_processes=num_processes)
 
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -50,10 +47,7 @@ class TestQueries:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single_wrapped(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single_wrapped(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -75,10 +69,7 @@ class TestQueries:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -101,10 +92,7 @@ class TestQueries:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice_wrapped(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice_wrapped(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -134,17 +122,14 @@ class TestBatch:
              ivy.array(5), ivy.array(6), ivy.array(7), ivy.array(8), ivy.array(9)]
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': self._x})
-        dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes)
+        dataset = Dataset(dataset_container, 'base', dataset_container.cont_shape[0], num_processes=num_processes)
         self._dataset = dataset.batch('batched', 3, num_processes=num_processes)
 
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -162,10 +147,7 @@ class TestBatch:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single_wrapped(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single_wrapped(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -184,10 +166,7 @@ class TestBatch:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -207,10 +186,7 @@ class TestBatch:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice_wrapped(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice_wrapped(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -236,17 +212,14 @@ class TestUnbatch:
         x = [ivy.array([[0], [1], [2]]), ivy.array([[3], [4], [5]]), ivy.array([[6], [7], [8]])]
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': x})
-        dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes)
+        dataset = Dataset(dataset_container, 'base', dataset_container.cont_shape[0], num_processes=num_processes)
         self._dataset = dataset.unbatch('unbatched', num_processes=num_processes)
 
     @pytest.mark.parametrize(
         "array_shape", [[3, 1], [3]])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -263,10 +236,7 @@ class TestUnbatch:
         "array_shape", [[3, 1], [3]])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single_wrapped(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single_wrapped(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -282,10 +252,7 @@ class TestUnbatch:
         "array_shape", [[3, 1], [3]])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -302,10 +269,7 @@ class TestUnbatch:
         "array_shape", [[3, 1], [3]])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice_wrapped(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice_wrapped(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 
@@ -325,16 +289,13 @@ class TestUnbatchAndBatch:
         self._x = [ivy.array([0, 1]),
                    ivy.array([2, 3, 4, 5, 6, 7, 8, 9])]
         dataset_container = ivy.Container({'x': self._x})
-        dataset = Dataset(dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes)
+        dataset = Dataset(dataset_container, 'base', dataset_container.cont_shape[0], num_processes=num_processes)
         dataset = dataset.unbatch('unbatched', num_processes=num_processes)
         self._dataset = dataset.batch('batched', 3, num_processes=num_processes)
 
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single(self, dev_str, f, call, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single(self, dev_str, f, num_processes):
 
         self._init(num_processes)
 
@@ -349,10 +310,7 @@ class TestUnbatchAndBatch:
 
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single_wrapped(self, dev_str, f, call, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single_wrapped(self, dev_str, f, num_processes):
 
         self._init(num_processes)
 
@@ -376,10 +334,7 @@ class TestUnbatchAndBatch:
 
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice(self, dev_str, f, call, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice(self, dev_str, f, num_processes):
 
         self._init(num_processes)
 
@@ -393,10 +348,7 @@ class TestUnbatchAndBatch:
 
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice_wrapped(self, dev_str, f, call, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice_wrapped(self, dev_str, f, num_processes):
 
         self._init(num_processes)
 
@@ -419,16 +371,13 @@ class TestShuffle:
         self._x = [ivy.reshape(item, array_shape) for item in x]
         dataset_container = ivy.Container({'x': self._x})
         self._dataset = Dataset(
-            dataset_container, 'base', dataset_container.shape[0], num_processes=num_processes).shuffle('shuffled', 9)
+            dataset_container, 'base', dataset_container.cont_shape[0], num_processes=num_processes).shuffle('shuffled', 9)
 
     @pytest.mark.parametrize(
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single(self, dev_str, f, array_shape, num_processes):
 
         ivy.seed(seed_value=0)
         np.random.seed(0)
@@ -458,10 +407,7 @@ class TestShuffle:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single_wrapped(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_single_wrapped(self, dev_str, f, array_shape, num_processes):
 
         ivy.seed(seed_value=0)
         np.random.seed(0)
@@ -487,10 +433,7 @@ class TestShuffle:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice(self, dev_str, f, array_shape, num_processes):
 
         ivy.seed(seed_value=0)
         np.random.seed(0)
@@ -518,10 +461,7 @@ class TestShuffle:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_slice_wrapped(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call and num_processes == 2:
-            pytest.skip()
+    def test_slice_wrapped(self, dev_str, f, array_shape, num_processes):
 
         ivy.seed(seed_value=0)
         np.random.seed(0)
@@ -564,12 +504,12 @@ class TestPrefetch:
         dataset_container = ivy.Container({'x': self._x})
 
         # without pre-fetch
-        dataset_wo_prefetch = Dataset(copy.deepcopy(dataset_container), 'base', dataset_container.shape[0],
+        dataset_wo_prefetch = Dataset(copy.deepcopy(dataset_container), 'base', dataset_container.cont_shape[0],
                                       with_caching=False, cache_size=0, num_processes=num_processes)
         self._dataset_wo_prefetch = dataset_wo_prefetch.map('sleep', sleep_fn)
 
         # with pre-fetch
-        dataset_w_prefetch = Dataset(copy.deepcopy(dataset_container), 'base', dataset_container.shape[0],
+        dataset_w_prefetch = Dataset(copy.deepcopy(dataset_container), 'base', dataset_container.cont_shape[0],
                                      with_caching=False, cache_size=0, num_processes=num_processes)
         dataset_w_prefetch = dataset_w_prefetch.map('sleep', sleep_fn)
         self._dataset_w_prefetch = dataset_w_prefetch.prefetch('prefetch', 1)
@@ -579,10 +519,7 @@ class TestPrefetch:
         "array_shape", [[1], []])
     @pytest.mark.parametrize(
         "num_processes", [1, 2])
-    def test_single(self, dev_str, f, call, array_shape, num_processes):
-
-        if call is helpers.mx_call:
-            pytest.skip()
+    def test_single(self, dev_str, f, array_shape, num_processes):
 
         self._init(array_shape, num_processes)
 

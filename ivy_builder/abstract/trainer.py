@@ -149,7 +149,7 @@ class Trainer:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _learning_rate_func(self, global_step: ivy.Variable) -> ivy.Array:
+    def _learning_rate_func(self, global_step: ivy.Array) -> ivy.Array:
         """
         compute learning rate, given global step
         """
@@ -157,7 +157,7 @@ class Trainer:
 
     @abc.abstractmethod
     def _write_scalar_summaries(self, data_loader: DataLoader, network: Network, training_batch: ivy.Array,
-                                global_step: ivy.Variable) -> None:
+                                global_step: ivy.Array) -> None:
         """
         write scalar summaries to disk, ready for tensorboard viewing
         """
@@ -165,7 +165,7 @@ class Trainer:
 
     @abc.abstractmethod
     def _write_image_summaries(self, data_loader: DataLoader, network: Network, training_batch: ivy.Array,
-                               global_step: ivy.Variable) -> None:
+                               global_step: ivy.Array) -> None:
         """
         write image summaries to disk, ready for tensorboard viewing
         """
