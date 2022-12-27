@@ -13,7 +13,7 @@ def format_containers(cont_dir, cont_format, cont_format_file):
     if cont_format:
         key_chains = ivy.Container(json.loads(cont_format))
     else:
-        key_chains = ivy.Container.from_disk_as_json(cont_format_file)
+        key_chains = ivy.Container.cont_from_disk_as_json(cont_format_file)
 
     cont_fnames = os.listdir(cont_dir)
     cont_fnames.sort()
@@ -25,9 +25,9 @@ def format_containers(cont_dir, cont_format, cont_format_file):
         if i % log_freq == 0:
             logging.info('reformatting container {} of {}...'.format(i, num_conts))
         cont_fpath = os.path.join(cont_dir, cont_fname)
-        cont = ivy.Container.from_disk_as_json(cont_fpath)
-        cont = cont.at_key_chains(key_chains)
-        cont.to_disk_as_json(cont_fpath)
+        cont = ivy.Container.cont_from_disk_as_json(cont_fpath)
+        cont = cont.cont_at_key_chains(key_chains)
+        cont.cont_to_disk_as_json(cont_fpath)
 
 
 def main(container_dir=None, cont_format=None, cont_format_fpath=None):
