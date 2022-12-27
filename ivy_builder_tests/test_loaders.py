@@ -420,20 +420,20 @@ def test_seq_loader_wo_cont_load(dev_str, f, with_prefetching, shuffle_buffer_si
                     idx = last_idx
 
                 action_as_list = self._actions_dict[str(seq_idx)][str(idx)]
-                action_arrays_list.append(ivy.array(action_as_list, dtype_str='float32')[0])
+                action_arrays_list.append(ivy.array(action_as_list, dtype='float32')[0])
 
-                seq_idx_arrays_list.append(ivy.array([seq_idx], dtype_str='float32'))
-                idx_arrays_list.append(ivy.array([idx], dtype_str='float32'))
-            length_arrays_list = [ivy.array([last_idx+1 if found_end else idx+1], dtype_str='float32')] * (j+1)
+                seq_idx_arrays_list.append(ivy.array([seq_idx], dtype='float32'))
+                idx_arrays_list.append(ivy.array([idx], dtype='float32'))
+            length_arrays_list = [ivy.array([last_idx+1 if found_end else idx+1], dtype='float32')] * (j+1)
 
-            action_arrays = ivy.concatenate(action_arrays_list, 0)
+            action_arrays = ivy.concat(action_arrays_list, axis=0)
             actions_seqs_list.append(action_arrays)
 
-            seq_idx_arrays = ivy.concatenate(seq_idx_arrays_list, 0)
+            seq_idx_arrays = ivy.concat(seq_idx_arrays_list, axis=0)
             seq_idxs_seqs_list.append(seq_idx_arrays)
-            idx_arrays = ivy.concatenate(idx_arrays_list, 0)
+            idx_arrays = ivy.concat(idx_arrays_list, axis=0)
             idxs_seqs_list.append(idx_arrays)
-            length_arrays = ivy.concatenate(length_arrays_list, 0)
+            length_arrays = ivy.concat(length_arrays_list, axis=0)
             lengths_seqs_list.append(length_arrays)
 
         new_cont.actions = actions_seqs_list

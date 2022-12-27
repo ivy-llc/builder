@@ -163,7 +163,7 @@ class SeqDataLoader(DataLoader):
                     break
                 with open(filepath) as fp:
                     container_dict = json.load(fp)
-                container = ivy.Container(container_dict).map(self._to_tensor)
+                container = ivy.Container(container_dict).cont_map(self._to_tensor)
                 window_containers.append(container)
             window_containers += [container] * (max_seq_len - seq_len - 1)  # padding for shorter sequences
             joined_window_containers = ivy.Container.concat(window_containers, axis=1)
@@ -267,13 +267,13 @@ class SeqDataLoader(DataLoader):
 
     def _group_container_into_windowed_container(self, container):
         if self._first_frame_validity_fn is not None:
-            return container.map(lambda x, _: self._group_tensor_into_windowed_tensor(x, container.valid_first_frame))
+            return container.cont_map(lambda x, _: self._group_tensor_into_windowed_tensor(x, container.valid_first_frame))
         else:
             if 'seq_info' in container:
                 seq_info = container.seq_info
             else:
                 seq_info = None
-            return container.map(lambda x, _: self._group_tensor_into_windowed_tensor_simple(x, seq_info))
+            return container.cont_map(lambda x, _: self._group_tensor_into_windowed_tensor_simple(x, seq_info))
 
     # Dynamic File Reading #
     # ---------------------#
@@ -295,16 +295,16 @@ class SeqDataLoader(DataLoader):
     def _parse_json_strings(self, containers):
         json_strings_stack = containers.json_str
         highest_idx_entry = len([item for item in containers.json_str if item != '']) - 1
-        json_container_stack = [ivy.Container(json.loads(json_str)).map(self._to_tensor)[0]
+        json_container_stack = [ivy.Container(json.loads(json_str)).cont_map(self._to_tensor)[0]
                                 if json_str != '' else
-                                ivy.Container(json.loads(json_strings_stack[highest_idx_entry])).map(
+                                ivy.Container(json.loads(json_strings_stack[highest_idx_entry])).cont_map(
                                     self._to_tensor)[0] for json_str in json_strings_stack]
         return ivy.Container.concat(json_container_stack, axis=0)
 
     # container pruning
 
     def _prune_unused_key_chains(self, container):
-        container = container.prune_key_chains(self._spec.unused_key_chains)
+        container = container.cont_prune_key_chains(self._spec.unused_key_chains)
         return container
 
     # arrays
@@ -398,7 +398,7 @@ class SeqDataLoader(DataLoader):
         return x
 
     def _load_data_from_filepath_tensors(self, container):
-        return container.map(self._str_fn)
+        return container.cont_map(self._str_fn)
 
     # Dataset Creation #
     # -----------------#
@@ -560,7 +560,7 @@ class SeqDataLoader(DataLoader):
                 dataset = Dataset(ivy.Container({'fpaths': container_idx_map}),
                                   'base',
                                   len(container_idx_map),
-                                  trans_fn=lambda cont: cont.map(lambda x_, kc: x_.to_filepaths()),
+                                  trans_fn=lambda cont: cont.cont_map(lambda x_, kc: x_.to_filepaths()),
                                   elementwise_query_fn=False,
                                   numpy_loading=True,
                                   cache_size=self._base_cache_size,
@@ -609,7 +609,7 @@ class SeqDataLoader(DataLoader):
                                 self._batch_size,
                                 self._num_workers.batched)
         dataset = dataset.map('from_np',
-                              lambda cont: cont.map(lambda x_, kc: ivy.array(x_, device='cpu')),
+                              lambda cont: cont.cont_map(lambda x_, kc: ivy.array(x_, device='cpu')),
                               self._num_workers.from_np,
                               numpy_loading=False)
         if ivy.exists(self._spec.post_proc_fn):
