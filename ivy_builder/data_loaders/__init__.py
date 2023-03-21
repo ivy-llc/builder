@@ -13,3 +13,5 @@ __all__ = [
         or isinstance(thing, types.ModuleType)
     )
 ]
+
+del types
