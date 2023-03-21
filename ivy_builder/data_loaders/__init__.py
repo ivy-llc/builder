@@ -10,7 +10,6 @@ __all__ = [
     for name, thing in globals().items()
     if not (
         name.startswith("_")
-        or name == "specs"
-        or (isinstance(thing, types.ModuleType) and "specs" not in thing.__name__)
+        or isinstance(thing, types.ModuleType)
     )
 ]
