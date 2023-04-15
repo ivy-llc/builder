@@ -129,7 +129,8 @@ class ExampleTrainer(Trainer):
 
     def _compute_cost(self, network, batch, dev_str, v=None):
         network_output = network(batch.input, v=v)
-        return ivy.mean((network_output - batch.target) ** 2)[0]
+        cost = ivy.mean((network_output - batch.target) ** 2)
+        return cost[0] if len(cost.shape) > 0 else cost
 
     def _learning_rate_func(self, global_step):
         if global_step < self._spec.total_iterations/2:

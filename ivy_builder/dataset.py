@@ -264,7 +264,7 @@ class Dataset:
                 return slice(so_start_wrapped, so_start_wrapped + 1, 1)
             so_stop_wrapped = so_stop_orig % self._size
             if abs(so_stop_wrapped) < 1:
-                so_stop_wrapped = self._size + so_stop_wrapped
+                so_stop_wrapped = math.ceil(self._size + so_stop_wrapped)
             return slice(so_start_wrapped, so_stop_wrapped, 1)
 
     def _wrap_base_slice_obj(self, slice_obj):
@@ -404,7 +404,7 @@ class Dataset:
     def batch(self, name, batch_size, num_processes=1, numpy_loading=None):
         def batch_array(x, _):
             return [ivy.concat([ivy.expand_dims(item, axis=0) for item in x[i*batch_size:i*batch_size+batch_size]], axis=0)
-                    for i in range(int(len(x)/batch_size))]
+                    for i in range(math.ceil((len(x)/batch_size)))]
 
         def batch_cont(cont):
             return cont.cont_map(batch_array)

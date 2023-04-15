@@ -35,7 +35,7 @@ FIXED_CONFIG_KEYS = ['train_steps_per_tune_step', 'framework']
 def _is_numeric_leaf(val):
     if not isinstance(val, ivy.Container):
         return False
-    if val.if_exists('min') and val.if_exists('max'):
+    if val.cont_if_exists('min') and val.cont_if_exists('max'):
         return True
     return False
 
@@ -43,7 +43,7 @@ def _is_numeric_leaf(val):
 def _is_config_leaf(val):
     if not isinstance(val, ivy.Container):
         return False
-    if val.if_exists('configs'):
+    if val.cont_if_exists('configs'):
         return True
     return False
 
@@ -53,13 +53,13 @@ def _is_leaf(val):
 
 
 def _convert_numeric_leaf(val):
-    min_val = val.min
-    max_val = val.max
+    min_val = val['min']
+    max_val = val['max']
     mean_val = (max_val + min_val) / 2
     sd_val = max_val - mean_val
-    gaussian = val.if_exists('gaussian')
-    grid = val.if_exists('grid')
-    uniform = val.if_exists('uniform')
+    gaussian = val.cont_if_exists('gaussian')
+    grid = val.cont_if_exists('grid')
+    uniform = val.cont_if_exists('uniform')
     selections = [bool(gaussian), bool(grid), bool(uniform)]
     num_selected = sum(selections)
     if num_selected > 1:
@@ -67,13 +67,13 @@ def _convert_numeric_leaf(val):
                         'but {} are selected, with the following options set: {}'.format(num_selected, selections))
     if num_selected == 0:
         uniform = True
-    if val.if_exists('exponent'):
+    if val.cont_if_exists('exponent'):
         exponential = True
         exponent = val.exponent
         log_exponent = np.log(exponent)
     else:
         exponential = False
-    as_int = val.if_exists('as_int')
+    as_int = val.cont_if_exists('as_int')
     if gaussian:
         if exponential:
             if as_int:
@@ -132,14 +132,14 @@ def _convert_numeric_leaf(val):
 
 
 def _convert_config_leaf(val):
-    if val.if_exists('grid'):
+    if val.cont_if_exists('grid'):
         return tune.grid_search(val.configs)
     return tune.sample_from(lambda: np.random.choice(val.configs))
 
 
 def _convert_multi_config_leaf(keys, val):
     new_config = ivy.Container()
-    new_config.grid = val.if_exists('grid')
+    new_config.grid = val.cont_if_exists('grid')
     new_config.configs = [dict(zip(keys, v)) for v in val.configs]
     return _convert_config_leaf(new_config)
 
@@ -315,7 +315,7 @@ class Tuner:
                 config_cont = ivy.Container(self.config)
                 self._config_str = '_'.join(
                     [str(SHORT_SPEC_KEYS_DICT[kc.split('/')[0]]) + '_' + kc.split('/')[-1] + '_' +
-                     ("%.2g" % val if isinstance(val, float) else str(val)) for kc, val in config_cont.to_iterator()
+                     ("%.2g" % val if isinstance(val, float) else str(val)) for kc, val in config_cont.cont_to_iterator()
                      if (isinstance(val, (float, int, bool, type(None))) and kc not in FIXED_CONFIG_KEYS)])
                 trainer_spec_args['log_dir'] = os.path.join(orig_log_dir, self._config_str)
                 new_args = dict()
@@ -323,7 +323,7 @@ class Tuner:
                                                        network_spec_args, trainer_spec_args]):
                     new_args[class_key] =\
                         ivy.Container({**args, **(self.config[class_key] if
-                                              class_key in self.config else {})}).prune_key_from_key_chains(
+                                              class_key in self.config else {})}).cont_prune_key_from_key_chains(
                             containing='_AND_')
 
                 self._trainer = builder.build_trainer(data_loader_class=data_loader_class,
@@ -431,7 +431,7 @@ class Tuner:
                 self._spec.device_priority))
         ivy.unset_backend()
 
-        reporter = CLIReporter(['cost'])
+        reporter = CLIReporter(parameter_columns=['cost'])
 
         # initialize ray with custom temp_dir
         ray.init(_temp_dir=os.path.join('/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]), 'ray'),
@@ -450,7 +450,7 @@ class Tuner:
                 "gpu": gpus_per_trial
             },
             config={key: val for key, val in self._spec.items()
-                    if (isinstance(val, dict) or isinstance(val, tune.sample.Function)
+                    if (isinstance(val, dict) or isinstance(val, tune.search.sample.Function)
                         or key in ['framework', 'train_steps_per_tune_step'])},
             local_dir='/'.join(self._spec.trainer.spec.log_dir.split('/')[:-1]),
             checkpoint_freq=self._spec.checkpoint_freq,

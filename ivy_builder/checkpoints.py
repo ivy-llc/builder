@@ -11,13 +11,13 @@ class Checkpoint:
 
     # noinspection PyProtectedMember
     def restore(self, checkpoint_path):
-        checkpoint = ivy.Container.from_disk_as_hdf5(checkpoint_path)
-        loaded_v = checkpoint.network.map(lambda x, kc: ivy.variable(ivy.to_device(x, self._net._dev_str)))
+        checkpoint = ivy.Container.cont_from_disk_as_hdf5(checkpoint_path)
+        loaded_v = checkpoint.network.cont_map(lambda x, kc: ivy.array(ivy.to_device(x, self._net._dev)))
         if ivy.exists(self._net.v):
             # if build_mode is 'on_call', the network variables will not have been built yet
-            assert (self._net.v.shapes == loaded_v.shapes).all_true(assert_is_bool=True)
+            assert (self._net.v.cont_shapes == loaded_v.cont_shapes).cont_all_true()
         self._net.v = loaded_v
-        self._optimizer.set_state(checkpoint.optimizer.map(lambda x, kc: ivy.to_device(x, self._net.spec.dev_strs[0])))
+        self._optimizer.set_state(checkpoint.optimizer.cont_map(lambda x, kc: ivy.to_device(x, self._net.spec.dev_strs[0])))
 
     @property
     def optimizer(self):
@@ -54,4 +54,4 @@ class CheckpointManager:
         checkpoint = ivy.Container({'network': self._checkpoint.net.v,
                                     'optimizer': self._checkpoint.optimizer.state})
         self._latest_checkpoint_fpath = os.path.join(self._directory, 'chkpt-{}.hdf5'.format(step))
-        checkpoint.to_disk_as_hdf5(self._latest_checkpoint_fpath)
+        checkpoint.cont_to_disk_as_hdf5(self._latest_checkpoint_fpath)

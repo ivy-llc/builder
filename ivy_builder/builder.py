@@ -71,9 +71,9 @@ def json_spec_from_fpath(json_spec_path, json_fname, store_duplicates=False):
                     else:
                         return x
 
-                parsed_json_cont = parsed_json_cont.map(map_fn)
+                parsed_json_cont = parsed_json_cont.cont_map(map_fn)
                 json_spec = ivy.Container.cont_combine(parsed_json_cont,
-                                                  json_spec.prune_key_chains(duplicate_key_chains))
+                                                  json_spec.cont_prune_key_chains(duplicate_key_chains))
             else:
                 json_spec = ivy.Container.cont_combine(ivy.Container(parse_json_to_cont(fpath)), json_spec)
         if base_dir.split('/')[-1] == 'json_args':
@@ -209,15 +209,15 @@ def spec_to_dict(spec):
         except (TypeError, OverflowError):
             return False
 
-    prev_spec_len = len([x for x in spec.to_iterator()])
-    spec = spec.map(lambda x, kc: x.spec if hasattr(x, 'spec') else x)
-    new_spec_len = len([x for x in spec.to_iterator()])
+    prev_spec_len = len([x for x in spec.cont_to_iterator()])
+    spec = spec.cont_map(lambda x, kc: x.spec if hasattr(x, 'spec') else x)
+    new_spec_len = len([x for x in spec.cont_to_iterator()])
     while new_spec_len > prev_spec_len:
         prev_spec_len = new_spec_len
-        spec = spec.map(lambda x, kc: x.spec if hasattr(x, 'spec') else x)
-        new_spec_len = len([x for x in spec.to_iterator()])
-    spec = spec.map(lambda x, kc: x if _is_jsonable(x) else str(x))
-    return spec.to_dict()
+        spec = spec.cont_map(lambda x, kc: x.spec if hasattr(x, 'spec') else x)
+        new_spec_len = len([x for x in spec.cont_to_iterator()])
+    spec = spec.cont_map(lambda x, kc: x if _is_jsonable(x) else str(x))
+    return spec.cont_to_dict()
 
 
 def _obj_to_class_str(obj_in):
@@ -229,16 +229,16 @@ def trainer_to_spec_args_dict(trainer):
     args_dict['data_loader_class'] = _obj_to_class_str(trainer.spec.data_loader)
     args_dict['network_class'] = _obj_to_class_str(trainer.spec.network)
     args_dict['trainer_class'] = _obj_to_class_str(trainer)
-    args_dict['dataset_dirs_args'] = ivy.Container(trainer.spec.data_loader.spec.dataset_spec.dirs.kwargs).to_dict()
+    args_dict['dataset_dirs_args'] = ivy.Container(trainer.spec.data_loader.spec.dataset_spec.dirs.kwargs).cont_to_dict()
     args_dict['dataset_dirs_class'] = _obj_to_class_str(trainer.spec.data_loader.spec.dataset_spec.dirs)
-    args_dict['dataset_spec_args'] = ivy.Container(trainer.spec.data_loader.spec.dataset_spec.kwargs).to_dict()
+    args_dict['dataset_spec_args'] = ivy.Container(trainer.spec.data_loader.spec.dataset_spec.kwargs).cont_to_dict()
     args_dict['dataset_spec_class'] = _obj_to_class_str(trainer.spec.data_loader.spec.dataset_spec)
-    args_dict['data_loader_spec_args'] = ivy.Container(trainer.spec.data_loader.spec.kwargs).to_dict()
+    args_dict['data_loader_spec_args'] = ivy.Container(trainer.spec.data_loader.spec.kwargs).cont_to_dict()
     args_dict['data_loader_spec_class'] = _obj_to_class_str(trainer.spec.data_loader.spec)
-    args_dict['network_spec_args'] = ivy.Container(trainer.spec.network.spec.kwargs).to_dict()
+    args_dict['network_spec_args'] = ivy.Container(trainer.spec.network.spec.kwargs).cont_to_dict()
     args_dict['network_spec_class'] = _obj_to_class_str(trainer.spec.network.spec)
-    args_dict['trainer_spec_args'] = ivy.Container(trainer.spec.kwargs).prune_key_chains(
-        ['data_loader', 'network']).to_dict()
+    args_dict['trainer_spec_args'] = ivy.Container(trainer.spec.kwargs).cont_prune_key_chains(
+        ['data_loader', 'network']).cont_to_dict()
     args_dict['trainer_spec_class'] = _obj_to_class_str(trainer.spec)
     return args_dict
 

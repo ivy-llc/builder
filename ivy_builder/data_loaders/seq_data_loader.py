@@ -166,9 +166,9 @@ class SeqDataLoader(DataLoader):
                 container = ivy.Container(container_dict).cont_map(self._to_tensor)
                 window_containers.append(container)
             window_containers += [container] * (max_seq_len - seq_len - 1)  # padding for shorter sequences
-            joined_window_containers = ivy.Container.concat(window_containers, axis=1)
+            joined_window_containers = ivy.Container.static_concat(window_containers, axis=1)
             all_containers.append(joined_window_containers)
-        return ivy.Container.concat(all_containers, axis=0)
+        return ivy.Container.static_concat(all_containers, axis=0)
 
     # Multiprocessing Sizes #
     # ----------------------#
@@ -227,24 +227,28 @@ class SeqDataLoader(DataLoader):
         seq_idx = int(seq_info.seq_idx[0])
         seq_len = int(seq_info.length[0])
         new_len = self._compute_seq_len(seq_idx, seq_len, self._spec.containers_to_skip)
-        seq_info = seq_info.copy()
+        seq_info = seq_info.cont_copy()
         seq_info.length = ivy.ones_like(seq_info.length) * new_len
         return seq_info
 
     def _group_tensor_into_windowed_tensor_simple(self, x, seq_info):
+        update_seq_length = seq_info.length is x
         seq_info = self._update_seq_info_for_window(seq_info)
         if self._fixed_sequence_length:
             return ivy.reshape(ivy.gather_nd(x, ivy.array(self._gather_idxs)),
                                (self._windows_per_seq, self._window_size) + x.shape[1:])
         else:
-            num_windows_in_seq = int(ivy.to_numpy(ivy.maximum(seq_info.length[0] - self._window_size + 1, 1)))
-            window_idxs_in_seq = ivy.arange(num_windows_in_seq, 0, 1)
-            gather_idxs = ivy.tile(ivy.reshape(ivy.arange(self._window_size, 0, 1), (1, self._window_size)),
+            if update_seq_length:
+                if int(seq_info.length[0]) < self._window_size:
+                    ivy.inplace_update(x, seq_info.length*0 + self._window_size)
+            seq_len  = int(seq_info.length[0])
+            num_windows_in_seq = math.ceil(seq_len / self._window_size )
+            window_idxs_in_seq = ivy.arange(0, num_windows_in_seq, 1)
+            gather_idxs = ivy.tile(ivy.reshape(ivy.arange(0, self._window_size, 1), (1, self._window_size)),
                                    (num_windows_in_seq, 1)) + ivy.expand_dims(window_idxs_in_seq, axis=-1)
             gather_idxs_flat = ivy.reshape(gather_idxs, (self._window_size * num_windows_in_seq, 1))
             return ivy.reshape(ivy.gather_nd(x, gather_idxs_flat),
-                               (num_windows_in_seq, self._window_size) + x.shape[1:])
-
+                               (num_windows_in_seq,  self._window_size) + x.shape[1:])
     def _group_tensor_into_windowed_tensor(self, x, valid_first_frame):
         if self._window_size == 1:
             valid_first_frame_pruned = ivy.astype(valid_first_frame[:, 0], 'bool')
@@ -299,7 +303,7 @@ class SeqDataLoader(DataLoader):
                                 if json_str != '' else
                                 ivy.Container(json.loads(json_strings_stack[highest_idx_entry])).cont_map(
                                     self._to_tensor)[0] for json_str in json_strings_stack]
-        return ivy.Container.concat(json_container_stack, axis=0)
+        return ivy.Container.static_concat(json_container_stack, axis=0)
 
     # container pruning
 
@@ -315,14 +319,14 @@ class SeqDataLoader(DataLoader):
             str_path = bytearray(ivy.to_numpy(filepath).tolist()).decode()
             full_path = os.path.abspath(os.path.join(self._container_data_dir, str_path))
             if self._spec.array_mode == 'hdf5':
-                cont = ivy.Container.from_disk_as_hdf5(full_path + '.hdf5')
+                cont = ivy.Container.cont_from_disk_as_hdf5(full_path + '.hdf5')
             elif self._spec.array_mode == 'pickled':
-                cont = ivy.Container.from_disk_as_pickled(full_path + '.pickled')
+                cont = ivy.Container.cont_from_disk_as_pickled(full_path + '.pickled')
             else:
                 raise Exception('array_mode must be one of [ hdf5 | pickled ],'
                                 'but found {}'.format(self._spec.array_mode))
             conts.append(cont)
-        return ivy.Container.concat(conts, axis=0)
+        return ivy.Container.static_concat(conts, axis=0)
 
     # images
 
@@ -370,7 +374,7 @@ class SeqDataLoader(DataLoader):
             imgs.append(img)
         img0 = imgs[0]
         if isinstance(img0, ivy.Container):
-            return ivy.Container.concat(imgs, axis=0)
+            return ivy.Container.static_concat(imgs, axis=0)
         elif ivy.is_array(img0):
             return ivy.concat(imgs, axis=0)
         else:
@@ -524,10 +528,10 @@ class SeqDataLoader(DataLoader):
                                             [self._spec.dataset_spec.sequence_lengths] * len(container_idx_map)))
             self._windows_per_seq = self._sequence_lengths[0] - self._window_size + 1
             # windowing values
-            window_idxs_per_seq = ivy.reshape(ivy.arange(self._windows_per_seq, 0, 1), (self._windows_per_seq, 1))
+            window_idxs_per_seq = ivy.reshape(ivy.arange(0, self._windows_per_seq, 1), (self._windows_per_seq, 1))
             gather_idxs_list = list()
             for x in window_idxs_per_seq:
-                gather_idxs_list.append(ivy.expand_dims(ivy.arange(x[0] + self._window_size, x[0], 1), axis=0))
+                gather_idxs_list.append(ivy.expand_dims(ivy.arange(x[0], x[0] + self._window_size, 1), axis=0))
             gather_idxs = ivy.concat(gather_idxs_list, axis=0)
             self._gather_idxs = \
                 ivy.to_numpy(ivy.reshape(gather_idxs, (self._windows_per_seq * self._window_size, 1))).tolist()
@@ -548,9 +552,9 @@ class SeqDataLoader(DataLoader):
                 container_slices = self._prune_unused_key_chains(container_slices)
 
             dataset = Dataset(
-                ivy.Container.list_stack([c[0] for c in container_slices.unstack(0, container_slices.shape[0])], 0),
+                ivy.Container.cont_list_stack([c for c in container_slices.unstack(axis=0)], dim=0),
                 'base',
-                container_slices.shape[0],
+                container_slices.cont_shape[0],
                 numpy_loading=True,
                 cache_size=self._base_cache_size,
                 queue_timeout=self._spec.queue_timeout)

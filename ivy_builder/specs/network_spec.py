@@ -48,8 +48,8 @@ class NetworkSpec(Spec, abc.ABC):
                     self.subnets[k].network_class = load_class_from_str(subet_spec.network_class)
                 else:
                     self.subnets[k].network_class = subet_spec.network_class
-                self.subnets[k].store_vars = ivy.default(self.subnets[k].if_exists('store_vars'), True)
-                self.subnets[k].build_mode = ivy.default(self.subnets[k].if_exists('build_mode'), self.build_mode)
+                self.subnets[k].store_vars = ivy.default(self.subnets[k].cont_cont_if_exists('store_vars'), True)
+                self.subnets[k].build_mode = ivy.default(self.subnets[k].cont_if_exists('build_mode'), self.build_mode)
                 self.subnets[k].dataset_spec = dataset_spec
                 self.subnets[k].dev_strs = dev_strs
         self._kwargs = kw

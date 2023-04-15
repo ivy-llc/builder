@@ -45,7 +45,7 @@ class ExampleTrainer(Trainer):
 
     def _compute_cost(self, network, batch, dev_str, v=None):
         network_output = network(batch.x, v=v)
-        return ivy.mean((batch.target - network_output)**2)[0]
+        return ivy.mean((batch.target - network_output)**2, keepdims=True)[0]
 
     def _learning_rate_func(self, global_step):
         return self._spec.initial_learning_rate

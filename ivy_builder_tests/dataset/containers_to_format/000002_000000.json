@@ -1,8 +1,8 @@
 {
  "seq_info": {
-  "seq_idx": 2,
-  "idx": 0,
-  "length": 2
+  "seq_idx": [[2]],
+  "idx": [[0]],
+  "length": [[2]]
  },
  "actions": [
   [

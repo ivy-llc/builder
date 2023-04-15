@@ -57,8 +57,8 @@ class Trainer:
         self._moving_average_loss = 0
 
         # set seed
-        np.random.seed(self._spec.seed)
-        ivy.seed(seed_value=self._spec.seed)
+        np.random.seed(self._spec['seed'])
+        ivy.seed(seed_value=self._spec['seed'])
 
         # uninitialized variables
         self._chkpt = None
@@ -93,7 +93,7 @@ class Trainer:
         self._partial_grad_updates = bool(self._net_spec.v_keychains)
 
         # multi-dev - to check!
-        self._dev_str = ivy.default(lambda: self._spec.dev_strs[0], ivy.default_device(), True)
+        self._dev_str = ivy.default(lambda: self._spec.dev_strs[0], ivy.default_device(), catch_exceptions=True)
         if len(self._spec.dev_strs) > 1:
             if self._network.built:
                 raise Exception('Network must use either explicit or on_call build modes if training on multiple'
@@ -107,13 +107,13 @@ class Trainer:
             dev_mapper = None
             self._multi_dev = False
 
-        # device manager - to check!
-        if (self._multi_dev and self._spec.tune_device_allocation) or self._spec.tune_splitting:
-            self._dev_manager = ivy.DevManager(
-                dev_mapper, self._spec.dev_strs, tune_dev_alloc=(self._multi_dev and self._spec.tune_device_allocation),
-                tune_dev_splits=self._spec.tune_splitting)
-        else:
-            self._dev_manager = None
+        # # device manager - to check!
+        # if (self._multi_dev and self._spec.tune_device_allocation) or self._spec.tune_splitting:
+        #     self._dev_manager = ivy.DevManager(
+        #         dev_mapper, self._spec.dev_strs, tune_dev_alloc=(self._multi_dev and self._spec.tune_device_allocation),
+        #         tune_dev_splits=self._spec.tune_splitting)
+        # else:
+        #     self._dev_manager = None
 
         # compilation
         self._compile_network_once_tuned = False
@@ -363,8 +363,8 @@ class Trainer:
         if self._net_spec.build_mode == 'explicit':
             self._network.build()
         first_batch = self._spec.data_loader.get_first_batch()
-        if ivy.exists(self._dev_manager):
-            self._dev_manager.dim_size = first_batch.shape[0]
+        # if ivy.exists(self._dev_manager):
+        #     self._dev_manager.dim_size = first_batch.shape[0]
         # for on_call builds
         self._compute_cost(self._network, first_batch[0:1], self._spec.dev_strs[0])
         # compile
@@ -404,10 +404,10 @@ class Trainer:
 
     def _raw_execute_with_grads(self, network, dev_str, batch, network_v):
         cost, gradients = ivy.execute_with_gradients(
-            lambda v: self._compute_cost(network, batch, dev_str, v=network_v.set_at_key_chains(v)),
-            network_v.at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
+            lambda v: self._compute_cost(network, batch, dev_str, v=network_v.cont_set_at_key_chains(v)),
+            network_v.cont_at_key_chains(self._net_spec.v_keychains, ignore_none=True) if
             self._net_spec.keep_v_keychains else
-            network_v.prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
+            network_v.cont_prune_key_chains(self._net_spec.v_keychains, ignore_none=True))
         return cost, gradients
 
     def _split_execute_with_grads(self, network, dev_str, batch, network_v):
@@ -416,31 +416,31 @@ class Trainer:
 
     def _dev_manager_execute_with_grads(self, network, batch):
         # ToDo: assign this function in constructor rather than performing checks on each training step
-        dev_manager_exists = ivy.exists(self._dev_manager)
-        tuned = not dev_manager_exists or self._dev_manager.tuned
-        if self._compile_network_once_tuned and tuned:
-            network.compile_on_next_step()
-            self._compile_network_once_tuned = False
-        if self._compile_optimizer_once_tuned and tuned:
-            self._optimizer.compile_on_next_step()
-            self._compile_optimizer_once_tuned = False
-        if ivy.exists(self._dev_manager):
-            if self._multi_dev:
-                if not isinstance(batch, ivy.MultiDevContainer): # to check!
-                    batch = batch.to_multi_dev(self._spec.dev_strs)
-                return self._dev_manager.map(distributed={"batch": batch.at_devs()},
-                                             to_clone={"network_v": network.v})
-            ret = None
-            oom = False
-            while ret is None:
-                try:
-                    ret = self._split_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
-                except RuntimeError as e:
-                    if oom:
-                        raise Exception('Out of Memory Error raise twice consecutively {}'.format(e))
-                    oom = True
-                self._dev_manager.tune_step(oom)
-            return ret
+        # dev_manager_exists = ivy.exists(self._dev_manager)
+        # tuned = not dev_manager_exists or self._dev_manager.tuned
+        # if self._compile_network_once_tuned and tuned:
+        #     network.compile_on_next_step()
+        #     self._compile_network_once_tuned = False
+        # if self._compile_optimizer_once_tuned and tuned:
+        #     self._optimizer.compile_on_next_step()
+        #     self._compile_optimizer_once_tuned = False
+        # if ivy.exists(self._dev_manager):
+        #     if self._multi_dev:
+        #         if not isinstance(batch, ivy.MultiDevContainer): # to check!
+        #             batch = batch.to_multi_dev(self._spec.dev_strs)
+        #         return self._dev_manager.map(distributed={"batch": batch.at_devs()},
+        #                                      to_clone={"network_v": network.v})
+        #     ret = None
+        #     oom = False
+        #     while ret is None:
+        #         try:
+        #             ret = self._split_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
+        #         except RuntimeError as e:
+        #             if oom:
+        #                 raise Exception('Out of Memory Error raise twice consecutively {}'.format(e))
+        #             oom = True
+        #         self._dev_manager.tune_step(oom)
+        #     return ret
         return self._split_execute_with_grads(network, self._spec.dev_strs[0], batch, network.v)
 
     def _optimizer_step(self, v, grads):
@@ -546,7 +546,7 @@ class Trainer:
         checkpoint = ivy.Container({'network': self._network.v,
                                     'optimizer': self._optimizer.state})
         os.makedirs('/'.join(checkpoint_path.split('/')[:-1]), exist_ok=True)
-        checkpoint.to_disk_as_hdf5(checkpoint_path)
+        checkpoint.cont_to_disk_as_hdf5(checkpoint_path)
 
     def restore(self, checkpoint_path: str, global_step: int = None) -> None:
         """
@@ -581,8 +581,8 @@ class Trainer:
         """
         Close this trainer, and destroy all child objects or processes which may not be garbage collected.
         """
-        if ivy.exists(self._dev_manager):
-            self._dev_manager.__del__()
+        # if ivy.exists(self._dev_manager):
+        #     self._dev_manager.__del__()
         self._spec.data_loader.close()
 
     # Getters #
