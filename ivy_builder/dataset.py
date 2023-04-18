@@ -546,7 +546,7 @@ class Dataset:
     def to_dev(self, name, dev_str, num_processes=1):
 
         def cont_to_dev(cont):
-            return cont.to_dev(dev_str)
+            return cont.to_device(dev_str)
 
         return Dataset(base_dataset=self,
                        name=name,

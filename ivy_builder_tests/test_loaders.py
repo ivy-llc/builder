@@ -52,7 +52,7 @@ def test_seq_loader_multi_dev(dev_str, f):
         assert batch.actions.shape == (2, 1, 6)
         assert batch.observations.image.ego.ego_cam_px.rgb.shape == (2, 1, 32, 32, 3)
         assert batch.observations.image.ego.ego_cam_px.rgb.shape == (2, 1, 32, 32, 3)
-        assert batch.array.data.shape == (2, 1, 3)
+        assert batch['array'].data.shape == (2, 1, 3)
 
         # test values
         if len(dev_strs) == 1:
