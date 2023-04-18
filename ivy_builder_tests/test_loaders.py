@@ -110,7 +110,7 @@ def test_seq_loader_fixed_seq_len(dev_str, f, container_load_mode, array_mode, w
         assert batch.actions.shape == (1, 1, 6)
         assert batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
         assert batch.observations.image.ego.ego_cam_px.rgb.shape == (1, 1, 32, 32, 3)
-        assert batch.array.data.shape == (1, 1, 3)
+        assert batch['array'].data.shape == (1, 1, 3)
 
         # test values
         if sequence_lengths == 2 and num_sequences == 1:
@@ -187,7 +187,7 @@ def test_seq_loader(dev_str, f, container_load_mode, array_mode, with_prefetchin
         assert train_batch.actions.shape == (3, 2, 6)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
         assert train_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
-        assert train_batch.array.data.shape == (3, 2, 3)
+        assert train_batch['array'].data.shape == (3, 2, 3)
 
         # test values
         window_idxs = [i % 4 for i in list(range(i*batch_size, i*batch_size+batch_size))]
@@ -199,11 +199,11 @@ def test_seq_loader(dev_str, f, container_load_mode, array_mode, with_prefetchin
                            if si != 0 else wi for si, wi in zip(seq_idxs, window_idxs)]
         if shuffle_buffer_size == 0:
             assert np.allclose(ivy.to_numpy(train_batch.seq_info.length),
-                               np.tile(np.array(padded_seq_lens).reshape(-1, 1), (1, 2)))
+                               np.tile(np.asarray(padded_seq_lens, dtype=np.float32).reshape(-1, 1), (1, 2)))
             assert np.allclose(ivy.to_numpy(train_batch.seq_info.idx),
-                               np.concatenate((np.array(in_seq_win_idxs).reshape(-1, 1),
-                                               np.array(in_seq_win_idxs).reshape(-1, 1) +
-                                               np.array(unpadded_mask).reshape(-1, 1)), -1))
+                               np.concatenate((np.asarray(in_seq_win_idxs, dtype='float32').reshape(-1, 1),
+                                               np.asarray(in_seq_win_idxs, dtype='float32').reshape(-1, 1) +
+                                               np.asarray(unpadded_mask, dtype='float32').reshape(-1, 1)), -1))
 
         # get validation batch
         valid_batch = valid_data_loader.get_next_batch()
@@ -211,7 +211,7 @@ def test_seq_loader(dev_str, f, container_load_mode, array_mode, with_prefetchin
         # test cardinality
         assert valid_batch.actions.shape == (3, 2, 6)
         assert valid_batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
-        assert valid_batch.array.data.shape == (3, 2, 3)
+        assert valid_batch['array'].data.shape == (3, 2, 3)
 
         # test values
         window_idxs = [i % 5 for i in list(range(i*batch_size, i*batch_size+batch_size))]
@@ -223,11 +223,11 @@ def test_seq_loader(dev_str, f, container_load_mode, array_mode, with_prefetchin
                            if si != 0 else wi for si, wi in zip(seq_idxs, window_idxs)]
         if shuffle_buffer_size == 0:
             assert np.allclose(ivy.to_numpy(valid_batch.seq_info.length),
-                               np.tile(np.array(seq_lens).reshape(-1, 1), (1, 2)))
+                               np.tile(np.asarray(padded_seq_lens, dtype=np.float32).reshape(-1, 1), (1, 2)))
             assert np.allclose(ivy.to_numpy(valid_batch.seq_info.idx),
-                               np.concatenate((np.array(in_seq_win_idxs).reshape(-1, 1),
-                                               np.array(in_seq_win_idxs).reshape(-1, 1) +
-                                               np.array(unpadded_mask).reshape(-1, 1)), -1))
+                               np.concatenate((np.asarray(in_seq_win_idxs, dtype='float32').reshape(-1, 1),
+                                               np.asarray(in_seq_win_idxs, dtype='float32').reshape(-1, 1) +
+                                               np.asarray(unpadded_mask, dtype='float32').reshape(-1, 1)), -1))
 
     # delete
     train_data_loader.close()
@@ -251,7 +251,7 @@ def test_seq_loader(dev_str, f, container_load_mode, array_mode, with_prefetchin
     assert batch.actions.shape == (3, 2, 6)
     assert batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
     assert batch.observations.image.ego.ego_cam_px.rgb.shape == (3, 2, 32, 32, 3)
-    assert batch.array.data.shape == (3, 2, 3)
+    assert batch['array'].data.shape == (3, 2, 3)
 
     # test removed key chain
     assert 'depth' not in batch.observations.image.ego.ego_cam_px
