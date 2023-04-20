@@ -5,6 +5,7 @@
   :template: top_level_toc.rst
   :recursive:
   :caption: API Reference
+  :hide-table:
 
   ivy_builder.abstract
   ivy_builder.data_loaders
