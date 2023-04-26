@@ -4,7 +4,6 @@ from ivy_builder.abstract.data_loader import DataLoader
 
 
 class EmptyDataLoader(DataLoader):
-
     def __init__(self, data_loader_spec: DataLoaderSpec) -> None:
         """
         base class for loading data from disk for training

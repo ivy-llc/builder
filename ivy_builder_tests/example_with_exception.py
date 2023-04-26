@@ -1,6 +1,6 @@
 def main():
-    raise Exception('This example raised an exception')
+    raise Exception("This example raised an exception")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

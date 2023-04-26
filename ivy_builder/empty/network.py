@@ -4,9 +4,7 @@ from ivy_builder.abstract.network import Network
 
 
 class EmptyNetwork(Network):
-
-    def __init__(self,
-                 network_spec: NetworkSpec) -> None:
+    def __init__(self, network_spec: NetworkSpec) -> None:
         """
         base class for any networks to be used with this core tensorflow training repo
         """

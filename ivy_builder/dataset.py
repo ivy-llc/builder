@@ -27,12 +27,11 @@ class EmptyDatasetException(Exception):
 
 # noinspection PyMissingConstructor
 class Cache:
-    
     def __init__(self, max_size):
         self._max_size = max_size
         self._used_keys = list()
         self._dict = dict()
-        
+
     def __setitem__(self, key, value):
         if key in self:
             self._used_keys.remove(key)
@@ -43,7 +42,7 @@ class Cache:
             key_to_del = self._used_keys.pop(0)
             del self._dict[key_to_del]
         self._dict[key] = value
-        
+
     def __getitem__(self, item):
         return self._dict[item]
 
@@ -52,10 +51,23 @@ class Cache:
 
 
 class Dataset:
-
-    def __init__(self, base_dataset, name, size, base_slice_fn=None, trans_fn=None, slice_fn=None,
-                 elementwise_query_fn=True, with_caching=True, cache_size=1, num_processes=1, numpy_loading=False,
-                 prefetching=False, queue_timeout=None, subprocess_depth=0):
+    def __init__(
+        self,
+        base_dataset,
+        name,
+        size,
+        base_slice_fn=None,
+        trans_fn=None,
+        slice_fn=None,
+        elementwise_query_fn=True,
+        with_caching=True,
+        cache_size=1,
+        num_processes=1,
+        numpy_loading=False,
+        prefetching=False,
+        queue_timeout=None,
+        subprocess_depth=0,
+    ):
         self._name = name
         self._size = size
         self._base_slice_fn_arg = base_slice_fn
@@ -73,7 +85,9 @@ class Dataset:
         self._with_caching = with_caching
         self._cache_size = cache_size
         self._cache = Cache(cache_size)
-        self._num_processes = multiprocessing().cpu_count() if num_processes is None else num_processes
+        self._num_processes = (
+            multiprocessing().cpu_count() if num_processes is None else num_processes
+        )
         self._numpy_loading = numpy_loading
         self._prefetching = prefetching
         self._queue_timeout = ivy.default(queue_timeout, ivy.get_queue_timeout())
@@ -102,16 +116,29 @@ class Dataset:
     def _deep_copy(self, num_processes=None):
         # noinspection PyProtectedMember
         return Dataset(
-            base_dataset=self._base_dataset if isinstance(self._base_dataset, ivy.Container)
-            else self._base_dataset._deep_copy(), name=self._name, size=self._size,
-            base_slice_fn=self._base_slice_fn_arg, trans_fn=self._trans_fn, slice_fn=self._slice_fn,
-            elementwise_query_fn=self._elementwise_query_fn, with_caching=self._with_caching,
-            cache_size=self._cache_size, num_processes=ivy.default(num_processes, self._num_processes),
-            numpy_loading=self._numpy_loading, prefetching=self._prefetching, queue_timeout=self._queue_timeout,
-            subprocess_depth=self._subprocess_depth + 1)
+            base_dataset=self._base_dataset
+            if isinstance(self._base_dataset, ivy.Container)
+            else self._base_dataset._deep_copy(),
+            name=self._name,
+            size=self._size,
+            base_slice_fn=self._base_slice_fn_arg,
+            trans_fn=self._trans_fn,
+            slice_fn=self._slice_fn,
+            elementwise_query_fn=self._elementwise_query_fn,
+            with_caching=self._with_caching,
+            cache_size=self._cache_size,
+            num_processes=ivy.default(num_processes, self._num_processes),
+            numpy_loading=self._numpy_loading,
+            prefetching=self._prefetching,
+            queue_timeout=self._queue_timeout,
+            subprocess_depth=self._subprocess_depth + 1,
+        )
 
     def _initialize_all_workers(self):
-        if not isinstance(self._base_dataset, ivy.Container) and self._num_processes == 1:
+        if (
+            not isinstance(self._base_dataset, ivy.Container)
+            and self._num_processes == 1
+        ):
             # noinspection PyProtectedMember
             self._base_dataset._initialize_all_workers()
         if self._num_processes > 1:
@@ -124,7 +151,9 @@ class Dataset:
                 index_queue = multiproc.Queue()
                 output_queue = multiproc.Queue()
                 worker = multiproc.Process(
-                    target=self._worker_fn, args=(index_queue, output_queue, dataset_copy, self._numpy_loading))
+                    target=self._worker_fn,
+                    args=(index_queue, output_queue, dataset_copy, self._numpy_loading),
+                )
                 worker.start()
                 self._slice_queues.append(index_queue)
                 self._output_queues.append(output_queue)
@@ -133,32 +162,47 @@ class Dataset:
         self._workers_initialized = True
 
     @staticmethod
-    def _slice_dataset_with_error_checks(dataset, slice_obj, log_working_slice=False, trans_fn=None):
+    def _slice_dataset_with_error_checks(
+        dataset, slice_obj, log_working_slice=False, trans_fn=None
+    ):
         try:
             ret = dataset[slice_obj]
             if not log_working_slice:
                 return ret
             is_cont = isinstance(dataset, ivy.Container)
-            dataset_name = 'cont' if is_cont else dataset.name
+            dataset_name = "cont" if is_cont else dataset.name
             if is_cont and trans_fn:
                 ret = trans_fn(ret)
             if not ret.cont_shape or not ret.cont_shape[0] > 0:
-                logging.info('{} dataset {} is empty'.format(dataset_name, slice_obj))
-                raise EmptyDatasetException('{} dataset {} was empty'.format(dataset_name, slice_obj))
-            logging.info('{} dataset {} succeeded, producing container:\n{}\n'.format(
-                dataset_name, slice_obj, ret[0].cont_remove_print_limit()))
+                logging.info("{} dataset {} is empty".format(dataset_name, slice_obj))
+                raise EmptyDatasetException(
+                    "{} dataset {} was empty".format(dataset_name, slice_obj)
+                )
+            logging.info(
+                "{} dataset {} succeeded, producing container:\n{}\n".format(
+                    dataset_name, slice_obj, ret[0].cont_remove_print_limit()
+                )
+            )
         except LoggedDatasetException:
             sys.exit(1)
         except Exception as e:
             is_cont = isinstance(dataset, ivy.Container)
-            dataset_name = 'cont' if is_cont else dataset.name
-            logging.info('{} dataset {} failed'.format(dataset_name, slice_obj))
+            dataset_name = "cont" if is_cont else dataset.name
+            logging.info("{} dataset {} failed".format(dataset_name, slice_obj))
             if not is_cont:
                 # noinspection PyProtectedMember
                 Dataset._slice_dataset_with_error_checks(
-                    dataset._base_dataset, dataset._base_slice_fn(slice_obj), True, dataset._trans_fn)
+                    dataset._base_dataset,
+                    dataset._base_slice_fn(slice_obj),
+                    True,
+                    dataset._trans_fn,
+                )
             if not isinstance(e, EmptyDatasetException):
-                logging.info('traceback for {} dataset {} failure:'.format(dataset_name, slice_obj))
+                logging.info(
+                    "traceback for {} dataset {} failure:".format(
+                        dataset_name, slice_obj
+                    )
+                )
                 logging.info(traceback.format_exc())
             raise LoggedDatasetException(str(e))
 
@@ -173,7 +217,7 @@ class Dataset:
                 dataset.close()
                 return
             if numpy_loading:
-                ivy.set_backend('numpy')
+                ivy.set_backend("numpy")
             item = Dataset._slice_dataset_with_error_checks(dataset, slice_obj)
             if numpy_loading:
                 ivy.unset_backend()
@@ -197,7 +241,9 @@ class Dataset:
     def _ensure_number_is_int(val):
         val_rounded = round(val)
         if abs(val_rounded - val) > 1e-6:
-            raise Exception('Trying to slice ivy Container with non-integer slice {}'.format(val))
+            raise Exception(
+                "Trying to slice ivy Container with non-integer slice {}".format(val)
+            )
         return int(val_rounded)
 
     @staticmethod
@@ -220,7 +266,7 @@ class Dataset:
     @staticmethod
     def _default_base_slice_fn(slice_obj):
         if isinstance(slice_obj, numbers.Number):
-            slice_obj = slice(slice_obj, slice_obj+1, 1)
+            slice_obj = slice(slice_obj, slice_obj + 1, 1)
         return slice_obj
 
     @staticmethod
@@ -240,15 +286,22 @@ class Dataset:
         base_dataset = Dataset._slice_dataset(base_slice_obj, self._base_dataset)
         if self._trans_fn is not None:
             if self._elementwise_query_fn:
-                vals = [self._trans_fn(base_dataset[i]) for i in range(base_dataset.cont_shape[0])]
+                vals = [
+                    self._trans_fn(base_dataset[i])
+                    for i in range(base_dataset.cont_shape[0])
+                ]
                 return ivy.Container.cont_list_stack(vals, 0)
             return self._trans_fn(base_dataset)
         return base_dataset
 
     def _get_item_from_slice_objs(self, base_slice_obj, slice_obj):
         if isinstance(base_slice_obj, tuple):
-            item = ivy.Container.cont_list_join((self._get_base_item(base_slice_obj[0]),
-                                            self._get_base_item(base_slice_obj[1])))
+            item = ivy.Container.cont_list_join(
+                (
+                    self._get_base_item(base_slice_obj[0]),
+                    self._get_base_item(base_slice_obj[1]),
+                )
+            )
         else:
             item = self._get_base_item(base_slice_obj)
         return self._slice_dataset(slice_obj, item, self._size)
@@ -287,11 +340,11 @@ class Dataset:
                 return [(False, slice_obj)]
         slice_objs = list()
         start = slice_obj.start
-        for i in np.arange(slice_obj.start, slice_obj.stop, 1.):
+        for i in np.arange(slice_obj.start, slice_obj.stop, 1.0):
             if i in cache:
                 if i != start:
                     slice_objs.append((False, slice(start, i, 1)))
-                slice_objs.append((True, slice(i, i+1, 1)))
+                slice_objs.append((True, slice(i, i + 1, 1)))
                 start = i + 1
         if start < slice_obj.stop:
             slice_objs.append((False, slice(start, slice_obj.stop, 1)))
@@ -303,8 +356,8 @@ class Dataset:
         if isinstance(so, numbers.Number):
             self._cache[so] = item
         else:
-            for i in np.arange(so.start, so.stop-1e-3, 1.):
-                self._cache[i] = Dataset._slice_dataset(i-so.start, item)
+            for i in np.arange(so.start, so.stop - 1e-3, 1.0):
+                self._cache[i] = Dataset._slice_dataset(i - so.start, item)
 
     def __del__(self):
         self.close()
@@ -336,7 +389,10 @@ class Dataset:
             if isinstance(slice_obj, numbers.Number):
                 return items[0]
             return items[0].cont_map(lambda x, kc: x if isinstance(x, list) else [x])
-        items_as_lists = [item.cont_map(lambda x, kc: x if isinstance(x, list) else [x]) for item in items]
+        items_as_lists = [
+            item.cont_map(lambda x, kc: x if isinstance(x, list) else [x])
+            for item in items
+        ]
         return ivy.Container.cont_list_join(items_as_lists)
 
     # Public #
@@ -346,7 +402,7 @@ class Dataset:
         if not self._workers_initialized:
             self._initialize_all_workers()
         if self._numpy_loading:
-            ivy.set_backend('numpy')
+            ivy.set_backend("numpy")
         if self._num_processes < 2 or isinstance(slice_obj, numbers.Number):
             ret = self._get_item(slice_obj)
             if self._numpy_loading:
@@ -355,90 +411,135 @@ class Dataset:
             return ret
         slice_size = int(round(slice_obj.stop - slice_obj.start))
         num_sub_slices = min(slice_size, self._num_processes)
-        slice_points = np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices+1)
+        slice_points = np.linspace(slice_obj.start, slice_obj.stop, num_sub_slices + 1)
         slice_sizes = np.round(slice_points[1:] - slice_points[:-1]).astype(np.int32)
         if Dataset._is_int(slice_obj.start) and Dataset._is_int(slice_obj.stop):
             slice_points = np.round(slice_points)
-        sub_slices = [slice(slice_points[i], slice_points[i+1], 1.) for i in range(num_sub_slices)]
+        sub_slices = [
+            slice(slice_points[i], slice_points[i + 1], 1.0)
+            for i in range(num_sub_slices)
+        ]
         if self._prefetching:
             self._queue_offset = int(not self._queue_offset)
         else:
             self._queue_offset = np.random.randint(0, self._num_processes)
-        q_idxs = [int((i + self._queue_offset) % self._num_processes) for i in range(len(sub_slices))]
+        q_idxs = [
+            int((i + self._queue_offset) % self._num_processes)
+            for i in range(len(sub_slices))
+        ]
         slice_queues = [self._slice_queues[qi] for qi in q_idxs]
         output_queues = [self._output_queues[qi] for qi in q_idxs]
         if self._prefetching:
             if self._first_pass:
-                [slice_queue.put(sub_slice) for slice_queue, sub_slice in zip(slice_queues, sub_slices)]
+                [
+                    slice_queue.put(sub_slice)
+                    for slice_queue, sub_slice in zip(slice_queues, sub_slices)
+                ]
             else:
                 slice_queues[-1].put(sub_slices[-1])
             if self._numpy_loading:
                 ivy.unset_backend()
             self._first_pass = False
-            return ivy.Container(queues=output_queues, queue_load_sizes=slice_sizes, queue_timeout=self._queue_timeout)
+            return ivy.Container(
+                queues=output_queues,
+                queue_load_sizes=slice_sizes,
+                queue_timeout=self._queue_timeout,
+            )
         else:
-            [slice_queue.put(sub_slice) for slice_queue, sub_slice in zip(slice_queues, sub_slices)]
+            [
+                slice_queue.put(sub_slice)
+                for slice_queue, sub_slice in zip(slice_queues, sub_slices)
+            ]
             # if ivy.wrapped_mode():
             #     items_as_lists = [ivy.Container(output_queue.get(timeout=self._queue_timeout)).to_ivy()
             #                       for output_queue in output_queues]
             # else:
-            items_as_lists = [ivy.Container(output_queue.get(timeout=self._queue_timeout))
-                                for output_queue in output_queues]
+            items_as_lists = [
+                ivy.Container(output_queue.get(timeout=self._queue_timeout))
+                for output_queue in output_queues
+            ]
             if self._numpy_loading:
                 ivy.unset_backend()
             self._first_pass = False
             return ivy.Container.cont_list_join(items_as_lists)
 
-    def map(self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None):
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=self._size,
-                       base_slice_fn=base_slice_fn,
-                       trans_fn=map_func,
-                       with_caching=self._with_caching,
-                       cache_size=self._cache_size,
-                       num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
-                       queue_timeout=self._queue_timeout)
+    def map(
+        self, name, map_func, num_processes=1, base_slice_fn=None, numpy_loading=None
+    ):
+        return Dataset(
+            base_dataset=self,
+            name=name,
+            size=self._size,
+            base_slice_fn=base_slice_fn,
+            trans_fn=map_func,
+            with_caching=self._with_caching,
+            cache_size=self._cache_size,
+            num_processes=num_processes,
+            numpy_loading=self._numpy_loading
+            if numpy_loading is None
+            else numpy_loading,
+            queue_timeout=self._queue_timeout,
+        )
 
     def batch(self, name, batch_size, num_processes=1, numpy_loading=None):
         def batch_array(x, _):
-            return [ivy.concat([ivy.expand_dims(item, axis=0) for item in x[i*batch_size:i*batch_size+batch_size]], axis=0)
-                    for i in range(math.ceil((len(x)/batch_size)))]
+            return [
+                ivy.concat(
+                    [
+                        ivy.expand_dims(item, axis=0)
+                        for item in x[i * batch_size : i * batch_size + batch_size]
+                    ],
+                    axis=0,
+                )
+                for i in range(math.ceil((len(x) / batch_size)))
+            ]
 
         def batch_cont(cont):
             return cont.cont_map(batch_array)
 
         def base_slice_fn(slc_obj):
             if isinstance(slc_obj, numbers.Number):
-                base_slice_obj =\
-                    slice(int(round(batch_size * slc_obj)), int(round(batch_size * slc_obj + batch_size)), 1)
+                base_slice_obj = slice(
+                    int(round(batch_size * slc_obj)),
+                    int(round(batch_size * slc_obj + batch_size)),
+                    1,
+                )
             else:
                 so_start = int(round(batch_size * slc_obj.start))
                 so_stop = int(round(batch_size * slc_obj.stop))
                 base_slice_obj = slice(so_start, so_stop, 1)
             return base_slice_obj
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=float(self._size / batch_size),
-                       base_slice_fn=base_slice_fn,
-                       trans_fn=batch_cont,
-                       elementwise_query_fn=False,
-                       with_caching=self._with_caching,
-                       cache_size=int(math.ceil(self._cache_size / batch_size)),
-                       num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
-                       queue_timeout=self._queue_timeout)
+        return Dataset(
+            base_dataset=self,
+            name=name,
+            size=float(self._size / batch_size),
+            base_slice_fn=base_slice_fn,
+            trans_fn=batch_cont,
+            elementwise_query_fn=False,
+            with_caching=self._with_caching,
+            cache_size=int(math.ceil(self._cache_size / batch_size)),
+            num_processes=num_processes,
+            numpy_loading=self._numpy_loading
+            if numpy_loading is None
+            else numpy_loading,
+            queue_timeout=self._queue_timeout,
+        )
 
-    def unbatch(self, name, num_processes=1, numpy_loading=None, cache_size=None, batch_sizes=None):
-
+    def unbatch(
+        self,
+        name,
+        num_processes=1,
+        numpy_loading=None,
+        cache_size=None,
+        batch_sizes=None,
+    ):
         unbatch_slice_dict = dict()
         slice_dict = dict()
         size_so_far = 0
         size = math.ceil(self._size)
         if isinstance(batch_sizes, int):
-            batch_sizes = [batch_sizes]*size
+            batch_sizes = [batch_sizes] * size
         for i in range(size):
             if batch_sizes is None:
                 data = self._get_item(i)
@@ -446,7 +547,9 @@ class Dataset:
             else:
                 data_size = batch_sizes[i]
             if i == size - 1 and self._size % 1 != 0:
-                data_size = int(round(data_size * (self._size - math.floor(self._size))))
+                data_size = int(
+                    round(data_size * (self._size - math.floor(self._size)))
+                )
             for j in range(data_size):
                 unbatch_slice_dict[size_so_far + j] = i
                 slice_dict[size_so_far + j] = j
@@ -462,7 +565,11 @@ class Dataset:
             return slice(so_start, so_stop, 1)
 
         def unbatch_fn(cont):
-            return cont.cont_map(lambda x, kc: [c for o in [ivy.unstack(item, axis=0) for item in x] for c in o])
+            return cont.cont_map(
+                lambda x, kc: [
+                    c for o in [ivy.unstack(item, axis=0) for item in x] for c in o
+                ]
+            )
 
         def slice_fn(slice_obj, sliced_dataset, dataset_size):
             if isinstance(slice_obj, numbers.Number):
@@ -477,19 +584,24 @@ class Dataset:
                 so = slice(so_start, so_stop, 1)
                 return Dataset._slice_dataset(so, sliced_dataset)
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=unrolled_size,
-                       base_slice_fn=base_slice_fn,
-                       trans_fn=unbatch_fn,
-                       slice_fn=slice_fn,
-                       elementwise_query_fn=False,
-                       with_caching=self._with_caching,
-                       cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size))
-                       if cache_size is None else cache_size,
-                       num_processes=num_processes,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
-                       queue_timeout=self._queue_timeout)
+        return Dataset(
+            base_dataset=self,
+            name=name,
+            size=unrolled_size,
+            base_slice_fn=base_slice_fn,
+            trans_fn=unbatch_fn,
+            slice_fn=slice_fn,
+            elementwise_query_fn=False,
+            with_caching=self._with_caching,
+            cache_size=int(math.ceil(self._cache_size * unrolled_size / self._size))
+            if cache_size is None
+            else cache_size,
+            num_processes=num_processes,
+            numpy_loading=self._numpy_loading
+            if numpy_loading is None
+            else numpy_loading,
+            queue_timeout=self._queue_timeout,
+        )
 
     def shuffle(self, name, shuffle_buffer_size, num_processes=1, numpy_loading=None):
         if shuffle_buffer_size == 0:
@@ -498,28 +610,39 @@ class Dataset:
         def cont_shuffle_fn(cont):
             return cont.shuffle()
 
-        pre_shuffled = self.batch('pre_' + name,
-                                  shuffle_buffer_size,
-                                  num_processes=num_processes,
-                                  numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading)
-        shuffled = Dataset(base_dataset=pre_shuffled,
-                           name=name,
-                           size=pre_shuffled.size,
-                           trans_fn=cont_shuffle_fn,
-                           with_caching=self._with_caching,
-                           cache_size=self._cache_size,
-                           num_processes=num_processes,
-                           numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
-                           queue_timeout=self._queue_timeout)
-        post_shuffled = shuffled.unbatch('post_' + name,
-                                         num_processes=num_processes,
-                                         numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
-                                         cache_size=self._cache_size,
-                                         batch_sizes=shuffle_buffer_size)
+        pre_shuffled = self.batch(
+            "pre_" + name,
+            shuffle_buffer_size,
+            num_processes=num_processes,
+            numpy_loading=self._numpy_loading
+            if numpy_loading is None
+            else numpy_loading,
+        )
+        shuffled = Dataset(
+            base_dataset=pre_shuffled,
+            name=name,
+            size=pre_shuffled.size,
+            trans_fn=cont_shuffle_fn,
+            with_caching=self._with_caching,
+            cache_size=self._cache_size,
+            num_processes=num_processes,
+            numpy_loading=self._numpy_loading
+            if numpy_loading is None
+            else numpy_loading,
+            queue_timeout=self._queue_timeout,
+        )
+        post_shuffled = shuffled.unbatch(
+            "post_" + name,
+            num_processes=num_processes,
+            numpy_loading=self._numpy_loading
+            if numpy_loading is None
+            else numpy_loading,
+            cache_size=self._cache_size,
+            batch_sizes=shuffle_buffer_size,
+        )
         return post_shuffled
 
     def prefetch(self, name, numpy_loading=None):
-
         # noinspection PyUnresolvedReferences
         def base_slice_fn(slc_obj):
             if isinstance(slc_obj, numbers.Number):
@@ -533,59 +656,71 @@ class Dataset:
         self._prefetching = True
         self._num_processes = 2
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=self._size,
-                       base_slice_fn=base_slice_fn,
-                       with_caching=self._with_caching,
-                       cache_size=self._cache_size,
-                       num_processes=1,
-                       numpy_loading=self._numpy_loading if numpy_loading is None else numpy_loading,
-                       queue_timeout=self._queue_timeout)
+        return Dataset(
+            base_dataset=self,
+            name=name,
+            size=self._size,
+            base_slice_fn=base_slice_fn,
+            with_caching=self._with_caching,
+            cache_size=self._cache_size,
+            num_processes=1,
+            numpy_loading=self._numpy_loading
+            if numpy_loading is None
+            else numpy_loading,
+            queue_timeout=self._queue_timeout,
+        )
 
     def to_dev(self, name, dev_str, num_processes=1):
-
         def cont_to_dev(cont):
             return cont.to_device(dev_str)
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=self._size,
-                       trans_fn=cont_to_dev,
-                       with_caching=self._with_caching,
-                       cache_size=self._cache_size,
-                       num_processes=num_processes,
-                       numpy_loading=False,
-                       queue_timeout=self._queue_timeout)
+        return Dataset(
+            base_dataset=self,
+            name=name,
+            size=self._size,
+            trans_fn=cont_to_dev,
+            with_caching=self._with_caching,
+            cache_size=self._cache_size,
+            num_processes=num_processes,
+            numpy_loading=False,
+            queue_timeout=self._queue_timeout,
+        )
 
     def to_devs(self, name, dev_strs, axis=0, num_processes=1):
-
         def cont_to_devs(cont):
             return cont.to_multi_dev(dev_strs, axis)
 
-        return Dataset(base_dataset=self,
-                       name=name,
-                       size=self._size,
-                       trans_fn=cont_to_devs,
-                       with_caching=self._with_caching,
-                       cache_size=self._cache_size,
-                       num_processes=num_processes,
-                       numpy_loading=False,
-                       queue_timeout=self._queue_timeout)
+        return Dataset(
+            base_dataset=self,
+            name=name,
+            size=self._size,
+            trans_fn=cont_to_devs,
+            with_caching=self._with_caching,
+            cache_size=self._cache_size,
+            num_processes=num_processes,
+            numpy_loading=False,
+            queue_timeout=self._queue_timeout,
+        )
 
     def cycle_for_debugging(self, offset=0, num_logs=100):
-        logging.info('\nabout to cycle through all elements in dataset {}!\n'.format(self._name))
-        log_freq = max(round(self._size/num_logs), 1)
+        logging.info(
+            "\nabout to cycle through all elements in dataset {}!\n".format(self._name)
+        )
+        log_freq = max(round(self._size / num_logs), 1)
         for i in range(offset, math.ceil(self._size)):
             if i % log_freq == 0:
-                logging.info('loading element {} of {}'.format(i, self._size))
-                logging.info('{}%'.format((i/self._size)*100))
+                logging.info("loading element {} of {}".format(i, self._size))
+                logging.info("{}%".format((i / self._size) * 100))
             # noinspection PyTypeChecker
             data = self[i]
             if i == 0:
-                logging.info('loaded first element successfully:')
+                logging.info("loaded first element successfully:")
                 logging.info(data)
-        logging.info('\nfinished cycling through all elements in dataset {}!\n'.format(self._name))
+        logging.info(
+            "\nfinished cycling through all elements in dataset {}!\n".format(
+                self._name
+            )
+        )
 
     def close(self):
         if not isinstance(self._base_dataset, ivy.Container):

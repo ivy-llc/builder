@@ -9,11 +9,8 @@ from ivy_builder.abstract.network import Network as BaseNetwork
 
 
 class NetworkGroup(BaseNetwork, ABC):
-
     # noinspection PyMissingConstructor
-    def __init__(self,
-                 spec: NetworkSpec,
-                 v=None) -> None:
+    def __init__(self, spec: NetworkSpec, v=None) -> None:
         """
         base class for any networks
         """
@@ -28,8 +25,9 @@ class NetworkGroup(BaseNetwork, ABC):
         """
         built_rets = list()
         for k, subnet_spec in self._spec.subnets.items():
-            subnet = subnet_spec.network_class(subnet_spec,
-                                               v=ivy.default(lambda: self._v_in[k], None, True))
+            subnet = subnet_spec.network_class(
+                subnet_spec, v=ivy.default(lambda: self._v_in[k], None, True)
+            )
             built_rets.append(subnet.build(*args, dev_str=self._dev_str, **kwargs))
             self._subnets[k] = subnet
         return ivy.Container(dict(zip(self._spec.subnets.keys(), built_rets)))
@@ -38,7 +36,9 @@ class NetworkGroup(BaseNetwork, ABC):
         """
         Network builder method. This should be overriden if additional building if required.
         """
-        return bool(np.prod([bool(ret) for ret in self._build_subnets(*args, **kwargs)]))
+        return bool(
+            np.prod([bool(ret) for ret in self._build_subnets(*args, **kwargs)])
+        )
 
     # Properties #
     # -----------#

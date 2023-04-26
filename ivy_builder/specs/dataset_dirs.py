@@ -7,9 +7,7 @@ from ivy_builder.specs.spec import locals_to_kwargs
 
 
 class DatasetDirs(Spec, abc.ABC):
-
-    def __init__(self,
-                 **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         """
         base class for storing directories necessary for the data loader
         """
