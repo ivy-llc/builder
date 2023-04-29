@@ -686,7 +686,7 @@ def test_seq_loader_wo_cont_load(dev_str, f, with_prefetching, shuffle_buffer_si
         if shuffle_buffer_size == 0:
             assert np.allclose(
                 ivy.to_numpy(valid_batch.seq_info.length),
-                np.tile(np.array(seq_lens).reshape(-1, 1), (1, 2)),
+                np.tile(np.array(padded_seq_lens).reshape(-1, 1), (1, 2)),
             )
             assert np.allclose(
                 ivy.to_numpy(valid_batch.seq_info.idx),
