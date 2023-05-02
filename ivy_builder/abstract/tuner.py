@@ -300,7 +300,7 @@ class Tuner:
                 "unsetting framework {}, framework stack must be empty when"
                 "initializing tuner class.".format(ivy.backend_stack[-1])
             )
-            ivy.unset_backend()
+            ivy.previous_backend()
         self._builder = builder_module
 
         # tuner spec
@@ -496,7 +496,7 @@ class Tuner:
 
             def cleanup(self):
                 self._trainer.close()
-                ivy.unset_backend()
+                ivy.previous_backend()
 
         # Run this trainable class #
         # -------------------------#
@@ -546,7 +546,7 @@ class Tuner:
                     self._spec.device_priority
                 )
             )
-        ivy.unset_backend()
+        ivy.previous_backend()
 
         reporter = CLIReporter(parameter_columns=["cost"])
 

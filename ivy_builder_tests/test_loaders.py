@@ -232,7 +232,7 @@ def test_seq_loader(
     # testing
     for i in range(5):
         # get training batch
-        train_batch = train_data_loader.get_next_batch()
+        train_batch = ivy.to_native(train_data_loader.get_next_batch())
 
         # test cardinality
         assert train_batch.actions.shape == (3, 2, 6)
@@ -284,7 +284,7 @@ def test_seq_loader(
             )
 
         # get validation batch
-        valid_batch = valid_data_loader.get_next_batch()
+        valid_batch = ivy.to_native(valid_data_loader.get_next_batch())
 
         # test cardinality
         assert valid_batch.actions.shape == (3, 2, 6)
@@ -472,7 +472,7 @@ def test_seq_loader_containers_to_skip(
             seq_idx.append(seq_idxs[(i * batch_size + j) % len(seq_idxs)])
 
         # get training batch
-        batch = data_loader.get_next_batch()
+        batch = ivy.to_native(data_loader.get_next_batch())
 
         # test seq_info
         assert np.array_equal(
@@ -631,7 +631,7 @@ def test_seq_loader_wo_cont_load(dev_str, f, with_prefetching, shuffle_buffer_si
     # testing
     for i in range(5):
         # get training batch
-        train_batch = train_data_loader.get_next_batch()
+        train_batch = ivy.to_native(train_data_loader.get_next_batch())
 
         # test cardinality
         assert train_batch.actions.shape == (3, 2, 6)
@@ -666,7 +666,7 @@ def test_seq_loader_wo_cont_load(dev_str, f, with_prefetching, shuffle_buffer_si
             )
 
         # get validation batch
-        valid_batch = valid_data_loader.get_next_batch()
+        valid_batch = ivy.to_native(valid_data_loader.get_next_batch())
 
         # test cardinality
         assert valid_batch.actions.shape == (3, 2, 6)

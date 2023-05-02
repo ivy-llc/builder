@@ -296,7 +296,7 @@ def print_json_args(base_dir=None, keys_to_ignore=None, keychains_to_ignore=None
         print(
             ivy.Container(these_json_args, keyword_color_dict={"duplicated": "magenta"})
         )
-    ivy.unset_backend()
+    ivy.previous_backend()
 
 
 def save_dict_as_json(dict_to_save, json_filepath):

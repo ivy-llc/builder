@@ -226,4 +226,4 @@ if __name__ == "__main__":
     f = ivy.default(parsed_args.backend, ivy.choose_random_backend())
     ivy.set_backendframework(f)
     main()
-    ivy.unset_backend()
+    ivy.previous_backend()

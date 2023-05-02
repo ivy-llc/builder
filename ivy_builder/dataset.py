@@ -220,7 +220,7 @@ class Dataset:
                 ivy.set_backend("numpy")
             item = Dataset._slice_dataset_with_error_checks(dataset, slice_obj)
             if numpy_loading:
-                ivy.unset_backend()
+                ivy.previous_backend()
             # if ivy.wrapped_mode():
             #     item = item.to_native(nested=True)
             output_queue.put(item.cont_to_dict())
@@ -406,7 +406,7 @@ class Dataset:
         if self._num_processes < 2 or isinstance(slice_obj, numbers.Number):
             ret = self._get_item(slice_obj)
             if self._numpy_loading:
-                ivy.unset_backend()
+                ivy.previous_backend()
             self._first_pass = False
             return ret
         slice_size = int(round(slice_obj.stop - slice_obj.start))
@@ -438,7 +438,7 @@ class Dataset:
             else:
                 slice_queues[-1].put(sub_slices[-1])
             if self._numpy_loading:
-                ivy.unset_backend()
+                ivy.previous_backend()
             self._first_pass = False
             return ivy.Container(
                 queues=output_queues,
@@ -459,7 +459,7 @@ class Dataset:
                 for output_queue in output_queues
             ]
             if self._numpy_loading:
-                ivy.unset_backend()
+                ivy.previous_backend()
             self._first_pass = False
             return ivy.Container.cont_list_join(items_as_lists)
 
