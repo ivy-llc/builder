@@ -8,6 +8,7 @@ def remove_dirs(base_dir=None):
     if base_dir is None:
         base_dir = os.getcwd()
     tune_present = False
+    base_dir = os.path.join(base_dir, "ivy_builder_tests/")
     tune_path = os.path.join(base_dir, "tune")
     if os.path.isdir(tune_path):
         tune_present = True
