@@ -4,16 +4,17 @@ from typing import Dict
 
 # local
 import ivy
-from  ivy_builder_tests import globals
+from ivy_tests.test_ivy import helpers
+
 
 FW_STRS = ["numpy", "jax", "tensorflow", "torch"]
 
 
 TEST_BACKENDS: Dict[str, callable] = {
-    "numpy": lambda: globals._get_ivy_numpy(),
-    "jax": lambda: globals._get_ivy_jax(),
-    "tensorflow": lambda: globals._get_ivy_tensorflow(),
-    "torch": lambda: globals._get_ivy_torch(),
+    "numpy": lambda: helpers.globals._get_ivy_numpy(),
+    "jax": lambda: helpers.globals._get_ivy_jax(),
+    "tensorflow": lambda: helpers.globals._get_ivy_tensorflow(),
+    "torch": lambda: helpers.globals._get_ivy_torch(),
 }
 
 
@@ -22,7 +23,7 @@ def run_around_tests(dev_str, f, compile_graph, implicit, fw):
     if "gpu" in dev_str and fw == "numpy":
         # Numpy does not support GPU
         pytest.skip()
-    ivy.previous_backend()
+    ivy.unset_backend()
     with f.use:
         with ivy.DefaultDevice(dev_str):
             yield
