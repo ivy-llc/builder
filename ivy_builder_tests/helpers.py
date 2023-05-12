@@ -8,10 +8,11 @@ def remove_dirs(base_dir=None):
     if base_dir is None:
         base_dir = os.getcwd()
     tune_present = False
-    print(os.getcwd())
     tune_path = os.path.join(base_dir, "ivy_builder_tests/")
     shutil.rmtree(os.path.join(base_dir, "log"), ignore_errors=True)
     shutil.rmtree(os.path.join(base_dir, "chkpt"), ignore_errors=True)
+    os.path.isdir(os.path.join(tune_path, "tune"))
+    os.path.isdir(os.path.join(tune_path, "log"))
     shutil.rmtree(os.path.join(tune_path, "tune"), ignore_errors=True)
     shutil.rmtree(os.path.join(tune_path, "log"), ignore_errors=True)    
     shutil.rmtree(os.path.join(base_dir, "ray"), ignore_errors=True)
