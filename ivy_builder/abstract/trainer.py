@@ -470,8 +470,6 @@ class Trainer:
 
     def _save_info_to_disk(self):
         info_dir = os.path.join(self._spec.log_dir, "info")
-        print(info_dir)
-        print(os.path.isdir(path))
         os.makedirs(info_dir, exist_ok=True)
         info_filepath = _get_valid_filepath(info_dir, "info", ".txt")
         if not ivy.exists(git):
