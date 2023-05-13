@@ -470,7 +470,8 @@ class Trainer:
 
     def _save_info_to_disk(self):
         info_dir = os.path.join(self._spec.log_dir, "info")
-        print(info_dir)
+        print('BBBB')
+        print('A' + str(info_dir))
         print(os.path.isdir(info_dir))     
         os.makedirs(info_dir, exist_ok=True)
         info_filepath = _get_valid_filepath(info_dir, "info", ".txt")
