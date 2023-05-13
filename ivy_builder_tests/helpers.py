@@ -11,10 +11,8 @@ def remove_dirs(base_dir=None):
     tune_path = os.path.join(base_dir, "ivy_builder_tests/")
     shutil.rmtree(os.path.join(base_dir, "log"), ignore_errors=True)
     shutil.rmtree(os.path.join(base_dir, "chkpt"), ignore_errors=True)
-#     print(os.path.isdir(os.path.join(tune_path, "tune")))
-#     print(os.path.isdir(os.path.join(tune_path, "log")))
+    shutil.rmtree(os.path.join(tune_path, "log"), ignore_errors=True)
     shutil.rmtree(os.path.join(tune_path, "tune"), ignore_errors=True)
-    shutil.rmtree(os.path.join(tune_path, "log"), ignore_errors=True)    
     shutil.rmtree(os.path.join(base_dir, "ray"), ignore_errors=True)
     log_fpath = os.path.join(base_dir, "log.log")
     if os.path.isfile(log_fpath):
