@@ -12,4 +12,4 @@ jobs:
 
       - name: Run Tests
         run: |
-          docker run --rm -v `pwd`/builder:/builder unifyai/builder:latest python3 -m pytest ivy_builder_tests/test_tune.py
+          docker run --rm -v `pwd`/builder:/builder unifyai/builder:latest python3 -m pytest ivy_builder_tests/test_trainers.py
