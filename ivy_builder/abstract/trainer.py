@@ -469,10 +469,7 @@ class Trainer:
         save_dict_as_json(spec_args_dict, complete_spec_args_filepath)
 
     def _save_info_to_disk(self):
-        info_dir = os.path.join(self._spec.log_dir, "info")
-        print('BBBB')
-        print('A' + str(info_dir))
-        print(os.path.isdir(info_dir))     
+        info_dir = os.path.join(self._spec.log_dir, "info")  
         os.makedirs(info_dir, exist_ok=True)
         info_filepath = _get_valid_filepath(info_dir, "info", ".txt")
         if not ivy.exists(git):
