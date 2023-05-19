@@ -1,7 +1,6 @@
 # global
 import os
 import ivy
-import subprocess
 
 try:
     import git
@@ -484,16 +483,11 @@ class Trainer:
             return
         try:
             repo = git.Repo(search_parent_directories=True)
-            sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
-        except (git.exc.InvalidGitRepositoryError, ValueError):
-            sha = "NOT A GIT REPO"       
         with open(info_filepath, "w+") as info_file:
             info_file.writelines(
                 [
                     "time of execution:\n",
-                    str(datetime.now()) + "\n\n",
-                    "git commit hash at time of execution:\n",
-                    sha + "\n",
+                    str(datetime.now()) + "\n\n"
                 ]
             )
 
