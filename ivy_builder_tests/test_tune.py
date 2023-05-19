@@ -14,14 +14,14 @@ from ivy_builder_demos.simple_example import (
     ExampleTrainer,
 )
 
+ray.init()
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 def test_tune_numeric_spec(dev_str, fw):
     if fw != "torch":
         pytest.skip()
-        
-    ray.init()
+
     builder_helpers.remove_dirs()
     data_loader_spec_args = {"batch_size": 1}
     trainer_spec_args = {
@@ -51,7 +51,6 @@ def test_tune_numeric_spec(dev_str, fw):
         tuner_spec_args=tuner_spec_args,
     )
     tuner.tune()
-    ray.shutdown()
     builder_helpers.remove_dirs()
 
 
@@ -59,7 +58,6 @@ def test_tune_general_spec(dev_str, fw):
     if fw != "torch":
         pytest.skip()
 
-    ray.init()    
     builder_helpers.remove_dirs()
     data_loader_spec_args = {"batch_size": 1}
     trainer_spec_args = {
@@ -106,7 +104,6 @@ def test_tune_general_spec(dev_str, fw):
         tuner_spec_args=tuner_spec_args,
     )
     tuner.tune()
-    ray.shutdown()
     builder_helpers.remove_dirs()
 
 
@@ -117,7 +114,6 @@ def test_tune_resume_training(dev_str, fw):
     #     # this test fails when running all tests for some reason, need to further investigate
     #     pytest.skip()
 
-    ray.init()
     builder_helpers.remove_dirs()
 
     # tuner spec args
@@ -221,5 +217,4 @@ def test_tune_resume_training(dev_str, fw):
     )
 
     # end
-    ray.shutdown()
     builder_helpers.remove_dirs()
