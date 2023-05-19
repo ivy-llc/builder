@@ -483,7 +483,7 @@ class Trainer:
             return
         try:
             repo = git.Repo(search_parent_directories=True)
-            sha = repo.head.commit.hexsha
+            sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
         except (git.exc.InvalidGitRepositoryError, ValueError):
             sha = "NOT A GIT REPO"       
         with open(info_filepath, "w+") as info_file:
