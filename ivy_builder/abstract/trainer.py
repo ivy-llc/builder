@@ -15,7 +15,7 @@ import datetime
 import numpy as np
 from datetime import datetime
 
-# local 
+# local
 from ivy_builder.abstract.network import Network
 from ivy_builder.specs.trainer_spec import TrainerSpec
 from ivy_builder.abstract.data_loader import DataLoader
