@@ -475,7 +475,17 @@ class Trainer:
         print(os.path.isdir(info_dir))     
         os.makedirs(info_dir, exist_ok=True)
         info_filepath = _get_valid_filepath(info_dir, "info", ".txt")
-        sha = "NOT A GIT REPO"
+        if not ivy.exists(git):
+            logging.warning(
+                "no gitpython installation found, not saving git commit hash to disk. "
+                "To install gitpython, run pip install gitpython."
+            )
+            return
+        try:
+            repo = git.Repo(search_parent_directories=True)
+            sha = repo.head.commit.hexsha
+        except (git.exc.InvalidGitRepositoryError, ValueError):
+            sha = "NOT A GIT REPO"       
         with open(info_filepath, "w+") as info_file:
             info_file.writelines(
                 [
