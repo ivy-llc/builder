@@ -469,7 +469,7 @@ class Trainer:
         save_dict_as_json(spec_args_dict, complete_spec_args_filepath)
 
     def _save_info_to_disk(self):
-        info_dir = os.path.join(self._spec.log_dir, "info")
+        info_dir = os.path.join(self._spec.log_dir, "info")  
         os.makedirs(info_dir, exist_ok=True)
         info_filepath = _get_valid_filepath(info_dir, "info", ".txt")
         if not ivy.exists(git):
@@ -478,18 +478,11 @@ class Trainer:
                 "To install gitpython, run pip install gitpython."
             )
             return
-        try:
-            repo = git.Repo(search_parent_directories=True)
-            sha = repo.head.object.hexsha
-        except (git.exc.InvalidGitRepositoryError, ValueError):
-            sha = "NOT A GIT REPO"
         with open(info_filepath, "w+") as info_file:
             info_file.writelines(
                 [
                     "time of execution:\n",
-                    str(datetime.now()) + "\n\n",
-                    "git commit hash at time of execution:\n",
-                    sha + "\n",
+                    str(datetime.now()) + "\n\n"
                 ]
             )
 
