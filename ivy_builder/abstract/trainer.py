@@ -481,8 +481,6 @@ class Trainer:
                 "To install gitpython, run pip install gitpython."
             )
             return
-        try:
-            repo = git.Repo(search_parent_directories=True)
         with open(info_filepath, "w+") as info_file:
             info_file.writelines(
                 [
