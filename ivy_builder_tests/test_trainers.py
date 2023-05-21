@@ -159,7 +159,6 @@ def test_reduced_cost_after_checkpoint_load(dev_str, compile_mode, fw):
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "../ivy_builder_demos")
     )
 
-
     compile_mode = compile_mode
 
     # dataset dirs specification

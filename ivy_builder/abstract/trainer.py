@@ -469,7 +469,7 @@ class Trainer:
         save_dict_as_json(spec_args_dict, complete_spec_args_filepath)
 
     def _save_info_to_disk(self):
-        info_dir = os.path.join(self._spec.log_dir, "info")  
+        info_dir = os.path.join(self._spec.log_dir, "info")
         os.makedirs(info_dir, exist_ok=True)
         info_filepath = _get_valid_filepath(info_dir, "info", ".txt")
         if not ivy.exists(git):
@@ -479,12 +479,7 @@ class Trainer:
             )
             return
         with open(info_filepath, "w+") as info_file:
-            info_file.writelines(
-                [
-                    "time of execution:\n",
-                    str(datetime.now()) + "\n\n"
-                ]
-            )
+            info_file.writelines(["time of execution:\n", str(datetime.now()) + "\n\n"])
 
     def _initialize_model(self, checkpoint_path=None):
         self._pre_init()

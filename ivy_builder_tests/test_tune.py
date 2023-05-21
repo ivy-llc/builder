@@ -20,7 +20,7 @@ THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 def test_tune_numeric_spec(dev_str, fw):
     if fw == "numpy":
-        pytest.skip()        
+        pytest.skip()
     builder_helpers.remove_dirs()
     data_loader_spec_args = {"batch_size": 1}
     trainer_spec_args = {
