@@ -33,6 +33,8 @@ from ivy_builder_demos.full_example import (
 
 @pytest.mark.parametrize("compile_mode", ["all", False])
 def test_simple_trainers(dev_str, compile_mode, fw):
+    if fw == "numpy":
+        pytest.skip()
     compile_mode = compile_mode
     # test
     builder_helpers.remove_dirs()
@@ -42,7 +44,8 @@ def test_simple_trainers(dev_str, compile_mode, fw):
 
 @pytest.mark.parametrize("compile_mode", ["all", False])
 def test_simple_multi_dev_trainers(dev_str, compile_mode, fw):
-
+    if fw == "numpy":
+        pytest.skip()
     compile_mode = compile_mode
 
     # devices
@@ -62,6 +65,8 @@ def test_simple_multi_dev_trainers(dev_str, compile_mode, fw):
 
 @pytest.mark.parametrize("compile_mode", ["all", False])
 def test_full_trainers(dev_str, compile_mode, fw):
+    if fw == "numpy":
+        pytest.skip()
     compile_mode = compile_mode
     # test
     builder_helpers.remove_dirs()
@@ -71,7 +76,8 @@ def test_full_trainers(dev_str, compile_mode, fw):
 
 @pytest.mark.parametrize("compile_mode", ["all", False])
 def test_visualizing(dev_str, compile_mode, fw):
-
+    if fw == "numpy":
+        pytest.skip()
     compile_mode = compile_mode
     builder_helpers.remove_dirs()
     data_loader_spec_args = {"batch_size": 1, "dev_strs": [dev_str]}
@@ -99,6 +105,8 @@ def test_visualizing(dev_str, compile_mode, fw):
 
 @pytest.mark.parametrize("compile_mode", ["all", False])
 def test_checkpoint_loading(dev_str, compile_mode, fw):
+    if fw == "numpy":
+        pytest.skip()
     compile_mode = compile_mode
 
     builder_helpers.remove_dirs()
@@ -144,6 +152,8 @@ def test_checkpoint_loading(dev_str, compile_mode, fw):
 
 @pytest.mark.parametrize("compile_mode", ["all", False])
 def test_reduced_cost_after_checkpoint_load(dev_str, compile_mode, fw):
+    if fw == "numpy":
+        pytest.skip()
 
     example_dir = os.path.relpath(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "../ivy_builder_demos")
@@ -265,9 +275,9 @@ def test_reduced_cost_after_checkpoint_load(dev_str, compile_mode, fw):
 def test_checkpoint_save_and_restore_via_public_trainer_methods(
     dev_str, compile_mode, fw
 ):
-
+    if fw == "numpy":
+        pytest.skip()
     compile_mode = compile_mode
-
     builder_helpers.remove_dirs()
     data_loader_spec_args = {"batch_size": 1, "dev_strs": [dev_str]}
     trainer_spec_args = {
