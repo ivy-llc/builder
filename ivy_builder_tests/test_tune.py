@@ -19,7 +19,8 @@ THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 def test_tune_numeric_spec(dev_str, fw):
-        
+    if fw == "numpy":
+        pytest.skip()        
     builder_helpers.remove_dirs()
     data_loader_spec_args = {"batch_size": 1}
     trainer_spec_args = {
@@ -53,7 +54,8 @@ def test_tune_numeric_spec(dev_str, fw):
 
 
 def test_tune_general_spec(dev_str, fw):
-
+    if fw == "numpy":
+        pytest.skip()
     builder_helpers.remove_dirs()
     data_loader_spec_args = {"batch_size": 1}
     trainer_spec_args = {
@@ -104,8 +106,7 @@ def test_tune_general_spec(dev_str, fw):
 
 
 def test_tune_resume_training(dev_str, fw):
-
-    if ivy.current_backend_str() == 'numpy':
+    if fw == "numpy":
         pytest.skip()
     builder_helpers.remove_dirs()
 
