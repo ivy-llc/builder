@@ -15,7 +15,7 @@ import datetime
 import numpy as np
 from datetime import datetime
 
-# local 
+# local
 from ivy_builder.abstract.network import Network
 from ivy_builder.specs.trainer_spec import TrainerSpec
 from ivy_builder.abstract.data_loader import DataLoader
@@ -478,20 +478,8 @@ class Trainer:
                 "To install gitpython, run pip install gitpython."
             )
             return
-        try:
-            repo = git.Repo(search_parent_directories=True)
-            sha = repo.head.object.hexsha
-        except (git.exc.InvalidGitRepositoryError, ValueError):
-            sha = "NOT A GIT REPO"
         with open(info_filepath, "w+") as info_file:
-            info_file.writelines(
-                [
-                    "time of execution:\n",
-                    str(datetime.now()) + "\n\n",
-                    "git commit hash at time of execution:\n",
-                    sha + "\n",
-                ]
-            )
+            info_file.writelines(["time of execution:\n", str(datetime.now()) + "\n\n"])
 
     def _initialize_model(self, checkpoint_path=None):
         self._pre_init()
