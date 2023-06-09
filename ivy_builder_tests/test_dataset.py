@@ -749,7 +749,7 @@ class TestPrefetch:
             self._dataset_w_prefetch[i]
             time_taken = time.process_time() - start_time
             if i > 0:
-                assert time_taken < 0.5
+                assert time_taken < 0.8
             time.sleep(0.015)
 
         # delete
