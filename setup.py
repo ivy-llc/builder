@@ -30,7 +30,7 @@ def _replace_logos_html(txt):
     backends_chunk = chunks[2]
     bc = backends_chunk.split("\n\n")
     img_str = (
-        ".. image:: https://github.com/unifyai/unifyai.github.io/blob/master/img/externally_linked/logos/supported/frameworks.png?raw=true\n"
+        ".. image:: https://github.com/unifyai/unifyai.github.io/blob/master/img/externally_linked/logos/supported/frameworks.png?raw=true\n"  # noqa
         "   :width: 100%"
     )
     backends_chunk = "\n\n".join(bc[0:1] + [img_str] + bc[2:])
@@ -39,7 +39,7 @@ def _replace_logos_html(txt):
     libraries_chunk = chunks[3]
     lc = libraries_chunk.split("\n\n")
     img_str = (
-        ".. image:: https://github.com/unifyai/unifyai.github.io/blob/master/img/externally_linked/ivy_libraries.png?raw=true\n"
+        ".. image:: https://github.com/unifyai/unifyai.github.io/blob/master/img/externally_linked/ivy_libraries.png?raw=true\n"  # noqa
         "   :width: 100%"
     )
     libraries_chunk = "\n\n".join(lc[0:1] + [img_str] + lc[2:])
@@ -113,15 +113,15 @@ long_description = "\n".join(lines)
 
 setup(
     name="ivy-builder",
-    version="1.1.9",
-    author="Ivy Team",
-    author_email="ivydl.team@gmail.com",
-    description="Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n",
+    version="0.0.1.post0",
+    author="Unify",
+    author_email="hello@unify.ai",
+    description="Build custom Ivy training tasks with clear, hierarchical and robust user specifications.\n",  # noqa
     long_description_content_type="text/x-rst",
     long_description=long_description,
-    url="https://lets-unify.ai/builder",
+    url="https://unify.ai/docs/builder",
     project_urls={
-        "Docs": "https://lets-unify.ai/builder/",
+        "Docs": "https://unify.ai/docs/builder/",
         "Source": "https://github.com/unifyai/builder",
     },
     packages=setuptools.find_packages(),
