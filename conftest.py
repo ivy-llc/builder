@@ -12,7 +12,7 @@ FW_STRS = ["numpy", "jax", "tensorflow", "torch"]
 
 
 @pytest.fixture(autouse=True)
-def run_around_tests(dev_str, compile_graph, fw):
+def run_around_tests(dev_str, f, compile_graph, fw):
     if "gpu" in device and fw == "numpy":
         # Numpy does not support GPU
         pytest.skip()
@@ -50,8 +50,8 @@ def pytest_generate_tests(metafunc):
     for backend_str in backend_strs:
         for device in devices:
             for compile_graph in compile_modes:
-                configs.append((device, compile_graph, backend_str))
-    metafunc.parametrize("dev_str,compile_graph,fw", configs)
+                configs.append((device, None, compile_graph, backend_str))
+    metafunc.parametrize("dev_str,f,compile_graph,fw", configs)
 
 
 def pytest_addoption(parser):
