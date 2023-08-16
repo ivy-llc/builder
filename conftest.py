@@ -13,7 +13,7 @@ FW_STRS = ["numpy", "jax", "tensorflow", "torch"]
 
 @pytest.fixture(autouse=True)
 def run_around_tests(dev_str, f, compile_graph, fw):
-    if "gpu" in device and fw == "numpy":
+    if "gpu" in dev_str and fw == "numpy":
         # Numpy does not support GPU
         pytest.skip()
     with ivy.utils.backend.ContextManager(fw):
