@@ -1,3 +1,5 @@
+.. title:: Ivy Builder
+
 .. include:: ../README.rst
 
 .. autosummary::
