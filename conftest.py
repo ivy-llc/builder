@@ -11,6 +11,8 @@ jax.config.update("jax_enable_x64", True)
 FW_STRS = ["numpy", "jax", "tensorflow", "torch"]
 
 
+
+
 @pytest.fixture(autouse=True)
 def run_around_tests(dev_str, f, compile_graph, fw):
     if "gpu" in dev_str and fw == "numpy":
